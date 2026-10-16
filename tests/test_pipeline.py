@@ -57,3 +57,33 @@ class CompiledPipelineTests(unittest.TestCase):
         self.assertEqual((ROOT / "pipelines/ticket-router-training.yaml").read_text(), fresh,
                          "pipelines/ticket-router-training.yaml is stale: run smlops pipeline compile")
         yaml.safe_load(fresh)                                           # valid YAML, as Kubeflow will parse it
+
+
+class LocalRunTests(unittest.TestCase):
+    def test_pipeline_runs_end_to_end_and_gates_the_second_model(self):
+        import io
+        from contextlib import redirect_stderr, redirect_stdout
+
+        import mlflow
+
+        from secure_mlops import registry
+        from secure_mlops.cli import main
+        with tempfile.TemporaryDirectory() as d, redirect_stderr(io.StringIO()) as err, redirect_stdout(io.StringIO()):
+            uri = f"sqlite:///{d}/mlflow.db"
+            # the default 3000 tickets: on 1200 the test split is small enough that calibration error lands just
+            # over the gate's 0.10 floor, and the gate (rightly) holds the model back
+            common = ["pipeline", "run-local", "--n", "3000", "--tracking-uri", uri, "-o", f"{d}/runs",
+                      "--gate", str(ROOT / "configs/gate.yaml")]
+            try:
+                self.assertEqual(main([*common, "--config", str(ROOT / "configs/train.yaml")]), 0)
+                self.assertIn("v1 is the new champion", err.getvalue())
+                weak = Path(d, "weak.yaml")
+                weak.write_text("c: 0.05\nmin_df: 5\n")
+                self.assertEqual(main([*common, "--config", str(weak)]), 1)
+                self.assertIn("v2 was registered but not promoted (champion: v1)", err.getvalue())
+                mlflow.set_tracking_uri(uri)
+                self.assertEqual(registry.by_alias("ticket-router", registry.CHAMPION).version, "1")
+                cards = list(Path(d, "runs").rglob("card"))
+                self.assertEqual(len(cards), 2)                         # one model card artifact per run
+            finally:
+                mlflow.set_tracking_uri("")

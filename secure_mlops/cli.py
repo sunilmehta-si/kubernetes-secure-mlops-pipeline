@@ -34,6 +34,15 @@ def _parser() -> argparse.ArgumentParser:
     psub = pl.add_subparsers(dest="pipeline_command", required=True)
     c = psub.add_parser("compile", help="Write the pipeline as KFP v2 YAML, ready to upload to Kubeflow.")
     c.add_argument("--output", "-o", default="pipelines/ticket-router-training.yaml", help="YAML file to write.")
+    r = psub.add_parser("run-local", help="Run the whole pipeline on this machine with KFP's local runner.")
+    r.add_argument("--n", type=int, default=3000, help="Tickets to generate (default: 3000).")
+    r.add_argument("--seed", type=int, default=7, help="Data seed (default: 7).")
+    r.add_argument("--drift", type=float, default=0.0, help="Data drift, 0-1 (default: 0).")
+    r.add_argument("--config", default="configs/train.yaml", help="Training config (default: configs/train.yaml).")
+    r.add_argument("--gate", default="configs/gate.yaml", help="Gate policy (default: configs/gate.yaml).")
+    r.add_argument("--model-name", default="ticket-router", help="Registered model name (default: ticket-router).")
+    r.add_argument("--tracking-uri", default="sqlite:///mlflow.db", help="MLflow URI (default: sqlite:///mlflow.db).")
+    r.add_argument("--output", "-o", default="local_outputs", help="Pipeline root for artifacts (default: local_outputs).")
     return p
 
 
@@ -97,10 +106,55 @@ def _cmd_train(args: argparse.Namespace) -> int:
     return 0 if outcome.passed else 1
 
 
+def _absolute_sqlite(uri: str) -> str:
+    """Pipeline steps run as subprocesses; a relative sqlite path must mean the same file for all of them."""
+    prefix = "sqlite:///"
+    if uri.startswith(prefix) and not uri[len(prefix):].startswith("/"):
+        return prefix + str(Path(uri[len(prefix):]).resolve())
+    return uri
+
+
+def _run_local(args: argparse.Namespace) -> int:
+    import mlflow
+    import yaml
+    from kfp import local
+
+    from . import registry
+    from .config import ConfigError, load
+    from .gate import load_policy
+    from .pipeline import training_pipeline
+    try:
+        load(args.config), load_policy(args.gate)                      # fail fast, before any step runs
+        train_config = json.dumps(yaml.safe_load(Path(args.config).read_text()), sort_keys=True)
+        gate_policy = json.dumps(yaml.safe_load(Path(args.gate).read_text()), sort_keys=True)
+    except (ConfigError, OSError, ValueError) as exc:
+        print(f"smlops: {exc}", file=sys.stderr)
+        return 2
+    uri = _absolute_sqlite(args.tracking_uri)
+    local.init(runner=local.SubprocessRunner(use_venv=False), pipeline_root=str(Path(args.output).resolve()),
+               raise_on_error=False)
+    task = training_pipeline(n=args.n, seed=args.seed, drift=args.drift, train_config=train_config,
+                             gate_policy=gate_policy, model_name=args.model_name, tracking_uri=uri)
+    mlflow.set_tracking_uri(uri)
+    champion = registry.by_alias(args.model_name, registry.CHAMPION)
+    newest = registry.by_alias(args.model_name, registry.CHALLENGER)
+    if newest is None:
+        print("smlops: the pipeline failed before publishing a model; see the step logs above", file=sys.stderr)
+        return 2
+    promoted = champion is not None and champion.version == newest.version
+    print(f"smlops: pipeline finished; {args.model_name} v{newest.version} "
+          f"{'is the new champion' if promoted else 'was registered but not promoted'}"
+          f" (champion: v{champion.version if champion else '-'})", file=sys.stderr)
+    del task
+    return 0 if promoted else 1
+
+
 def _cmd_pipeline(args: argparse.Namespace) -> int:
     from kfp import compiler
 
     from .pipeline import training_pipeline
+    if args.pipeline_command == "run-local":
+        return _run_local(args)
     Path(args.output).parent.mkdir(parents=True, exist_ok=True)
     compiler.Compiler().compile(training_pipeline, args.output)
     print(f"smlops: wrote {args.output}", file=sys.stderr)
