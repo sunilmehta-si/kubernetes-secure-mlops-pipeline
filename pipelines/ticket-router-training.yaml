@@ -1,0 +1,409 @@
+# PIPELINE DEFINITION
+# Name: ticket-router-training
+# Description: Prepare data, train, evaluate against the champion, and publish ticket-router models.
+# Inputs:
+#    drift: float [Default: 0.0]
+#    gate_policy: str [Default: '{"max_calibration_error": 0.1, "max_drop_overall": 0.01, "max_drop_per_label": 0.03, "max_drop_per_slice": 0.03, "max_latency_p95_ms": 25.0, "min_accuracy": 0.9, "min_macro_f1": 0.9, "min_recall_per_label": 0.85, "min_slice_size": 30}']
+#    model_name: str [Default: 'ticket-router']
+#    n: int [Default: 3000.0]
+#    seed: int [Default: 7.0]
+#    tracking_uri: str [Default: 'http://mlflow.mlflow.svc.cluster.local:5000']
+#    train_config: str [Default: '{"c": 4.0, "class_weight": "balanced", "max_features": 20000, "max_iter": 2000, "min_df": 2, "ngram_max": 2, "seed": 7, "sublinear_tf": true}']
+components:
+  comp-evaluate-and-gate:
+    executorLabel: exec-evaluate-and-gate
+    inputDefinitions:
+      artifacts:
+        data:
+          artifactType:
+            schemaTitle: system.Dataset
+            schemaVersion: 0.0.1
+        model:
+          artifactType:
+            schemaTitle: system.Model
+            schemaVersion: 0.0.1
+      parameters:
+        gate_policy:
+          parameterType: STRING
+        model_name:
+          parameterType: STRING
+        tracking_uri:
+          parameterType: STRING
+    outputDefinitions:
+      artifacts:
+        decision:
+          artifactType:
+            schemaTitle: system.Artifact
+            schemaVersion: 0.0.1
+        metrics:
+          artifactType:
+            schemaTitle: system.Metrics
+            schemaVersion: 0.0.1
+        report:
+          artifactType:
+            schemaTitle: system.Markdown
+            schemaVersion: 0.0.1
+      parameters:
+        Output:
+          parameterType: BOOLEAN
+  comp-prepare-data:
+    executorLabel: exec-prepare-data
+    inputDefinitions:
+      parameters:
+        drift:
+          parameterType: NUMBER_DOUBLE
+        n:
+          parameterType: NUMBER_INTEGER
+        seed:
+          parameterType: NUMBER_INTEGER
+    outputDefinitions:
+      artifacts:
+        data:
+          artifactType:
+            schemaTitle: system.Dataset
+            schemaVersion: 0.0.1
+  comp-publish-model:
+    executorLabel: exec-publish-model
+    inputDefinitions:
+      artifacts:
+        data:
+          artifactType:
+            schemaTitle: system.Dataset
+            schemaVersion: 0.0.1
+        decision:
+          artifactType:
+            schemaTitle: system.Artifact
+            schemaVersion: 0.0.1
+        model:
+          artifactType:
+            schemaTitle: system.Model
+            schemaVersion: 0.0.1
+      parameters:
+        model_name:
+          parameterType: STRING
+        tracking_uri:
+          parameterType: STRING
+        train_config:
+          parameterType: STRING
+    outputDefinitions:
+      artifacts:
+        card:
+          artifactType:
+            schemaTitle: system.Markdown
+            schemaVersion: 0.0.1
+      parameters:
+        Output:
+          parameterType: STRING
+  comp-train-model:
+    executorLabel: exec-train-model
+    inputDefinitions:
+      artifacts:
+        data:
+          artifactType:
+            schemaTitle: system.Dataset
+            schemaVersion: 0.0.1
+      parameters:
+        train_config:
+          parameterType: STRING
+    outputDefinitions:
+      artifacts:
+        model:
+          artifactType:
+            schemaTitle: system.Model
+            schemaVersion: 0.0.1
+deploymentSpec:
+  executors:
+    exec-evaluate-and-gate:
+      container:
+        args:
+        - --executor_input
+        - '{{$}}'
+        - --function_to_execute
+        - evaluate_and_gate
+        command:
+        - sh
+        - -c
+        - "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip ||\
+          \ python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1\
+          \ python3 -m pip install --quiet --no-warn-script-location 'kfp==2.17.0'\
+          \ '--no-deps' 'typing-extensions>=3.7.4,<5; python_version<\"3.9\"' && \"\
+          $0\" \"$@\"\n"
+        - sh
+        - -ec
+        - 'program_path=$(mktemp -d)
+
+
+          printf "%s" "$0" > "$program_path/ephemeral_component.py"
+
+          _KFP_RUNTIME=true python3 -m kfp.dsl.executor_main                         --component_module_path                         "$program_path/ephemeral_component.py"                         "$@"
+
+          '
+        - "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import\
+          \ *\n\ndef evaluate_and_gate(data: dsl.Input[dsl.Dataset], model: dsl.Input[dsl.Model],\
+          \ gate_policy: str, model_name: str,\n                      tracking_uri:\
+          \ str, metrics: dsl.Output[dsl.Metrics], report: dsl.Output[dsl.Markdown],\n\
+          \                      decision: dsl.Output[dsl.Artifact]) -> bool:\n  \
+          \  \"\"\"Judge the challenger against the registered champion on the same\
+          \ test split.\"\"\"\n    import json\n\n    import mlflow\n\n    from secure_mlops.gate\
+          \ import parse_policy\n    from secure_mlops.report import gate_markdown\n\
+          \    from secure_mlops.steps import judge, load_model\n    from secure_mlops.tracking\
+          \ import flatten\n\n    mlflow.set_tracking_uri(tracking_uri)\n    evaluation,\
+          \ result = judge(load_model(model.path), data.path, parse_policy(gate_policy),\
+          \ model_name)\n    for name, value in flatten(evaluation).items():\n   \
+          \     metrics.log_metric(name, value)\n    with open(report.path, \"w\"\
+          ) as f:\n        f.write(gate_markdown(result, model_name))\n    with open(decision.path,\
+          \ \"w\") as f:\n        json.dump({\"evaluation\": evaluation, \"decision\"\
+          : result}, f)\n    return bool(result[\"passed\"])\n\n"
+        image: ghcr.io/sunilmehta-si/kubernetes-secure-mlops-pipeline:dev
+    exec-prepare-data:
+      container:
+        args:
+        - --executor_input
+        - '{{$}}'
+        - --function_to_execute
+        - prepare_data
+        command:
+        - sh
+        - -c
+        - "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip ||\
+          \ python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1\
+          \ python3 -m pip install --quiet --no-warn-script-location 'kfp==2.17.0'\
+          \ '--no-deps' 'typing-extensions>=3.7.4,<5; python_version<\"3.9\"' && \"\
+          $0\" \"$@\"\n"
+        - sh
+        - -ec
+        - 'program_path=$(mktemp -d)
+
+
+          printf "%s" "$0" > "$program_path/ephemeral_component.py"
+
+          _KFP_RUNTIME=true python3 -m kfp.dsl.executor_main                         --component_module_path                         "$program_path/ephemeral_component.py"                         "$@"
+
+          '
+        - "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import\
+          \ *\n\ndef prepare_data(n: int, seed: int, drift: float, data: dsl.Output[dsl.Dataset]):\n\
+          \    \"\"\"Generate tickets, check them against the data contract, and write\
+          \ fingerprinted splits.\"\"\"\n    import json\n    from pathlib import\
+          \ Path\n\n    import pandas as pd\n\n    from secure_mlops.data import DataSpec,\
+          \ generate\n    from secure_mlops.dataset import split, text_overlap, write\n\
+          \    from secure_mlops.steps import validate_splits\n\n    spec = DataSpec(n=n,\
+          \ seed=seed, drift=drift)\n    splits = split(pd.DataFrame(generate(spec)),\
+          \ seed=seed)\n    fingerprints = write(splits, data.path)\n    validate_splits(data.path)\
+          \                      # raises, failing the run, if any split breaks the\
+          \ contract\n    (Path(data.path) / \"manifest.json\").write_text(json.dumps(\n\
+          \        {\"spec\": {\"n\": n, \"seed\": seed, \"drift\": drift}, \"fingerprints\"\
+          : fingerprints,\n         \"test_text_overlap\": round(text_overlap(splits),\
+          \ 4)}, indent=2))\n    data.metadata.update({\"fingerprint_test\": fingerprints[\"\
+          test\"], \"tickets\": n})\n\n"
+        image: ghcr.io/sunilmehta-si/kubernetes-secure-mlops-pipeline:dev
+    exec-publish-model:
+      container:
+        args:
+        - --executor_input
+        - '{{$}}'
+        - --function_to_execute
+        - publish_model
+        command:
+        - sh
+        - -c
+        - "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip ||\
+          \ python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1\
+          \ python3 -m pip install --quiet --no-warn-script-location 'kfp==2.17.0'\
+          \ '--no-deps' 'typing-extensions>=3.7.4,<5; python_version<\"3.9\"' && \"\
+          $0\" \"$@\"\n"
+        - sh
+        - -ec
+        - 'program_path=$(mktemp -d)
+
+
+          printf "%s" "$0" > "$program_path/ephemeral_component.py"
+
+          _KFP_RUNTIME=true python3 -m kfp.dsl.executor_main                         --component_module_path                         "$program_path/ephemeral_component.py"                         "$@"
+
+          '
+        - "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import\
+          \ *\n\ndef publish_model(data: dsl.Input[dsl.Dataset], model: dsl.Input[dsl.Model],\
+          \ decision: dsl.Input[dsl.Artifact],\n                  train_config: str,\
+          \ model_name: str, tracking_uri: str, card: dsl.Output[dsl.Markdown]) ->\
+          \ str:\n    \"\"\"Track and register every model; promote it to champion\
+          \ only if the gate passed. Returns the version.\"\"\"\n    import json\n\
+          \    import shutil\n    import tempfile\n    from pathlib import Path\n\n\
+          \    import mlflow\n\n    from secure_mlops.config import parse\n    from\
+          \ secure_mlops.steps import load_model, publish, validate_splits\n\n   \
+          \ mlflow.set_tracking_uri(tracking_uri)\n    judged = json.loads(Path(decision.path).read_text())\n\
+          \    with tempfile.TemporaryDirectory() as out:\n        outcome = publish(load_model(model.path),\
+          \ parse(train_config), data.path, validate_splits(data.path),\n        \
+          \                  judged[\"evaluation\"], judged[\"decision\"], model_name,\
+          \ out)\n        shutil.copy(Path(out) / \"model_card.md\", card.path)\n\
+          \    return outcome.version\n\n"
+        image: ghcr.io/sunilmehta-si/kubernetes-secure-mlops-pipeline:dev
+    exec-train-model:
+      container:
+        args:
+        - --executor_input
+        - '{{$}}'
+        - --function_to_execute
+        - train_model
+        command:
+        - sh
+        - -c
+        - "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip ||\
+          \ python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1\
+          \ python3 -m pip install --quiet --no-warn-script-location 'kfp==2.17.0'\
+          \ '--no-deps' 'typing-extensions>=3.7.4,<5; python_version<\"3.9\"' && \"\
+          $0\" \"$@\"\n"
+        - sh
+        - -ec
+        - 'program_path=$(mktemp -d)
+
+
+          printf "%s" "$0" > "$program_path/ephemeral_component.py"
+
+          _KFP_RUNTIME=true python3 -m kfp.dsl.executor_main                         --component_module_path                         "$program_path/ephemeral_component.py"                         "$@"
+
+          '
+        - "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import\
+          \ *\n\ndef train_model(data: dsl.Input[dsl.Dataset], train_config: str,\
+          \ model: dsl.Output[dsl.Model]):\n    \"\"\"Train the classifier and hand\
+          \ it on in MLflow's model format.\"\"\"\n    from secure_mlops.config import\
+          \ parse\n    from secure_mlops.steps import fit, save_model\n\n    config\
+          \ = parse(train_config, \"train_config parameter\")\n    save_model(fit(data.path,\
+          \ config), model.path)\n    model.metadata.update({\"params_hash\": config.params_hash()})\n\
+          \n"
+        image: ghcr.io/sunilmehta-si/kubernetes-secure-mlops-pipeline:dev
+pipelineInfo:
+  description: Prepare data, train, evaluate against the champion, and publish ticket-router
+    models.
+  name: ticket-router-training
+root:
+  dag:
+    tasks:
+      evaluate-and-gate:
+        cachingOptions:
+          enableCache: true
+        componentRef:
+          name: comp-evaluate-and-gate
+        dependentTasks:
+        - prepare-data
+        - train-model
+        inputs:
+          artifacts:
+            data:
+              taskOutputArtifact:
+                outputArtifactKey: data
+                producerTask: prepare-data
+            model:
+              taskOutputArtifact:
+                outputArtifactKey: model
+                producerTask: train-model
+          parameters:
+            gate_policy:
+              componentInputParameter: gate_policy
+            model_name:
+              componentInputParameter: model_name
+            tracking_uri:
+              componentInputParameter: tracking_uri
+        taskInfo:
+          name: evaluate-and-gate
+      prepare-data:
+        cachingOptions:
+          enableCache: true
+        componentRef:
+          name: comp-prepare-data
+        inputs:
+          parameters:
+            drift:
+              componentInputParameter: drift
+            n:
+              componentInputParameter: n
+            seed:
+              componentInputParameter: seed
+        taskInfo:
+          name: prepare-data
+      publish-model:
+        cachingOptions:
+          enableCache: true
+        componentRef:
+          name: comp-publish-model
+        dependentTasks:
+        - evaluate-and-gate
+        - prepare-data
+        - train-model
+        inputs:
+          artifacts:
+            data:
+              taskOutputArtifact:
+                outputArtifactKey: data
+                producerTask: prepare-data
+            decision:
+              taskOutputArtifact:
+                outputArtifactKey: decision
+                producerTask: evaluate-and-gate
+            model:
+              taskOutputArtifact:
+                outputArtifactKey: model
+                producerTask: train-model
+          parameters:
+            model_name:
+              componentInputParameter: model_name
+            tracking_uri:
+              componentInputParameter: tracking_uri
+            train_config:
+              componentInputParameter: train_config
+        taskInfo:
+          name: publish-model
+      train-model:
+        cachingOptions:
+          enableCache: true
+        componentRef:
+          name: comp-train-model
+        dependentTasks:
+        - prepare-data
+        inputs:
+          artifacts:
+            data:
+              taskOutputArtifact:
+                outputArtifactKey: data
+                producerTask: prepare-data
+          parameters:
+            train_config:
+              componentInputParameter: train_config
+        taskInfo:
+          name: train-model
+  inputDefinitions:
+    parameters:
+      drift:
+        defaultValue: 0.0
+        isOptional: true
+        parameterType: NUMBER_DOUBLE
+      gate_policy:
+        defaultValue: '{"max_calibration_error": 0.1, "max_drop_overall": 0.01, "max_drop_per_label":
+          0.03, "max_drop_per_slice": 0.03, "max_latency_p95_ms": 25.0, "min_accuracy":
+          0.9, "min_macro_f1": 0.9, "min_recall_per_label": 0.85, "min_slice_size":
+          30}'
+        isOptional: true
+        parameterType: STRING
+      model_name:
+        defaultValue: ticket-router
+        isOptional: true
+        parameterType: STRING
+      n:
+        defaultValue: 3000.0
+        isOptional: true
+        parameterType: NUMBER_INTEGER
+      seed:
+        defaultValue: 7.0
+        isOptional: true
+        parameterType: NUMBER_INTEGER
+      tracking_uri:
+        defaultValue: http://mlflow.mlflow.svc.cluster.local:5000
+        isOptional: true
+        parameterType: STRING
+      train_config:
+        defaultValue: '{"c": 4.0, "class_weight": "balanced", "max_features": 20000,
+          "max_iter": 2000, "min_df": 2, "ngram_max": 2, "seed": 7, "sublinear_tf":
+          true}'
+        isOptional: true
+        parameterType: STRING
+schemaVersion: 2.1.0
+sdkVersion: kfp-2.17.0

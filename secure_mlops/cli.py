@@ -30,6 +30,10 @@ def _parser() -> argparse.ArgumentParser:
     t.add_argument("--tracking-uri", default="sqlite:///mlflow.db",
                    help="MLflow tracking and registry URI (default: sqlite:///mlflow.db).")
     t.add_argument("--output", "-o", default="runs/latest", help="Where to write evaluation and gate files.")
+    pl = sub.add_parser("pipeline", help="Compile or run the Kubeflow pipeline.")
+    psub = pl.add_subparsers(dest="pipeline_command", required=True)
+    c = psub.add_parser("compile", help="Write the pipeline as KFP v2 YAML, ready to upload to Kubeflow.")
+    c.add_argument("--output", "-o", default="pipelines/ticket-router-training.yaml", help="YAML file to write.")
     return p
 
 
@@ -93,11 +97,23 @@ def _cmd_train(args: argparse.Namespace) -> int:
     return 0 if outcome.passed else 1
 
 
+def _cmd_pipeline(args: argparse.Namespace) -> int:
+    from kfp import compiler
+
+    from .pipeline import training_pipeline
+    Path(args.output).parent.mkdir(parents=True, exist_ok=True)
+    compiler.Compiler().compile(training_pipeline, args.output)
+    print(f"smlops: wrote {args.output}", file=sys.stderr)
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     args = _parser().parse_args(argv)
     if args.command == "data":
         return _cmd_data(args)
     if args.command == "train":
         return _cmd_train(args)
+    if args.command == "pipeline":
+        return _cmd_pipeline(args)
     _parser().print_help()
     return 0

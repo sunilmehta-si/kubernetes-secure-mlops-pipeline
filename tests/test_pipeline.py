@@ -43,3 +43,17 @@ class PipelineSpecTests(unittest.TestCase):
         images = {e["container"]["image"] for e in compiled()["deploymentSpec"]["executors"].values()}
         self.assertEqual(len(images), 1)
         self.assertTrue(images.pop().startswith("ghcr.io/sunilmehta-si/kubernetes-secure-mlops-pipeline"))
+
+
+class CompiledPipelineTests(unittest.TestCase):
+    def test_committed_pipeline_matches_the_code(self):
+        import io
+        from contextlib import redirect_stderr
+
+        from secure_mlops.cli import main
+        with tempfile.TemporaryDirectory() as d, redirect_stderr(io.StringIO()):
+            self.assertEqual(main(["pipeline", "compile", "-o", f"{d}/p.yaml"]), 0)
+            fresh = Path(d, "p.yaml").read_text()
+        self.assertEqual((ROOT / "pipelines/ticket-router-training.yaml").read_text(), fresh,
+                         "pipelines/ticket-router-training.yaml is stale: run smlops pipeline compile")
+        yaml.safe_load(fresh)                                           # valid YAML, as Kubeflow will parse it
