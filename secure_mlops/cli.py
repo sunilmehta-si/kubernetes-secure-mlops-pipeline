@@ -49,8 +49,8 @@ def _parser() -> argparse.ArgumentParser:
 def _cmd_data(args: argparse.Namespace) -> int:
     import pandas as pd
 
-    from .data import DataSpec, generate
-    from .dataset import split, text_overlap, write
+    from .data import DataSpec
+    from .steps import StepError, prepare
     from .validate import validate
     if args.data_command == "generate":
         try:
@@ -58,18 +58,11 @@ def _cmd_data(args: argparse.Namespace) -> int:
         except ValueError as exc:
             print(f"smlops: {exc}", file=sys.stderr)
             return 2
-        frame = pd.DataFrame(generate(spec))
-        report = validate(frame)
-        if not report.ok:
-            print("smlops: generated data failed validation:\n  " + "\n  ".join(report.problems), file=sys.stderr)
+        try:
+            manifest = prepare(spec, args.output)
+        except StepError as exc:
+            print(f"smlops: {exc}", file=sys.stderr)
             return 1
-        splits = split(frame, seed=spec.seed)
-        manifest = {"spec": {"n": spec.n, "seed": spec.seed, "drift": spec.drift, "label_noise": spec.label_noise,
-                             "typo_rate": spec.typo_rate},
-                    "fingerprints": write(splits, args.output),
-                    "rows": {name: len(d) for name, d in splits.items()},
-                    "test_text_overlap": round(text_overlap(splits), 4)}
-        (Path(args.output) / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
         print(f"smlops: wrote {spec.n} tickets to {args.output} (test fingerprint {manifest['fingerprints']['test'][:19]}...)",
               file=sys.stderr)
         return 0

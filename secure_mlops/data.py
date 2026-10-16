@@ -59,6 +59,12 @@ TEMPLATES = {
         "please report a suspicious message pretending to be support",
     ],
 }
+# Per-ticket detail that belongs to no team, the way real tickets say when and where something happened. Without
+# it the templates repeat word for word, and a few thousand tickets breach the data contract's duplicate limit.
+# None of these words point at a team (no "order", "account", "charge"), so they add variety, not label noise.
+CONTEXT = ("since this morning", "since yesterday", "for three days now", "after the latest update",
+           "on the mobile app", "on the website", "from my work laptop", "while travelling", "around {hour} today",
+           "ref {ref}", "case {ref}", "reference number {ref}")
 # Phrases that belong to no team: they make tickets vaguer and blur the classes.
 FILLER = ("hi team", "please help", "this is urgent", "thanks in advance", "not sure who to ask",
           "second time writing about this", "", "", "")
@@ -108,6 +114,9 @@ def generate(spec: DataSpec) -> list[dict]:
         text = rng.choice(TEMPLATES[label]).format(
             product=rng.choice(products), amount=f"${rng.randint(5, 400)}", code=f"E{rng.randint(100, 999)}",
             order=f"#{rng.randint(10000, 99999)}")
+        if rng.random() < 0.7:
+            text += " " + rng.choice(CONTEXT).format(ref=rng.randint(100000, 999999),
+                                                     hour=f"{rng.randint(1, 12)}{rng.choice(('am', 'pm'))}")
         if rng.random() < 0.35:                    # some tickets mention a second topic
             other = rng.choice([lab for lab in LABELS if lab != label])
             text += " and also " + rng.choice(TEMPLATES[other]).format(

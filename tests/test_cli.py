@@ -27,10 +27,10 @@ class DataCliTests(unittest.TestCase):
         from contextlib import redirect_stderr
         from pathlib import Path
         with tempfile.TemporaryDirectory() as d, redirect_stderr(io.StringIO()) as err:
-            self.assertEqual(main(["data", "generate", "--n", "400", "-o", d]), 0)
+            self.assertEqual(main(["data", "generate", "--n", "1000", "-o", d]), 0)   # 30 per team in each split
             manifest = json.loads((Path(d) / "manifest.json").read_text())
             rows = manifest["rows"]
-            self.assertEqual((sum(rows.values()), rows["test"]), (400, 60))      # validation rounds to 60 or 61
+            self.assertEqual((sum(rows.values()), rows["test"]), (1000, 150))
             self.assertEqual(set(manifest["fingerprints"]), {"train", "validation", "test"})
             self.assertEqual(main(["data", "validate", str(Path(d) / "train.csv")]), 0)
             bad = Path(d) / "bad.csv"
@@ -38,6 +38,20 @@ class DataCliTests(unittest.TestCase):
             self.assertEqual(main(["data", "validate", str(bad)]), 1)
             self.assertIn("'fax'", err.getvalue())
             self.assertEqual(main(["data", "generate", "--drift", "2", "-o", d]), 2)
+
+    def test_too_small_a_dataset_is_refused(self):
+        import tempfile
+        from contextlib import redirect_stderr
+        with tempfile.TemporaryDirectory() as d, redirect_stderr(io.StringIO()) as err:
+            self.assertEqual(main(["data", "generate", "--n", "400", "-o", d]), 1)
+        self.assertIn("validation split failed the data contract", err.getvalue())   # ~12 tickets per team
+
+    def test_default_dataset_passes_its_own_contract(self):
+        # regression: the default 3000 tickets used to repeat template text 28% of the time, over the 25% limit
+        import tempfile
+        from contextlib import redirect_stderr
+        with tempfile.TemporaryDirectory() as d, redirect_stderr(io.StringIO()) as err:
+            self.assertEqual(main(["data", "generate", "-o", d]), 0, err.getvalue())
 
 
 class TrainCliTests(unittest.TestCase):
@@ -50,7 +64,7 @@ class TrainCliTests(unittest.TestCase):
         root = Path(__file__).resolve().parents[1]
         with tempfile.TemporaryDirectory() as d, redirect_stderr(io.StringIO()) as err:
             try:
-                self.assertEqual(main(["data", "generate", "--n", "1500", "-o", f"{d}/data"]), 0)
+                self.assertEqual(main(["data", "generate", "--n", "3000", "-o", f"{d}/data"]), 0)
                 common = ["train", "--data", f"{d}/data", "--tracking-uri", f"sqlite:///{d}/mlflow.db", "-o", f"{d}/out",
                           "--gate", str(root / "configs/gate.yaml")]
                 out = io.StringIO()

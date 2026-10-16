@@ -38,6 +38,28 @@ class Outcome:
     failed_checks: list[str]
 
 
+def prepare(spec, data_dir: str | Path) -> dict:
+    """Generate tickets, check the whole set and then each split against the data contract, write the splits and a
+    manifest of their fingerprints. The CLI and the pipeline both call this, so both apply the same contract."""
+    import pandas as pd
+
+    from .data import generate
+    from .dataset import split, text_overlap, write
+    frame = pd.DataFrame(generate(spec))
+    report = validate(frame)
+    if not report.ok:
+        raise StepError("generated data failed the data contract: " + "; ".join(report.problems))
+    splits = split(frame, seed=spec.seed)
+    fingerprints = write(splits, data_dir)
+    validate_splits(data_dir)
+    manifest = {"spec": {"n": spec.n, "seed": spec.seed, "drift": spec.drift, "label_noise": spec.label_noise,
+                         "typo_rate": spec.typo_rate},
+                "fingerprints": fingerprints, "rows": {name: len(d) for name, d in splits.items()},
+                "test_text_overlap": round(text_overlap(splits), 4)}
+    (Path(data_dir) / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
+    return manifest
+
+
 def validate_splits(data_dir: str | Path) -> dict[str, str]:
     """Every split must pass the data contract; returns their fingerprints."""
     prints = {}

@@ -183,18 +183,11 @@ deploymentSpec:
         - "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import\
           \ *\n\ndef prepare_data(n: int, seed: int, drift: float, data: dsl.Output[dsl.Dataset]):\n\
           \    \"\"\"Generate tickets, check them against the data contract, and write\
-          \ fingerprinted splits.\"\"\"\n    import json\n    from pathlib import\
-          \ Path\n\n    import pandas as pd\n\n    from secure_mlops.data import DataSpec,\
-          \ generate\n    from secure_mlops.dataset import split, text_overlap, write\n\
-          \    from secure_mlops.steps import validate_splits\n\n    spec = DataSpec(n=n,\
-          \ seed=seed, drift=drift)\n    splits = split(pd.DataFrame(generate(spec)),\
-          \ seed=seed)\n    fingerprints = write(splits, data.path)\n    validate_splits(data.path)\
-          \                      # raises, failing the run, if any split breaks the\
-          \ contract\n    (Path(data.path) / \"manifest.json\").write_text(json.dumps(\n\
-          \        {\"spec\": {\"n\": n, \"seed\": seed, \"drift\": drift}, \"fingerprints\"\
-          : fingerprints,\n         \"test_text_overlap\": round(text_overlap(splits),\
-          \ 4)}, indent=2))\n    data.metadata.update({\"fingerprint_test\": fingerprints[\"\
-          test\"], \"tickets\": n})\n\n"
+          \ fingerprinted splits.\"\"\"\n    from secure_mlops.data import DataSpec\n\
+          \    from secure_mlops.steps import prepare\n\n    manifest = prepare(DataSpec(n=n,\
+          \ seed=seed, drift=drift), data.path)   # raises, failing the run, on a\
+          \ breach\n    data.metadata.update({\"fingerprint_test\": manifest[\"fingerprints\"\
+          ][\"test\"], \"tickets\": n})\n\n"
         image: ghcr.io/sunilmehta-si/kubernetes-secure-mlops-pipeline:dev
     exec-publish-model:
       container:

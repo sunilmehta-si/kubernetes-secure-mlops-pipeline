@@ -25,6 +25,11 @@ class GeneratorTests(unittest.TestCase):
         self.assertGreater(share(shifted, "channel", "chat"), share(base, "channel", "chat") + 0.25)
         self.assertGreater(share(shifted, "label", "technical"), 0.3)
 
+    def test_duplicate_text_stays_under_the_contract_limit_at_scale(self):
+        from secure_mlops.validate import MAX_DUPLICATE_TEXT_SHARE
+        texts = [r["text"] for r in generate(DataSpec(n=10000))]
+        self.assertLess(1 - len(set(texts)) / len(texts), MAX_DUPLICATE_TEXT_SHARE)
+
     def test_spec_is_validated(self):
         for bad in ({"n": 2}, {"label_noise": 1.5}, {"drift": -0.1}):
             with self.assertRaises(ValueError):

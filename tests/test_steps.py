@@ -22,7 +22,7 @@ class StepsTests(unittest.TestCase):
         self.dir = tempfile.TemporaryDirectory()
         self.root = Path(self.dir.name)
         mlflow.set_tracking_uri(f"sqlite:///{self.root}/mlflow.db")
-        write(split(pd.DataFrame(generate(DataSpec(n=1500)))), self.root / "data")
+        write(split(pd.DataFrame(generate(DataSpec(n=3000)))), self.root / "data")
 
     def tearDown(self):
         mlflow.set_tracking_uri("")

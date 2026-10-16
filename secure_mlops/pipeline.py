@@ -30,23 +30,11 @@ def _default(name: str) -> str:
 @dsl.component(base_image=IMAGE)
 def prepare_data(n: int, seed: int, drift: float, data: dsl.Output[dsl.Dataset]):
     """Generate tickets, check them against the data contract, and write fingerprinted splits."""
-    import json
-    from pathlib import Path
+    from secure_mlops.data import DataSpec
+    from secure_mlops.steps import prepare
 
-    import pandas as pd
-
-    from secure_mlops.data import DataSpec, generate
-    from secure_mlops.dataset import split, text_overlap, write
-    from secure_mlops.steps import validate_splits
-
-    spec = DataSpec(n=n, seed=seed, drift=drift)
-    splits = split(pd.DataFrame(generate(spec)), seed=seed)
-    fingerprints = write(splits, data.path)
-    validate_splits(data.path)                      # raises, failing the run, if any split breaks the contract
-    (Path(data.path) / "manifest.json").write_text(json.dumps(
-        {"spec": {"n": n, "seed": seed, "drift": drift}, "fingerprints": fingerprints,
-         "test_text_overlap": round(text_overlap(splits), 4)}, indent=2))
-    data.metadata.update({"fingerprint_test": fingerprints["test"], "tickets": n})
+    manifest = prepare(DataSpec(n=n, seed=seed, drift=drift), data.path)   # raises, failing the run, on a breach
+    data.metadata.update({"fingerprint_test": manifest["fingerprints"]["test"], "tickets": n})
 
 
 @dsl.component(base_image=IMAGE)
