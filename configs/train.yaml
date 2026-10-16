@@ -1,0 +1,10 @@
+# Ticket-routing classifier: TF-IDF word n-grams into a logistic regression.
+# Every key is checked; see secure_mlops/config.py for meanings and defaults.
+ngram_max: 2
+min_df: 2
+max_features: 20000
+sublinear_tf: true
+c: 4.0
+class_weight: balanced
+max_iter: 2000
+seed: 7
