@@ -13,6 +13,7 @@ import pandas as pd
 from sklearn.metrics import accuracy_score, f1_score, recall_score
 
 from .data import LABELS
+from .train import features
 
 SLICE_COLUMNS = ("channel", "tier", "length")
 SHORT_WORDS = 8         # tickets of at most this many words are "short"
@@ -35,14 +36,14 @@ def calibration_error(proba: np.ndarray, truth: np.ndarray, classes: list[str], 
     return float(ece)
 
 
-def latency_ms(model, texts: pd.Series, samples: int = 200) -> dict:
+def latency_ms(model, frame: pd.DataFrame, samples: int = 200) -> dict:
     """Wall time to route one ticket at a time, the way a serving endpoint sees traffic."""
-    picks = texts.iloc[: min(samples, len(texts))].tolist()
-    model.predict(picks[:1])                      # warm up
+    picks = [features(frame.iloc[[i]]) for i in range(min(samples, len(frame)))]
+    model.predict(picks[0])                       # warm up
     times = []
     for t in picks:
         start = time.perf_counter()
-        model.predict([t])
+        model.predict(t)
         times.append((time.perf_counter() - start) * 1000)
     times.sort()
     return {"p50": round(statistics.median(times), 3), "p95": round(times[int(0.95 * (len(times) - 1))], 3)}
@@ -54,8 +55,8 @@ def _scores(truth: pd.Series, pred: np.ndarray) -> dict:
 
 
 def evaluate(model, frame: pd.DataFrame, measure_latency: bool = True) -> dict:
-    pred = model.predict(frame["text"])
-    proba = model.predict_proba(frame["text"])
+    pred = model.predict(features(frame))
+    proba = model.predict_proba(features(frame))
     out = {**_scores(frame["label"], pred),
            "recall_by_label": {lab: round(float(r), 4) for lab, r in
                                zip(LABELS, recall_score(frame["label"], pred, labels=list(LABELS), average=None,
@@ -67,5 +68,5 @@ def evaluate(model, frame: pd.DataFrame, measure_latency: bool = True) -> dict:
         for value, group in sorted(framed.groupby(column), key=lambda kv: kv[0]):
             out["slices"][f"{column}={value}"] = _scores(group["label"], group["_pred"].to_numpy())
     if measure_latency:
-        out["latency_ms"] = latency_ms(model, frame["text"])
+        out["latency_ms"] = latency_ms(model, frame)
     return out
