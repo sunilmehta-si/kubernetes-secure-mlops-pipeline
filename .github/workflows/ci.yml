@@ -31,3 +31,27 @@ jobs:
           python-version: ${{ matrix.python }}
       - run: pip install -e .
       - run: python -W error::SyntaxWarning -m unittest discover -s tests -t . -v
+
+  image:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      IMAGE: kubernetes-secure-mlops-pipeline
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Build the pipeline image
+        run: docker build -t "$IMAGE:$GITHUB_SHA" .
+      - name: Run the CLI inside it as its non-root user
+        run: |
+          docker run --rm "$IMAGE:$GITHUB_SHA" --version
+          test "$(docker run --rm --entrypoint id "$IMAGE:$GITHUB_SHA" -u)" = "10001"
+          docker run --rm "$IMAGE:$GITHUB_SHA" data generate --n 600 -o /tmp/data
+      - name: Scan for fixable high and critical vulnerabilities
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: ${{ env.IMAGE }}:${{ github.sha }}
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"
