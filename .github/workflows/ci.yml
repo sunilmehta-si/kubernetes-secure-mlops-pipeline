@@ -47,7 +47,7 @@ jobs:
         run: |
           docker run --rm "$IMAGE:$GITHUB_SHA" --version
           test "$(docker run --rm --entrypoint id "$IMAGE:$GITHUB_SHA" -u)" = "10001"
-          docker run --rm "$IMAGE:$GITHUB_SHA" data generate --n 600 -o /tmp/data
+          docker run --rm "$IMAGE:$GITHUB_SHA" data generate --n 1000 -o /tmp/data
       - name: Scan for fixable high and critical vulnerabilities
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
