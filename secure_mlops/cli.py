@@ -22,6 +22,14 @@ def _parser() -> argparse.ArgumentParser:
     g.add_argument("--output", "-o", required=True, help="Directory to write.")
     v = dsub.add_parser("validate", help="Check a CSV of tickets against the data contract; exit 1 on problems.")
     v.add_argument("csv", help="Tickets CSV.")
+    t = sub.add_parser("train", help="Validate, train, judge against the champion, track, register; promote on a pass.")
+    t.add_argument("--data", required=True, help="Directory from smlops data generate (train/validation/test CSVs).")
+    t.add_argument("--config", default="configs/train.yaml", help="Training config (default: configs/train.yaml).")
+    t.add_argument("--gate", default="configs/gate.yaml", help="Gate policy (default: configs/gate.yaml).")
+    t.add_argument("--model-name", default="ticket-router", help="Registered model name (default: ticket-router).")
+    t.add_argument("--tracking-uri", default="sqlite:///mlflow.db",
+                   help="MLflow tracking and registry URI (default: sqlite:///mlflow.db).")
+    t.add_argument("--output", "-o", default="runs/latest", help="Where to write evaluation and gate files.")
     return p
 
 
@@ -66,9 +74,30 @@ def _cmd_data(args: argparse.Namespace) -> int:
     return 1
 
 
+def _cmd_train(args: argparse.Namespace) -> int:
+    import mlflow
+
+    from .config import ConfigError, load
+    from .gate import load_policy
+    from .steps import StepError, train_and_gate
+    try:
+        config, policy = load(args.config), load_policy(args.gate)
+        mlflow.set_tracking_uri(args.tracking_uri)
+        outcome = train_and_gate(args.data, config, policy, args.model_name, args.output)
+    except (ConfigError, StepError, OSError, ValueError) as exc:
+        print(f"smlops: {exc}", file=sys.stderr)
+        return 2
+    print((Path(args.output) / "gate.md").read_text(), end="")
+    state = "promoted to champion" if outcome.promoted else "registered, not promoted"
+    print(f"smlops: {args.model_name} v{outcome.version} {state} (run {outcome.run_id})", file=sys.stderr)
+    return 0 if outcome.passed else 1
+
+
 def main(argv: list[str] | None = None) -> int:
     args = _parser().parse_args(argv)
     if args.command == "data":
         return _cmd_data(args)
+    if args.command == "train":
+        return _cmd_train(args)
     _parser().print_help()
     return 0

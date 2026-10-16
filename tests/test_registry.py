@@ -25,6 +25,7 @@ class RegistryTests(unittest.TestCase):
     def setUp(self):
         self.dir = tempfile.TemporaryDirectory()
         mlflow.set_tracking_uri(f"sqlite:///{self.dir.name}/mlflow.db")
+        mlflow.set_experiment("registry-test")       # MLflow caches the active experiment across tracking URIs
 
     def tearDown(self):
         mlflow.set_tracking_uri("")

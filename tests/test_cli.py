@@ -38,3 +38,31 @@ class DataCliTests(unittest.TestCase):
             self.assertEqual(main(["data", "validate", str(bad)]), 1)
             self.assertIn("'fax'", err.getvalue())
             self.assertEqual(main(["data", "generate", "--drift", "2", "-o", d]), 2)
+
+
+class TrainCliTests(unittest.TestCase):
+    def test_train_promotes_then_blocks_a_worse_config(self):
+        import tempfile
+        from contextlib import redirect_stderr
+        from pathlib import Path
+
+        import mlflow
+        root = Path(__file__).resolve().parents[1]
+        with tempfile.TemporaryDirectory() as d, redirect_stderr(io.StringIO()) as err:
+            try:
+                self.assertEqual(main(["data", "generate", "--n", "1500", "-o", f"{d}/data"]), 0)
+                common = ["train", "--data", f"{d}/data", "--tracking-uri", f"sqlite:///{d}/mlflow.db", "-o", f"{d}/out",
+                          "--gate", str(root / "configs/gate.yaml")]
+                out = io.StringIO()
+                with redirect_stdout(out):
+                    self.assertEqual(main([*common, "--config", str(root / "configs/train.yaml")]), 0)
+                self.assertIn("**passed**", out.getvalue())
+                self.assertIn("v1 promoted to champion", err.getvalue())
+                weak = Path(d) / "weak.yaml"
+                weak.write_text("c: 0.05\nmin_df: 5\n")
+                with redirect_stdout(io.StringIO()):
+                    self.assertEqual(main([*common, "--config", str(weak)]), 1)
+                self.assertIn("v2 registered, not promoted", err.getvalue())
+                self.assertEqual(main([*common, "--config", f"{d}/missing.yaml"]), 2)
+            finally:
+                mlflow.set_tracking_uri("")
