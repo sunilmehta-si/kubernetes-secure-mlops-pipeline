@@ -41,6 +41,14 @@ class StepsTests(unittest.TestCase):
         gate = json.loads((self.root / "out/gate.json").read_text())
         self.assertEqual((gate["compared_with_champion"], gate["champion_version"]), (True, "1"))
         self.assertIn("router v2 **failed**", (self.root / "out/gate.md").read_text())
+        card = (self.root / "out/model_card.md").read_text()
+        self.assertIn("# Model card: router v2", card)
+        self.assertIn("Evaluation gate: failed: ", card)
+        self.assertIn("against champion v1", card)
+        self.assertIn("| security |", card)
+        self.assertIn("synthetic tickets", card)
+        run = mlflow.get_run(worse.run_id)
+        self.assertIn("model_card.md", [a.path for a in mlflow.MlflowClient().list_artifacts(run.info.run_id)])
 
     def test_bad_data_stops_before_training(self):
         test = self.root / "data/test.csv"

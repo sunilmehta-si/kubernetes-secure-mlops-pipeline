@@ -10,7 +10,10 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 
+import mlflow
+
 from . import registry
+from .card import model_card
 from .config import TrainConfig
 from .dataset import fingerprint, read
 from .evaluate import evaluate
@@ -67,4 +70,7 @@ def train_and_gate(data_dir: str | Path, config: TrainConfig, policy: GatePolicy
     (out / "evaluation.json").write_text(json.dumps(challenger, indent=2) + "\n")
     (out / "gate.json").write_text(json.dumps(decision, indent=2) + "\n")
     (out / "gate.md").write_text(gate_markdown(decision, f"{model_name} v{version.version}"))
+    card = model_card(model_name, version.version, config, fingerprints, challenger, decision)
+    (out / "model_card.md").write_text(card)
+    mlflow.MlflowClient().log_text(logged.run_id, card, "model_card.md")
     return Outcome(logged.run_id, version.version, promoted, decision["passed"], decision["failed"])
