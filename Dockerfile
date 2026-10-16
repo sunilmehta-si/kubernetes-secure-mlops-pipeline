@@ -12,7 +12,11 @@ WORKDIR /app
 COPY pyproject.toml README.md LICENSE ./
 COPY secure_mlops ./secure_mlops
 COPY configs ./configs
-RUN pip install . && useradd --uid 10001 --create-home --shell /usr/sbin/nologin pipeline
+# kfp 2.17.0 pins urllib3==2.7.0, which has two HIGH CVEs (CVE-2026-97687, CVE-2026-97689) fixed in 2.8.0.
+# Override it after installing; the full test suite, including KFP executor runs, passes on 2.8.0.
+# Remove this line once kfp relaxes the pin.
+RUN pip install . && pip install "urllib3==2.8.0" \
+    && useradd --uid 10001 --create-home --shell /usr/sbin/nologin pipeline
 
 USER 10001:10001
 WORKDIR /home/pipeline
