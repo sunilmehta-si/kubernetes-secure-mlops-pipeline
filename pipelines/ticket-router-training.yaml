@@ -8,7 +8,7 @@
 #    n: int [Default: 3000.0]
 #    seed: int [Default: 7.0]
 #    tracking_uri: str [Default: 'http://mlflow.mlflow.svc.cluster.local:5000']
-#    train_config: str [Default: '{"c": 4.0, "class_weight": "balanced", "max_features": 20000, "max_iter": 2000, "min_df": 2, "ngram_max": 2, "seed": 7, "sublinear_tf": true}']
+#    train_config: str [Default: '{"c": 4.0, "class_weight": "balanced", "max_features": 20000, "max_iter": 2000, "min_df": 2, "ngram_max": 3, "seed": 7, "sublinear_tf": true}']
 components:
   comp-evaluate-and-gate:
     executorLabel: exec-evaluate-and-gate
@@ -394,7 +394,7 @@ root:
         parameterType: STRING
       train_config:
         defaultValue: '{"c": 4.0, "class_weight": "balanced", "max_features": 20000,
-          "max_iter": 2000, "min_df": 2, "ngram_max": 2, "seed": 7, "sublinear_tf":
+          "max_iter": 2000, "min_df": 2, "ngram_max": 3, "seed": 7, "sublinear_tf":
           true}'
         isOptional: true
         parameterType: STRING

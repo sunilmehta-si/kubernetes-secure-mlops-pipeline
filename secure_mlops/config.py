@@ -19,7 +19,7 @@ class ConfigError(ValueError):
 
 @dataclass(frozen=True)
 class TrainConfig:
-    ngram_max: int = 2              # word n-grams from 1 to this
+    ngram_max: int = 3              # word n-grams from 1 to this
     min_df: int = 2                 # ignore terms seen in fewer tickets
     max_features: int = 20000
     sublinear_tf: bool = True
