@@ -50,6 +50,13 @@ class StepsTests(unittest.TestCase):
         run = mlflow.get_run(worse.run_id)
         self.assertIn("model_card.md", [a.path for a in mlflow.MlflowClient().list_artifacts(run.info.run_id)])
 
+    def test_a_model_survives_the_hand_off_between_steps(self):
+        from secure_mlops.steps import fit, load_model, save_model
+        model = fit(self.root / "data", TrainConfig())
+        save_model(model, self.root / "model")
+        x = pd.DataFrame({"text": ["my account is locked after too many attempts"]})
+        self.assertEqual(list(load_model(self.root / "model").predict(x)), list(model.predict(x)))
+
     def test_bad_data_stops_before_training(self):
         test = self.root / "data/test.csv"
         test.write_text(test.read_text().replace(",email,", ",fax,", 1))
