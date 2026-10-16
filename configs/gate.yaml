@@ -1,0 +1,10 @@
+# Evaluation gate: what a challenger must meet to replace the champion. See secure_mlops/gate.py.
+min_accuracy: 0.90
+min_macro_f1: 0.90
+min_recall_per_label: 0.85
+max_calibration_error: 0.10
+max_latency_p95_ms: 25.0
+max_drop_overall: 0.01
+max_drop_per_label: 0.03
+max_drop_per_slice: 0.03
+min_slice_size: 30
