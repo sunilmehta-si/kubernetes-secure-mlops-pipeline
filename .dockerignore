@@ -1,0 +1,10 @@
+.git
+.github
+**/__pycache__
+*.egg-info
+data/
+mlruns/
+mlflow.db
+runs/
+local_outputs/
+tests/
