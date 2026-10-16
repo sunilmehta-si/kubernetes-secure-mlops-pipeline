@@ -1,0 +1,15 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.venv/
+venv/
+# pipeline outputs: generated data, MLflow stores, run artefacts
+/data/
+/mlruns/
+/mlflow.db
+/runs/
+/local_outputs/
+.pytest_cache/
+.DS_Store

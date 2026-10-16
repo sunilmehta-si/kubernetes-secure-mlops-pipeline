@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "kubernetes-secure-mlops-pipeline"
+description = "An MLOps pipeline on Kubernetes where every model that reaches production is reproducible, evaluated, signed and verified."
+readme = "README.md"
+license = "MIT"
+authors = [{ name = "Sunil Mehta" }]
+requires-python = ">=3.12"
+dynamic = ["version"]
+dependencies = [
+    "scikit-learn==1.9.1",
+    "pandas==3.0.6",
+    "pandera==0.34.1",
+    "pyyaml==6.0.3",
+    "mlflow==3.17.1",
+    "kfp==2.17.0",
+]
+
+[project.scripts]
+smlops = "secure_mlops.cli:main"
+
+[tool.setuptools.dynamic]
+version = { attr = "secure_mlops.__version__" }
+
+[tool.setuptools.packages.find]
+include = ["secure_mlops*"]
