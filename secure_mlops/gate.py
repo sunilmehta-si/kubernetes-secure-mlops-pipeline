@@ -37,13 +37,19 @@ class Check:
     kind: str                               # "floor" or "regression"
 
 
-def load_policy(path: str | Path) -> GatePolicy:
-    data = yaml.safe_load(Path(path).read_text()) or {}
+def parse_policy(text: str, source: str = "gate policy") -> GatePolicy:
+    data = yaml.safe_load(text) or {}
+    if not isinstance(data, dict):
+        raise ValueError(f"{source}: expected a mapping of gate settings")
     known = {f.name for f in fields(GatePolicy)}
     unknown = sorted(set(data) - known)
     if unknown:
-        raise ValueError(f"{path}: unknown gate key(s) {', '.join(unknown)}")
+        raise ValueError(f"{source}: unknown gate key(s) {', '.join(unknown)}")
     return GatePolicy(**data)
+
+
+def load_policy(path: str | Path) -> GatePolicy:
+    return parse_policy(Path(path).read_text(), str(path))
 
 
 def _floor(name, value, limit, higher_is_better=True) -> Check:

@@ -41,15 +41,19 @@ class TrainConfig:
         return "sha256:" + hashlib.sha256(canonical.encode()).hexdigest()
 
 
-def load(path: str | Path) -> TrainConfig:
-    data = yaml.safe_load(Path(path).read_text()) or {}
+def parse(text: str, source: str = "config") -> TrainConfig:
+    data = yaml.safe_load(text) or {}
     if not isinstance(data, dict):
-        raise ConfigError(f"{path}: expected a mapping of training parameters")
+        raise ConfigError(f"{source}: expected a mapping of training parameters")
     known = {f.name for f in fields(TrainConfig)}
     unknown = sorted(set(data) - known)
     if unknown:
-        raise ConfigError(f"{path}: unknown key(s) {', '.join(unknown)}; known: {', '.join(sorted(known))}")
+        raise ConfigError(f"{source}: unknown key(s) {', '.join(unknown)}; known: {', '.join(sorted(known))}")
     try:
         return TrainConfig(**data)
     except TypeError as exc:
-        raise ConfigError(f"{path}: {exc}") from exc
+        raise ConfigError(f"{source}: {exc}") from exc
+
+
+def load(path: str | Path) -> TrainConfig:
+    return parse(Path(path).read_text(), str(path))
