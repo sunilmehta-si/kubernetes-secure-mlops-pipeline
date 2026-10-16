@@ -1,39 +1,92 @@
 # kubernetes-secure-mlops-pipeline
 
+[![ci](https://github.com/sunilmehta-si/kubernetes-secure-mlops-pipeline/actions/workflows/ci.yml/badge.svg)](https://github.com/sunilmehta-si/kubernetes-secure-mlops-pipeline/actions/workflows/ci.yml)
+![Python](https://img.shields.io/badge/python-3.12%20%7C%203.13-3776ab)
+![Kubeflow Pipelines](https://img.shields.io/badge/Kubeflow%20Pipelines-v2-4279f4)
+![MLflow](https://img.shields.io/badge/MLflow-3-0194e2)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+
 An MLOps pipeline on Kubernetes where every model that reaches production is **reproducible, evaluated against the
 model it replaces, signed, verified at deploy time, rolled out gradually and rolled back automatically**.
 
-**Status: under construction.** Phase 1 works and is tested: data contract, training, the evaluation gate, the
-MLflow registry and the Kubeflow pipeline. Packaging, signing and delivery to Kubernetes come next. This README
-describes only what works; planned stages are marked as such.
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/architecture-dark.svg">
+  <img src="docs/images/architecture-light.svg" alt="The ML system in six stages, ingest, prepare, train, evaluate, deploy and monitor, with what this repo uses at each stage, other common tools, automatic retraining, and CI on every change">
+</picture>
 
-## How it works
+**Status: under construction.** Stages 1 to 4 and the model registry are built and tested (solid green above);
+signed packaging, deployment to Kubernetes and monitoring are next (dashed). This README describes only what works.
+Each stage also lists other tools commonly used for the same job, so the diagram doubles as a map of MLOps.
 
-```mermaid
-flowchart LR
-    D["Ticket data<br/>+ data contract"] --> T["Train"]
-    T --> G{"Evaluation gate<br/>challenger vs champion"}
-    G -- fail --> N["Registered,<br/>not promoted"]
-    G -- pass --> R["MLflow registry<br/>champion"]
-    R --> P["Package + sign<br/>OCI ModelKit"]
-    P --> A["GitOps<br/>Argo CD"]
-    A --> V{"Admission<br/>verify signature"}
-    V --> K["KServe canary<br/>auto rollback"]
-    K --> M["Monitoring<br/>+ drift"]
-    M -. "retrain" .-> D
-    classDef built fill:#d8f3e3,stroke:#1a7f37,color:#0b0b0b
-    classDef planned fill:#f4f4f1,stroke:#9a9893,stroke-dasharray:4 3,color:#52514e
-    class D,T,G,N,R built
-    class P,A,V,K,M planned
+## The gate in action
+
+A model reaches production only by beating the one it replaces. Here a challenger that scores **0.909 accuracy**
+clears every absolute floor, but it is measured against the **0.938** champion on the same test tickets, and the gate
+blocks it on eight regression checks. A single accuracy number would hide the worst of them, billing recall falling
+seven points:
+
+```text
+$ smlops train --data data --config challenger.yaml
+## Evaluation gate: ticket-router v3 **failed**
+
+| Check                      | Value   | Limit     | Result   |
+|----------------------------|---------|-----------|----------|
+| drop in accuracy           | +0.0289 | <= 0.0100 | **FAIL** |
+| drop in recall[billing]    | +0.0697 | <= 0.0300 | **FAIL** |
+| drop in macro_f1[tier=enterprise] | +0.0534 | <= 0.0300 | **FAIL** |
+| ...5 more regressions...   |         |           |          |
+| accuracy                   | 0.9089  | >= 0.9000 | pass     |
+| calibration_error          | 0.0650  | <= 0.1000 | pass     |
+smlops: ticket-router v3 registered, not promoted
 ```
 
-Green stages are built and tested; dashed stages are planned. A model reaches the registry's `champion` alias only
-if it meets absolute floors (accuracy, macro F1, every team's recall, calibration, latency) **and** does not regress
-against the current champion on the same tickets, overall, per team or on any sizeable slice. Every run records the
-fingerprints of its data, the hash of its parameters, every metric, the gate decision and a model card.
+The blocked model is still tracked and registered, so nothing is lost; only the `champion` alias, which production
+follows, stays where it was. The full report lists every check, failures first, and is written for CI summaries and
+promotion pull requests.
 
-The detailed diagrams (the pipeline step by step, the gate's checks, registry aliases, provenance and CI) are in
-[docs/architecture.md](docs/architecture.md).
+## Quick start
+
+Python 3.12 or newer. Everything runs on a laptop CPU in about a minute.
+
+```bash
+git clone https://github.com/sunilmehta-si/kubernetes-secure-mlops-pipeline && cd kubernetes-secure-mlops-pipeline
+pip install -e .
+
+smlops data generate -o data            # 3000 tickets, checked against the data contract, fingerprinted splits
+smlops train --data data                # validate, train, judge against the champion, register; exit 1 if blocked
+smlops pipeline run-local               # the same steps as a Kubeflow pipeline, on KFP's local runner
+smlops pipeline compile                 # pipelines/ticket-router-training.yaml, ready to upload to Kubeflow
+mlflow ui --backend-store-uri sqlite:///mlflow.db   # browse runs, metrics, gate reports and model cards
+```
+
+## How the pipeline runs
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/pipeline-dag-dark.svg">
+  <img src="docs/images/pipeline-dag-light.svg" alt="The Kubeflow pipeline as a directed acyclic graph: prepare-data, train-model, evaluate-and-gate and publish-model, with the data, model and decision each task passes on">
+</picture>
+
+Each task is a thin wrapper around the same function `smlops train` calls, so the command line, the local runner
+and a Kubeflow cluster all run the same code. Every run records the fingerprints of its data, the hash of its
+parameters, every metric (overall, per team and per slice), the gate decision and a model card.
+
+## Caught by its own checks
+
+Two problems this project's checks found in itself while it was being built:
+
+- **The default dataset broke its own data contract.** Templated tickets repeated word for word 28% of the time, over
+  the 25% limit. The pipeline missed it because it checked each split, the command line checked the whole set. Both
+  now share one `prepare` step, and the generator adds neutral per-ticket detail.
+- **Leakage inflated accuracy.** 37% of test tickets were exact copies of training tickets, which made the model look
+  like 0.958. After the fix only 9% are, the honest score was 0.909, and tuning on the validation split (word trigrams)
+  brought it to 0.938 without touching the test set.
+
+## More detail
+
+- [docs/architecture.md](docs/architecture.md): the pipeline step by step, the gate's checks and limits, registry
+  aliases for promotion and rollback, what every model carries, and CI.
+- The diagrams are generated by [`scripts/architecture_diagram.py`](scripts/architecture_diagram.py); tests fail if
+  the committed images drift from the code.
 
 ## License
 

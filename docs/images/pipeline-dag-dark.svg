@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="400" viewBox="0 0 1280 400" role="img" aria-labelledby="title desc" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">
+<title id="title">The training pipeline as a DAG</title>
+<desc id="desc">A directed acyclic graph of four tasks: prepare-data, train-model, evaluate-and-gate and publish-model. Arrows are dependencies: train-model needs the data; evaluate-and-gate needs the data and the model; publish-model needs the data, the model and the gate decision. A task starts when everything it depends on has finished. Kubeflow Pipelines runs this graph; Apache Airflow schedules work as DAGs the same way.</desc>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#6e7681"/></marker></defs>
+<rect x="1" y="1" width="1278" height="398" rx="18" fill="#0f141a" stroke="#2a313c"/>
+<text x="33" y="42" font-size="22" font-weight="700" fill="#e6edf3" text-anchor="start">How the pipeline runs: a DAG</text>
+<text x="33" y="64" font-size="13" font-weight="400" fill="#a3adb8" text-anchor="start">A directed acyclic graph: boxes are tasks, arrows are dependencies, and nothing loops back. A task starts once everything it depends on has finished.</text>
+<rect x="204" y="196" width="184" height="74" rx="10" fill="#0d1117" stroke="#2b5a3a" stroke-width="1.5"/>
+<rect x="204" y="208" width="4" height="50" rx="2" fill="#3fb950"/>
+<text x="220" y="222" font-size="14" font-weight="700" fill="#e6edf3" text-anchor="start">prepare-data</text>
+<text x="220" y="241" font-size="11.5" font-weight="400" fill="#a3adb8" text-anchor="start">generate, check, split</text>
+<text x="220" y="258" font-size="11" font-weight="600" fill="#3fb950" text-anchor="start">→ Dataset</text>
+<rect x="452" y="196" width="184" height="74" rx="10" fill="#0d1117" stroke="#2b5a3a" stroke-width="1.5"/>
+<rect x="452" y="208" width="4" height="50" rx="2" fill="#3fb950"/>
+<text x="468" y="222" font-size="14" font-weight="700" fill="#e6edf3" text-anchor="start">train-model</text>
+<text x="468" y="241" font-size="11.5" font-weight="400" fill="#a3adb8" text-anchor="start">fit the classifier</text>
+<text x="468" y="258" font-size="11" font-weight="600" fill="#3fb950" text-anchor="start">→ Model</text>
+<rect x="700" y="196" width="184" height="74" rx="10" fill="#1f1608" stroke="#5a4116" stroke-width="1.5"/>
+<rect x="700" y="208" width="4" height="50" rx="2" fill="#e3a33a"/>
+<text x="716" y="222" font-size="14" font-weight="700" fill="#e6edf3" text-anchor="start">evaluate-and-gate</text>
+<text x="716" y="241" font-size="11.5" font-weight="400" fill="#a3adb8" text-anchor="start">score vs champion</text>
+<text x="716" y="258" font-size="11" font-weight="600" fill="#e3a33a" text-anchor="start">→ Metrics, report</text>
+<rect x="948" y="196" width="184" height="74" rx="10" fill="#0d1117" stroke="#2b5a3a" stroke-width="1.5"/>
+<rect x="948" y="208" width="4" height="50" rx="2" fill="#3fb950"/>
+<text x="964" y="222" font-size="14" font-weight="700" fill="#e6edf3" text-anchor="start">publish-model</text>
+<text x="964" y="241" font-size="11.5" font-weight="400" fill="#a3adb8" text-anchor="start">register, maybe promote</text>
+<text x="964" y="258" font-size="11" font-weight="600" fill="#3fb950" text-anchor="start">→ Model card</text>
+<rect x="70" y="215" width="72" height="36" rx="18" fill="#131820" stroke="#2c333d"/>
+<text x="106" y="237.5" font-size="12.5" font-weight="700" fill="#a3adb8" text-anchor="middle">Start</text>
+<rect x="1160" y="215" width="72" height="36" rx="18" fill="#131820" stroke="#2c333d"/>
+<text x="1196" y="237.5" font-size="12.5" font-weight="700" fill="#a3adb8" text-anchor="middle">End</text>
+<line x1="142" y1="233" x2="200" y2="233" stroke="#6e7681" stroke-width="2" marker-end="url(#arrow)"/>
+<line x1="1136" y1="233" x2="1156" y2="233" stroke="#6e7681" stroke-width="2" marker-end="url(#arrow)"/>
+<line x1="391" y1="233" x2="448" y2="233" stroke="#6e7681" stroke-width="2" marker-end="url(#arrow)"/>
+<text x="420" y="226" font-size="10.5" font-weight="600" fill="#7d8590" text-anchor="middle">data</text>
+<line x1="639" y1="233" x2="696" y2="233" stroke="#6e7681" stroke-width="2" marker-end="url(#arrow)"/>
+<text x="668" y="226" font-size="10.5" font-weight="600" fill="#7d8590" text-anchor="middle">model</text>
+<line x1="887" y1="233" x2="944" y2="233" stroke="#6e7681" stroke-width="2" marker-end="url(#arrow)"/>
+<text x="916" y="226" font-size="10.5" font-weight="600" fill="#7d8590" text-anchor="middle">decision</text>
+<path d="M310 194 C310 128 792 128 792 192" fill="none" stroke="#6e7681" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#arrow)"/>
+<text x="551" y="145" font-size="10.5" font-weight="600" fill="#7d8590" text-anchor="middle">data</text>
+<path d="M282 194 C282 94 1040 94 1040 192" fill="none" stroke="#6e7681" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#arrow)"/>
+<text x="661" y="111" font-size="10.5" font-weight="600" fill="#7d8590" text-anchor="middle">data</text>
+<path d="M558 272 C558 310 1040 310 1040 274" fill="none" stroke="#6e7681" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#arrow)"/>
+<text x="799" y="312" font-size="10.5" font-weight="600" fill="#7d8590" text-anchor="middle">model</text>
+<rect x="33" y="338" width="1214" height="40" rx="12" fill="#131820" stroke="#2c333d"/>
+<text x="51" y="363" font-size="12" font-weight="500" fill="#a3adb8" text-anchor="start">Solid arrows: the main order. Dashed arrows: a task also reads an earlier task's output. Kubeflow Pipelines runs this graph in this repo; Apache Airflow schedules work as DAGs the same way.</text>
+</svg>

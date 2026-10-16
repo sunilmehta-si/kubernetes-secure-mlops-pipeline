@@ -1,0 +1,173 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="612" viewBox="0 0 1280 612" role="img" aria-labelledby="title desc" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">
+<title id="title">kubernetes-secure-mlops-pipeline: ML system from ingestion to monitoring</title>
+<desc id="desc">Six stages from left to right: ingest, prepare, train, evaluate, deploy, monitor. Each lists what this repository uses, marked built or planned, and other tools commonly used for that stage. Built: synthetic ticket ingestion with versioned datasets; a pandera data contract, stratified splits and TF-IDF features; logistic regression trained in Kubeflow Pipelines and tracked in MLflow; metrics, an evaluation gate against the champion and a model card; the MLflow model registry. Planned: signed OCI models, KServe canary deployment with Argo CD, Prometheus, Grafana and Evidently monitoring, and automatic retraining when new data arrives or drift is detected. GitHub Actions runs CI on every change.</desc>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#8a887f"/></marker></defs>
+<rect x="1" y="1" width="1278" height="610" rx="18" fill="#fbfbfa" stroke="#e4e2dc"/>
+<text x="33" y="42" font-size="22" font-weight="700" fill="#0b0b0b" text-anchor="start">kubernetes-secure-mlops-pipeline</text>
+<text x="33" y="64" font-size="13" font-weight="400" fill="#57564f" text-anchor="start">An ML system end to end: from collecting data to watching the model in production. Every model must beat the one it replaces before it ships.</text>
+<rect x="880" y="27" width="22" height="14" rx="4" fill="#f0f8f2" stroke="#1a7f37"/>
+<text x="910" y="38.5" font-size="12" font-weight="600" fill="#0b0b0b" text-anchor="start">Built and tested</text>
+<rect x="1025" y="27" width="22" height="14" rx="4" fill="#fbfbfa" stroke="#77756d" stroke-dasharray="4 3"/>
+<text x="1055" y="38.5" font-size="12" font-weight="600" fill="#0b0b0b" text-anchor="start">Planned</text>
+<text x="1130" y="38.5" font-size="12" font-weight="500" fill="#8a887f" text-anchor="start" font-style="italic">Also common</text>
+<text x="1130" y="55" font-size="10.5" font-weight="400" fill="#8a887f" text-anchor="start">other tools, same job</text>
+<rect x="33" y="100" width="182" height="364" rx="14" fill="#f0f8f2" stroke="#b9dcc4"/>
+<circle cx="56" cy="125" r="12" fill="#1a7f37"/>
+<text x="56" y="129.5" font-size="12.5" font-weight="700" fill="#fbfbfa" text-anchor="middle">1</text>
+<text x="76" y="130.5" font-size="16" font-weight="700" fill="#0b0b0b" text-anchor="start">Ingest</text>
+<text x="47" y="156" font-size="11.5" font-weight="400" fill="#57564f" text-anchor="start">Collect data from</text>
+<text x="47" y="171" font-size="11.5" font-weight="400" fill="#57564f" text-anchor="start">databases, APIs, files</text>
+<text x="47" y="196" font-size="9.5" font-weight="700" fill="#1a7f37" text-anchor="start" letter-spacing="0.8">IN THIS REPO</text>
+<rect x="45.0" y="204" width="158" height="48" rx="8" fill="#ffffff" stroke="#c8e4d1"/>
+<rect x="45.0" y="213" width="4" height="30" rx="2" fill="#1a7f37"/>
+<text x="59" y="224" font-size="12.5" font-weight="600" fill="#0b0b0b" text-anchor="start">Ticket generator</text>
+<text x="59" y="240" font-size="10.5" font-weight="400" fill="#57564f" text-anchor="start">synthetic, seeded</text>
+<rect x="45.0" y="260" width="158" height="48" rx="8" fill="#ffffff" stroke="#c8e4d1"/>
+<rect x="45.0" y="269" width="4" height="30" rx="2" fill="#1a7f37"/>
+<text x="59" y="280" font-size="12.5" font-weight="600" fill="#0b0b0b" text-anchor="start">Versioned datasets</text>
+<text x="59" y="296" font-size="10.5" font-weight="400" fill="#57564f" text-anchor="start">SHA-256 fingerprints</text>
+<line x1="47" y1="392" x2="201" y2="392" stroke="#b9dcc4"/>
+<text x="47" y="408" font-size="9.5" font-weight="700" fill="#8a887f" text-anchor="start" letter-spacing="0.8">ALSO COMMON</text>
+<text x="47" y="426" font-size="11.5" font-weight="500" fill="#8a887f" text-anchor="start" font-style="italic">Apache Airflow</text>
+<text x="47" y="441" font-size="11.5" font-weight="500" fill="#8a887f" text-anchor="start" font-style="italic">Kafka · DVC</text>
+<rect x="238.6" y="100" width="182" height="364" rx="14" fill="#f0f8f2" stroke="#b9dcc4"/>
+<circle cx="261.6" cy="125" r="12" fill="#1a7f37"/>
+<text x="261.6" y="129.5" font-size="12.5" font-weight="700" fill="#fbfbfa" text-anchor="middle">2</text>
+<text x="281.6" y="130.5" font-size="16" font-weight="700" fill="#0b0b0b" text-anchor="start">Prepare</text>
+<text x="252.6" y="156" font-size="11.5" font-weight="400" fill="#57564f" text-anchor="start">Clean, validate and</text>
+<text x="252.6" y="171" font-size="11.5" font-weight="400" fill="#57564f" text-anchor="start">build features</text>
+<text x="252.6" y="196" font-size="9.5" font-weight="700" fill="#1a7f37" text-anchor="start" letter-spacing="0.8">IN THIS REPO</text>
+<rect x="250.6" y="204" width="158" height="48" rx="8" fill="#ffffff" stroke="#c8e4d1"/>
+<rect x="250.6" y="213" width="4" height="30" rx="2" fill="#1a7f37"/>
+<text x="264.6" y="224" font-size="12.5" font-weight="600" fill="#0b0b0b" text-anchor="start">Data contract</text>
+<text x="264.6" y="240" font-size="10.5" font-weight="400" fill="#57564f" text-anchor="start">pandera + pandas</text>
+<rect x="250.6" y="260" width="158" height="48" rx="8" fill="#ffffff" stroke="#c8e4d1"/>
+<rect x="250.6" y="269" width="4" height="30" rx="2" fill="#1a7f37"/>
+<text x="264.6" y="280" font-size="12.5" font-weight="600" fill="#0b0b0b" text-anchor="start">Stratified splits</text>
+<text x="264.6" y="296" font-size="10.5" font-weight="400" fill="#57564f" text-anchor="start">train · validation · test</text>
+<rect x="250.6" y="316" width="158" height="48" rx="8" fill="#ffffff" stroke="#c8e4d1"/>
+<rect x="250.6" y="325" width="4" height="30" rx="2" fill="#1a7f37"/>
+<text x="264.6" y="336" font-size="12.5" font-weight="600" fill="#0b0b0b" text-anchor="start">Text features</text>
+<text x="264.6" y="352" font-size="10.5" font-weight="400" fill="#57564f" text-anchor="start">scikit-learn TF-IDF</text>
+<line x1="252.6" y1="392" x2="406.6" y2="392" stroke="#b9dcc4"/>
+<text x="252.6" y="408" font-size="9.5" font-weight="700" fill="#8a887f" text-anchor="start" letter-spacing="0.8">ALSO COMMON</text>
+<text x="252.6" y="426" font-size="11.5" font-weight="500" fill="#8a887f" text-anchor="start" font-style="italic">Spark</text>
+<text x="252.6" y="441" font-size="11.5" font-weight="500" fill="#8a887f" text-anchor="start" font-style="italic">Feast feature store</text>
+<rect x="444.2" y="100" width="182" height="364" rx="14" fill="#f0f8f2" stroke="#b9dcc4"/>
+<circle cx="467.2" cy="125" r="12" fill="#1a7f37"/>
+<text x="467.2" y="129.5" font-size="12.5" font-weight="700" fill="#fbfbfa" text-anchor="middle">3</text>
+<text x="487.2" y="130.5" font-size="16" font-weight="700" fill="#0b0b0b" text-anchor="start">Train</text>
+<text x="458.2" y="156" font-size="11.5" font-weight="400" fill="#57564f" text-anchor="start">Fit the model and</text>
+<text x="458.2" y="171" font-size="11.5" font-weight="400" fill="#57564f" text-anchor="start">track every experiment</text>
+<text x="458.2" y="196" font-size="9.5" font-weight="700" fill="#1a7f37" text-anchor="start" letter-spacing="0.8">IN THIS REPO</text>
+<rect x="456.2" y="204" width="158" height="48" rx="8" fill="#ffffff" stroke="#c8e4d1"/>
+<rect x="456.2" y="213" width="4" height="30" rx="2" fill="#1a7f37"/>
+<text x="470.2" y="224" font-size="12.5" font-weight="600" fill="#0b0b0b" text-anchor="start">Logistic regression</text>
+<text x="470.2" y="240" font-size="10.5" font-weight="400" fill="#57564f" text-anchor="start">scikit-learn, seeded</text>
+<rect x="456.2" y="260" width="158" height="48" rx="8" fill="#ffffff" stroke="#c8e4d1"/>
+<rect x="456.2" y="269" width="4" height="30" rx="2" fill="#1a7f37"/>
+<text x="470.2" y="280" font-size="12.5" font-weight="600" fill="#0b0b0b" text-anchor="start">Kubeflow Pipelines</text>
+<text x="470.2" y="296" font-size="10.5" font-weight="400" fill="#57564f" text-anchor="start">one task per step</text>
+<rect x="456.2" y="316" width="158" height="48" rx="8" fill="#ffffff" stroke="#c8e4d1"/>
+<rect x="456.2" y="325" width="4" height="30" rx="2" fill="#1a7f37"/>
+<text x="470.2" y="336" font-size="12.5" font-weight="600" fill="#0b0b0b" text-anchor="start">MLflow tracking</text>
+<text x="470.2" y="352" font-size="10.5" font-weight="400" fill="#57564f" text-anchor="start">params, data, metrics</text>
+<line x1="458.2" y1="392" x2="612.2" y2="392" stroke="#b9dcc4"/>
+<text x="458.2" y="408" font-size="9.5" font-weight="700" fill="#8a887f" text-anchor="start" letter-spacing="0.8">ALSO COMMON</text>
+<text x="458.2" y="426" font-size="11.5" font-weight="500" fill="#8a887f" text-anchor="start" font-style="italic">PyTorch · TensorFlow</text>
+<text x="458.2" y="441" font-size="11.5" font-weight="500" fill="#8a887f" text-anchor="start" font-style="italic">XGBoost</text>
+<rect x="649.8" y="100" width="182" height="364" rx="14" fill="#f0f8f2" stroke="#b9dcc4"/>
+<circle cx="672.8" cy="125" r="12" fill="#1a7f37"/>
+<text x="672.8" y="129.5" font-size="12.5" font-weight="700" fill="#fbfbfa" text-anchor="middle">4</text>
+<text x="692.8" y="130.5" font-size="16" font-weight="700" fill="#0b0b0b" text-anchor="start">Evaluate</text>
+<text x="663.8" y="156" font-size="11.5" font-weight="400" fill="#57564f" text-anchor="start">Score it and decide</text>
+<text x="663.8" y="171" font-size="11.5" font-weight="400" fill="#57564f" text-anchor="start">whether it may ship</text>
+<text x="663.8" y="196" font-size="9.5" font-weight="700" fill="#1a7f37" text-anchor="start" letter-spacing="0.8">IN THIS REPO</text>
+<rect x="661.8" y="204" width="158" height="48" rx="8" fill="#ffffff" stroke="#c8e4d1"/>
+<rect x="661.8" y="213" width="4" height="30" rx="2" fill="#1a7f37"/>
+<text x="675.8" y="224" font-size="12.5" font-weight="600" fill="#0b0b0b" text-anchor="start">Metrics</text>
+<text x="675.8" y="240" font-size="10.5" font-weight="400" fill="#57564f" text-anchor="start">accuracy, F1, recall</text>
+<rect x="661.8" y="260" width="158" height="48" rx="8" fill="#fff8ef" stroke="#f0cfa3"/>
+<rect x="661.8" y="269" width="4" height="30" rx="2" fill="#b35c00"/>
+<text x="675.8" y="280" font-size="12.5" font-weight="600" fill="#0b0b0b" text-anchor="start">Evaluation gate</text>
+<text x="675.8" y="296" font-size="10.5" font-weight="400" fill="#57564f" text-anchor="start">beat the champion</text>
+<rect x="661.8" y="316" width="158" height="48" rx="8" fill="#ffffff" stroke="#c8e4d1"/>
+<rect x="661.8" y="325" width="4" height="30" rx="2" fill="#1a7f37"/>
+<text x="675.8" y="336" font-size="12.5" font-weight="600" fill="#0b0b0b" text-anchor="start">Model card</text>
+<text x="675.8" y="352" font-size="10.5" font-weight="400" fill="#57564f" text-anchor="start">from the run's records</text>
+<line x1="663.8" y1="392" x2="817.8" y2="392" stroke="#b9dcc4"/>
+<text x="663.8" y="408" font-size="9.5" font-weight="700" fill="#8a887f" text-anchor="start" letter-spacing="0.8">ALSO COMMON</text>
+<text x="663.8" y="426" font-size="11.5" font-weight="500" fill="#8a887f" text-anchor="start" font-style="italic">MSE · RMSE</text>
+<text x="663.8" y="441" font-size="11.5" font-weight="500" fill="#8a887f" text-anchor="start" font-style="italic">for regression models</text>
+<rect x="855.4" y="100" width="182" height="364" rx="14" fill="#f6f6f3" stroke="#dcdad3"/>
+<circle cx="878.4" cy="125" r="12" fill="#77756d"/>
+<text x="878.4" y="129.5" font-size="12.5" font-weight="700" fill="#fbfbfa" text-anchor="middle">5</text>
+<text x="898.4" y="130.5" font-size="16" font-weight="700" fill="#0b0b0b" text-anchor="start">Deploy</text>
+<text x="869.4" y="156" font-size="11.5" font-weight="400" fill="#57564f" text-anchor="start">Serve it on</text>
+<text x="869.4" y="171" font-size="11.5" font-weight="400" fill="#57564f" text-anchor="start">Kubernetes, safely</text>
+<text x="869.4" y="196" font-size="9.5" font-weight="700" fill="#1a7f37" text-anchor="start" letter-spacing="0.8">IN THIS REPO</text>
+<rect x="867.4" y="204" width="158" height="48" rx="8" fill="#ffffff" stroke="#c8e4d1"/>
+<rect x="867.4" y="213" width="4" height="30" rx="2" fill="#1a7f37"/>
+<text x="881.4" y="224" font-size="12.5" font-weight="600" fill="#0b0b0b" text-anchor="start">Model registry</text>
+<text x="881.4" y="240" font-size="10.5" font-weight="400" fill="#57564f" text-anchor="start">MLflow champion alias</text>
+<rect x="867.4" y="260" width="158" height="48" rx="8" fill="#fbfbfa" stroke="#c4c2bb" stroke-dasharray="5 4"/>
+<text x="879.4" y="280" font-size="12.5" font-weight="600" fill="#57564f" text-anchor="start">Signed OCI model</text>
+<text x="879.4" y="296" font-size="10.5" font-weight="400" fill="#8a887f" text-anchor="start">verified at admission</text>
+<rect x="867.4" y="316" width="158" height="48" rx="8" fill="#fbfbfa" stroke="#c4c2bb" stroke-dasharray="5 4"/>
+<text x="879.4" y="336" font-size="12.5" font-weight="600" fill="#57564f" text-anchor="start">Canary on KServe</text>
+<text x="879.4" y="352" font-size="10.5" font-weight="400" fill="#8a887f" text-anchor="start">Argo CD, auto rollback</text>
+<line x1="869.4" y1="392" x2="1023.4" y2="392" stroke="#dcdad3"/>
+<text x="869.4" y="408" font-size="9.5" font-weight="700" fill="#8a887f" text-anchor="start" letter-spacing="0.8">ALSO COMMON</text>
+<text x="869.4" y="426" font-size="11.5" font-weight="500" fill="#8a887f" text-anchor="start" font-style="italic">Seldon · BentoML</text>
+<text x="869.4" y="441" font-size="11.5" font-weight="500" fill="#8a887f" text-anchor="start" font-style="italic">SageMaker</text>
+<rect x="1061" y="100" width="182" height="364" rx="14" fill="#f6f6f3" stroke="#dcdad3"/>
+<circle cx="1084" cy="125" r="12" fill="#77756d"/>
+<text x="1084" y="129.5" font-size="12.5" font-weight="700" fill="#fbfbfa" text-anchor="middle">6</text>
+<text x="1104" y="130.5" font-size="16" font-weight="700" fill="#0b0b0b" text-anchor="start">Monitor</text>
+<text x="1075" y="156" font-size="11.5" font-weight="400" fill="#57564f" text-anchor="start">Watch data and</text>
+<text x="1075" y="171" font-size="11.5" font-weight="400" fill="#57564f" text-anchor="start">predictions in production</text>
+<text x="1075" y="196" font-size="9.5" font-weight="700" fill="#1a7f37" text-anchor="start" letter-spacing="0.8">IN THIS REPO</text>
+<rect x="1073.0" y="204" width="158" height="48" rx="8" fill="#fbfbfa" stroke="#c4c2bb" stroke-dasharray="5 4"/>
+<text x="1085" y="224" font-size="12.5" font-weight="600" fill="#57564f" text-anchor="start">Prometheus + Grafana</text>
+<text x="1085" y="240" font-size="10.5" font-weight="400" fill="#8a887f" text-anchor="start">latency, errors, traffic</text>
+<rect x="1073.0" y="260" width="158" height="48" rx="8" fill="#fbfbfa" stroke="#c4c2bb" stroke-dasharray="5 4"/>
+<text x="1085" y="280" font-size="12.5" font-weight="600" fill="#57564f" text-anchor="start">Evidently</text>
+<text x="1085" y="296" font-size="10.5" font-weight="400" fill="#8a887f" text-anchor="start">data and prediction drift</text>
+<line x1="1075" y1="392" x2="1229" y2="392" stroke="#dcdad3"/>
+<text x="1075" y="408" font-size="9.5" font-weight="700" fill="#8a887f" text-anchor="start" letter-spacing="0.8">ALSO COMMON</text>
+<text x="1075" y="426" font-size="11.5" font-weight="500" fill="#8a887f" text-anchor="start" font-style="italic">whylogs</text>
+<text x="1075" y="441" font-size="11.5" font-weight="500" fill="#8a887f" text-anchor="start" font-style="italic">Arize</text>
+<line x1="218" y1="125" x2="235.6" y2="125" stroke="#8a887f" stroke-width="2" marker-end="url(#arrow)"/>
+<line x1="423.6" y1="125" x2="441.2" y2="125" stroke="#8a887f" stroke-width="2" marker-end="url(#arrow)"/>
+<line x1="629.2" y1="125" x2="646.8" y2="125" stroke="#8a887f" stroke-width="2" marker-end="url(#arrow)"/>
+<line x1="834.8" y1="125" x2="852.4" y2="125" stroke="#8a887f" stroke-width="2" marker-end="url(#arrow)"/>
+<line x1="1040.4" y1="125" x2="1058" y2="125" stroke="#8a887f" stroke-width="2" marker-end="url(#arrow)"/>
+<path d="M1152 466 V488 Q1152 498 1142 498 H134 Q124 498 124 488 V470" fill="none" stroke="#77756d" stroke-width="1.8" stroke-dasharray="6 5" marker-end="url(#arrow)"/>
+<rect x="340" y="485" width="600" height="26" rx="13" fill="#fbfbfa" stroke="#dcdad3"/>
+<text x="640" y="502.5" font-size="12" font-weight="600" fill="#0b0b0b" text-anchor="middle">Automatic retraining: new data or detected drift starts the pipeline again</text>
+<text x="640" y="528" font-size="11" font-weight="500" fill="#8a887f" text-anchor="middle" font-style="italic">Triggered by CI/CD: GitHub Actions in this repo (planned) · also Jenkins, AWS CodePipeline</text>
+<rect x="33" y="546" width="1214" height="50" rx="12" fill="#f0f8f2" stroke="#b9dcc4"/>
+<text x="51" y="567" font-size="13" font-weight="700" fill="#0b0b0b" text-anchor="start">On every change</text>
+<text x="51" y="583" font-size="11" font-weight="400" fill="#57564f" text-anchor="start">GitHub Actions</text>
+<rect x="183" y="558" width="199" height="26" rx="13" fill="#ffffff" stroke="#c8e4d1"/>
+<circle cx="196" cy="571" r="3.5" fill="#1a7f37"/>
+<text x="205" y="575.5" font-size="11.5" font-weight="500" fill="#0b0b0b" text-anchor="start">Tests on Python 3.12 + 3.13</text>
+<rect x="390" y="558" width="153" height="26" rx="13" fill="#ffffff" stroke="#c8e4d1"/>
+<circle cx="403" cy="571" r="3.5" fill="#1a7f37"/>
+<text x="412" y="575.5" font-size="11.5" font-weight="500" fill="#0b0b0b" text-anchor="start">2 full Kubeflow runs</text>
+<rect x="551" y="558" width="166" height="26" rx="13" fill="#ffffff" stroke="#c8e4d1"/>
+<circle cx="564" cy="571" r="3.5" fill="#1a7f37"/>
+<text x="573" y="575.5" font-size="11.5" font-weight="500" fill="#0b0b0b" text-anchor="start">Image pinned by digest</text>
+<rect x="725" y="558" width="140" height="26" rx="13" fill="#ffffff" stroke="#c8e4d1"/>
+<circle cx="738" cy="571" r="3.5" fill="#1a7f37"/>
+<text x="747" y="575.5" font-size="11.5" font-weight="500" fill="#0b0b0b" text-anchor="start">Non-root container</text>
+<rect x="873" y="558" width="114" height="26" rx="13" fill="#ffffff" stroke="#c8e4d1"/>
+<circle cx="886" cy="571" r="3.5" fill="#1a7f37"/>
+<text x="895" y="575.5" font-size="11.5" font-weight="500" fill="#0b0b0b" text-anchor="start">Trivy CVE gate</text>
+<rect x="995" y="558" width="114" height="26" rx="13" fill="#ffffff" stroke="#c8e4d1"/>
+<circle cx="1008" cy="571" r="3.5" fill="#1a7f37"/>
+<text x="1017" y="575.5" font-size="11.5" font-weight="500" fill="#0b0b0b" text-anchor="start">PR code review</text>
+<rect x="1116" y="558" width="88" height="26" rx="13" fill="#ffffff" stroke="#c8e4d1"/>
+<circle cx="1129" cy="571" r="3.5" fill="#1a7f37"/>
+<text x="1138" y="575.5" font-size="11.5" font-weight="500" fill="#0b0b0b" text-anchor="start">Dependabot</text>
+</svg>
