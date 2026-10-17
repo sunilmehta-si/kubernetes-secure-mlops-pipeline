@@ -30,16 +30,16 @@ THEMES = {
 # -- data: shared with docs/governance-and-security.md and checked by tests ---------------------------------------
 # (id, title, question, checks, evidence, owner, enforced by, status, file that implements it when built/partial)
 GATES = [
-    ("G0", "Use case & risk", "Should we build this at all?", "intended use, risk tier", "model card, risk register",
-     "model owner", "review before work starts", "partial", "secure_mlops/card.py"),
+    ("G0", "Use case & risk", "Should we build this at all?", "intended use, risk tier", "risk register, model card",
+     "model owner", "no entry, no training", "built", "secure_mlops/risk.py"),
     ("G1", "Data approval", "Can we trust the data?", "schema, balance, dupes, PII", "contract report, hashes",
-     "data owner", "pandera, every run", "partial", "secure_mlops/validate.py"),
+     "data owner", "contract + PII scan", "partial", "secure_mlops/validate.py"),
     ("G2", "Reproducibility", "Can we rebuild this model?", "same inputs, same model", "params + data hashes",
      "ML engineer", "MLflow run tags", "partial", "secure_mlops/tracking.py"),
     ("G3", "Evaluation gate", "Is it better than what runs?", "floors, no regression", "gate.json, gate.md",
      "ML engineer", "smlops gate, exit 1", "built", "secure_mlops/gate.py"),
-    ("G4", "Release approval", "Did someone else approve it?", "second-person review", "promotion pull request",
-     "approver, not author", "CODEOWNERS, branch rules", "planned", ""),
+    ("G4", "Release approval", "Did someone else approve it?", "second-person review", "promotion request, PR",
+     "approver, not author", "CODEOWNERS; branch rules", "partial", ".github/CODEOWNERS"),
     ("G5", "Supply chain", "Is the artifact what we built?", "signed, provenance, CVEs", "signature, ML-BOM, SLSA",
      "platform security", "cosign; Trivy in CI", "partial", ".github/workflows/ci.yml"),
     ("G6", "Deploy admission", "Will the cluster run only that?", "only signed digests run", "admission decisions",
@@ -52,14 +52,14 @@ GATES = [
 THREATS = [
     ("T1", "Poisoned or broken training data", "pipelines", "data contract on every split, content fingerprints",
      "ML02", "partial", "secure_mlops/validate.py"),
-    ("T2", "Personal data in training data", "pipelines", "PII scan before training (today: synthetic data only)",
-     "-", "planned", ""),
+    ("T2", "Personal data in training data", "pipelines", "PII scan in the data contract; names need a model",
+     "-", "partial", "secure_mlops/pii.py"),
     ("T3", "Compromised dependency or base image", "ghcr", "pinned versions and base digest, Trivy gate, Dependabot",
      "ML06", "built", "Dockerfile"),
     ("T4", "Compromised CI or leaked secret", "ci", "actions pinned by SHA, read-only tokens, no stored secrets",
      "ML06", "partial", ".github/workflows/ci.yml"),
-    ("T5", "Unreviewed change to code or gate", "repo", "automated PR review; CODEOWNERS and branch rules next",
-     "-", "partial", ".github/workflows/code-review.yml"),
+    ("T5", "Unreviewed change to code or gate", "repo", "automated PR review, CODEOWNERS; branch rules next",
+     "-", "partial", ".github/CODEOWNERS"),
     ("T6", "Leakage or regression hides a worse model", "pipelines", "train/test overlap measure, evaluation gate",
      "ML08", "built", "secure_mlops/gate.py"),
     ("T7", "Model swapped or tampered after approval", "registry", "signature and digest pinning, checked at admission",
@@ -160,10 +160,10 @@ def governance_gates(theme: str) -> str:
     by = GROW2 + GCH + 22                                           # policies as code
     parts += [_t(33, by + 18, "POLICIES AS CODE", 10, c["muted"], 700, spacing="0.8")]
     x = 170
-    for label, status in (("configs/gate.yaml", "built"), ("data contract · validate.py", "built"),
-                          ("configs/train.yaml (unknown keys rejected)", "built"), ("Kyverno model policy", "planned"),
-                          ("CODEOWNERS + branch rules", "planned")):
-        w = 34 + len(label) * 6.4
+    for label, status in (("configs/gate.yaml", "built"), ("data contract + PII", "built"),
+                          ("risk register", "built"), ("train config", "built"), ("CODEOWNERS", "built"),
+                          ("branch protection", "planned"), ("Kyverno model policy", "planned")):
+        w = 34 + sum(8.2 if ch.isupper() else 6.4 for ch in label)    # capitals are wider
         fill, line, dash = _card_style(status, c)
         dot = c["built"] if status == "built" else c["planned"]
         parts += [f'<rect x="{x:.0f}" y="{by}" width="{w:.0f}" height="26" rx="13" fill="{fill}" stroke="{line}"{dash}/>',

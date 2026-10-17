@@ -23,11 +23,11 @@ the code does.
 
 | Gate | Question | Today | Implemented in | Next |
 |---|---|---|---|---|
-| G0 Use case & risk | Should we build this at all? | Partial: every model card states the intended use and limits | [`card.py`](../secure_mlops/card.py) | A risk register entry and risk tier per model, reviewed before work starts |
-| G1 Data approval | Can we trust the data? | Partial: schema, per-team minimum, balance and duplicate checks on the whole set and on every split; content fingerprints | [`validate.py`](../secure_mlops/validate.py), [`dataset.py`](../secure_mlops/dataset.py) | PII scan before training; source provenance for real data |
+| G0 Use case & risk | Should we build this at all? | **Built**: a risk register entry per model (use, out-of-scope uses, tier, affected people, human in the loop, personal data, review date) is required before training, and an overdue review blocks it; the model card repeats it | [`risk.py`](../secure_mlops/risk.py), [`configs/models/`](../configs/models/) | A second person approves changes to the entry (G4) |
+| G1 Data approval | Can we trust the data? | Partial: schema, per-team minimum, balance, duplicate and personal-data checks on the whole set and on every split; content fingerprints | [`validate.py`](../secure_mlops/validate.py), [`pii.py`](../secure_mlops/pii.py), [`dataset.py`](../secure_mlops/dataset.py) | Source provenance for real data; names and addresses need a statistical PII detector |
 | G2 Reproducibility | Can we rebuild this exact model? | Partial: parameter hash, data fingerprints, git commit (runs from uncommitted changes are flagged), Python, platform and a hash of every installed package, with the frozen package list attached; unknown config keys rejected | [`tracking.py`](../secure_mlops/tracking.py), [`provenance.py`](../secure_mlops/provenance.py), [`config.py`](../secure_mlops/config.py) | The pipeline image by digest, recorded when the pipeline runs on a cluster |
 | G3 Evaluation gate | Is it better than what runs now? | **Built**: absolute floors, then no regression against the champion overall, per team and per slice; blocks with exit 1 | [`gate.py`](../secure_mlops/gate.py) | Fairness review when real user groups exist |
-| G4 Release approval | Did someone other than the author approve it? | Planned | | Promotion by pull request; CODEOWNERS and branch protection so the author cannot approve their own release |
+| G4 Release approval | Did someone other than the author approve it? | Partial: CODEOWNERS names the owner of every file that decides releases; `smlops promotion-request` writes the PR body with an approver checklist | [`.github/CODEOWNERS`](../.github/CODEOWNERS), [`promotion.py`](../secure_mlops/promotion.py) | Branch protection on `main` requiring code-owner review, so the author cannot approve their own release |
 | G5 Supply chain | Is the artifact what we built? | Partial: dependencies and base image pinned, Trivy blocks fixable HIGH/CRITICAL CVEs, Dependabot | [`Dockerfile`](../Dockerfile), [`ci.yml`](../.github/workflows/ci.yml) | Model packaged as an OCI artifact with an ML-BOM, OpenSSF model signature, cosign signature and provenance |
 | G6 Deploy admission | Will the cluster run only that artifact? | Planned | | Kyverno `verifyImages` admits only model images signed by the trusted CI identity, pinned by digest |
 | G7 Operate & retire | Is it still working, and can we undo it? | Partial: one-step rollback of the `champion` alias | [`registry.py`](../secure_mlops/registry.py) | Drift and accuracy alerts; a retirement step that archives the model and its records |
@@ -58,7 +58,9 @@ Decisions are made by versioned files, reviewed like code, rather than by settin
 | Data contract | [`secure_mlops/validate.py`](../secure_mlops/validate.py) | Built |
 | Training parameters, unknown keys rejected | [`configs/train.yaml`](../configs/train.yaml) | Built |
 | CI permissions: read-only token, actions pinned by commit | [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) | Built |
-| Who approves releases | `CODEOWNERS` and branch protection | Planned |
+| Who may train a model, for what | [`configs/models/`](../configs/models/) risk register | Built |
+| Who approves releases | [`.github/CODEOWNERS`](../.github/CODEOWNERS) | Built |
+| Code-owner review required on `main` | Branch protection | Planned |
 | Which model images may run | Kyverno policy in `deploy/` | Planned |
 
 ## 4. Threat model
@@ -71,10 +73,10 @@ Decisions are made by versioned files, reviewed like code, rather than by settin
 | | Threat | Where | Control | OWASP ML Top 10 | Status |
 |---|---|---|---|---|---|
 | T1 | Poisoned or broken training data | Pipeline | Data contract on the whole set and every split; content fingerprints. Catches broken exports and skew, not a careful poisoner | ML02 | Partial |
-| T2 | Personal data in training data | Pipeline | PII scan before training. Today the data is synthetic, so there is none | - | Planned |
+| T2 | Personal data in training data | Pipeline | The data contract fails on emails, phone numbers, card numbers (Luhn) and IBANs (mod-97), reporting masked values only. Names and addresses need a statistical detector | - | Partial |
 | T3 | Compromised dependency or base image | Image registry | Pinned versions, base image by digest, Trivy gate, Dependabot | ML06 | Built |
 | T4 | Compromised CI or leaked secret | GitHub Actions | Actions pinned by commit SHA, read-only token, no stored secrets. Keyless signing next | ML06 | Partial |
-| T5 | Unreviewed change to code or gate | Repository | Automated review of every pull request. CODEOWNERS and branch protection next | - | Partial |
+| T5 | Unreviewed change to code or gate | Repository | Automated review of every pull request; CODEOWNERS for release-deciding files. Branch protection next | - | Partial |
 | T6 | Leakage or regression hides a worse model | Pipeline | Train/test overlap measured on every dataset; evaluation gate against the champion | ML08 | Built |
 | T7 | Model swapped or tampered after approval | Registry | Signature over the model, deployment pinned by digest, checked at admission | ML10 | Planned |
 | T8 | Model file runs code when loaded (pickle) | Serving | Models are stored as skops, which loads only trusted types; any model stored as pickle is refused from its metadata before it is opened ([`safeload.py`](../secure_mlops/safeload.py)). Next: load only signed models | ML06 | Partial |
@@ -130,7 +132,7 @@ advice: classify each real use case with your legal team.
 
 ## 7. Gaps, in the order they will be closed
 
-1. **Release approval (G4):** CODEOWNERS, branch protection on `main`, and promotion by pull request.
+1. **Release approval (G4):** ~~CODEOWNERS~~ and ~~a promotion request~~ done; branch protection on `main` next.
 2. ~~**Safe model format (T8):** save models with skops instead of cloudpickle.~~ Done: pickles are refused.
 3. **Signing and admission (G5, G6, T7):** OCI model artifact, ML-BOM, signatures from CI's keyless identity, Kyverno
    policy that admits only those.
@@ -138,7 +140,7 @@ advice: classify each real use case with your legal team.
    with cluster runs.
 5. **Monitoring (G7, T9, T10):** gateway with authentication and rate limits, drift and accuracy alerts, prediction
    logging with the model digest.
-6. **Data (G1, T2):** PII scan, risk register entry per model (G0).
+6. **Data (G1, T2):** ~~PII scan~~ and ~~risk register (G0)~~ done; a statistical detector for names and addresses.
 
 Sources for the framework references: [OWASP Machine Learning Security Top Ten](https://owasp.org/www-project-machine-learning-security-top-10/),
 [NIST AI RMF overview and ISO/IEC 42001 comparison (EC-Council)](https://www.eccouncil.org/cybersecurity-exchange/responsible-ai-governance/eu-ai-act-nist-ai-rmf-and-iso-iec-42001-a-plain-english-comparison/),
