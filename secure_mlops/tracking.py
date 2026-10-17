@@ -16,6 +16,7 @@ from mlflow.models import infer_signature
 
 from . import __version__
 from .config import TrainConfig
+from .provenance import git_info
 from .report import gate_markdown
 from .safeload import SAFE_FORMAT  # models are stored with skops, never pickle
 from .train import features
@@ -48,7 +49,7 @@ def log_run(model, config: TrainConfig, train_frame: pd.DataFrame, test_frame: p
     mlflow.set_experiment(experiment)
     with mlflow.start_run() as run:
         mlflow.log_params(asdict(config))
-        mlflow.set_tags({"params_hash": config.params_hash(), "code_version": __version__,
+        mlflow.set_tags({**git_info(), "params_hash": config.params_hash(), "code_version": __version__,
                          "gate": "passed" if decision["passed"] else "failed",
                          **{f"data.{name}": fp for name, fp in sorted(fingerprints.items())}})
         for frame, context in ((train_frame, "training"), (test_frame, "evaluation")):

@@ -32,6 +32,8 @@ class TrackingTests(unittest.TestCase):
                                  experiment="test")
                 run = mlflow.get_run(logged.run_id)
                 self.assertEqual(run.data.tags["params_hash"], TrainConfig().params_hash())
+                self.assertRegex(run.data.tags["code.git_commit"], r"^([0-9a-f]{40}|unknown)$")
+                self.assertIn(run.data.tags["code.git_dirty"], ("true", "false", "unknown"))
                 self.assertEqual(run.data.tags["data.test"], fingerprint(s.test))
                 self.assertEqual(run.data.metrics["accuracy"], ev["accuracy"])
                 self.assertEqual(set(flatten(ev)) - set(run.data.metrics), set())
