@@ -7,6 +7,7 @@ promoted without a gate decision.
 from __future__ import annotations
 
 import json
+import os
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -96,14 +97,24 @@ def judge(model, data_dir: str | Path, policy: GatePolicy, model_name: str) -> t
     return challenger, decision
 
 
+def signing_key(explicit: str | Path | None = None) -> Path | None:
+    """The private key to sign models with: an explicit path, or SMLOPS_SIGNING_KEY (a mounted secret in a cluster)."""
+    value = explicit or os.environ.get("SMLOPS_SIGNING_KEY")
+    return Path(value) if value else None
+
+
 def publish(model, config: TrainConfig, data_dir: str | Path, fingerprints: dict, evaluation: dict, decision: dict,
-            model_name: str, output_dir: str | Path) -> Outcome:
-    """Track the run, register the model, promote it if the gate passed, and write the reports."""
+            model_name: str, output_dir: str | Path, private_key: str | Path | None = None) -> Outcome:
+    """Track the run, sign the stored model when a key is configured, register it, promote it if the gate passed,
+    and write the reports. An unsigned version is tagged as such, never left ambiguous."""
     train_frame, test_frame = read(data_dir, "train"), read(data_dir, "test")
     logged = log_run(model, config, train_frame, test_frame, fingerprints, evaluation, decision, experiment=model_name)
+    key = signing_key(private_key)
+    signature = registry.sign_stored_model(logged.model_uri, logged.run_id, key) if key else ""
     version = registry.register(logged.model_uri, model_name, {"params_hash": config.params_hash(),
                                                                 "data.test": fingerprints["test"],
-                                                                "run_id": logged.run_id})
+                                                                "run_id": logged.run_id,
+                                                                "signature": signature or "unsigned"})
     promoted = registry.promote(version, decision)
     out = Path(output_dir)
     out.mkdir(parents=True, exist_ok=True)
@@ -129,8 +140,8 @@ def load_model(path: str | Path):
 
 
 def train_and_gate(data_dir: str | Path, config: TrainConfig, policy: GatePolicy, model_name: str,
-                   output_dir: str | Path) -> Outcome:
+                   output_dir: str | Path, private_key: str | Path | None = None) -> Outcome:
     fingerprints = validate_splits(data_dir)
     model = fit(data_dir, config, model_name)
     evaluation, decision = judge(model, data_dir, policy, model_name)
-    return publish(model, config, data_dir, fingerprints, evaluation, decision, model_name, output_dir)
+    return publish(model, config, data_dir, fingerprints, evaluation, decision, model_name, output_dir, private_key)

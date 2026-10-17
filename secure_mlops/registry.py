@@ -7,6 +7,7 @@ on the current test set when a challenger is judged, so both are always compared
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
 
 import mlflow
 from mlflow import MlflowClient
@@ -25,6 +26,21 @@ class Version:
     @property
     def uri(self) -> str:
         return f"models:/{self.name}/{self.version}"
+
+
+SIGNATURE_ARTIFACT = "model.sig.json"     # stored on the training run, next to the model it signs
+
+
+def sign_stored_model(model_uri: str, run_id: str, private_key: str | Path) -> str:
+    """Sign the model's files exactly as the store holds them, and attach the signature to the run."""
+    import tempfile
+
+    from .signing import sign
+    with tempfile.TemporaryDirectory() as d:
+        local = mlflow.artifacts.download_artifacts(artifact_uri=model_uri, dst_path=f"{d}/model")
+        sig = sign(local, Path(d) / SIGNATURE_ARTIFACT, private_key)
+        MlflowClient().log_artifact(run_id, str(sig))
+    return f"runs:/{run_id}/{SIGNATURE_ARTIFACT}"
 
 
 def register(model_uri: str, name: str, tags: dict[str, str]) -> Version:

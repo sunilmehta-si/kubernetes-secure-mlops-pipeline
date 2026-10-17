@@ -92,6 +92,22 @@ class StepsTests(unittest.TestCase):
         with self.assertRaisesRegex(PromotionError, "missing release.json"):
             promotion_request(self.root / "nowhere")
 
+    def test_a_signing_key_signs_the_stored_model_and_its_absence_is_recorded(self):
+        from mlflow import MlflowClient
+
+        from secure_mlops.signing import generate_keys, verify
+        private, public = generate_keys(self.root / "keys")
+        unsigned = self.run_once()
+        signed = train_and_gate(self.root / "data", TrainConfig(), GatePolicy(), "router", self.root / "out", private)
+        client = MlflowClient()
+        self.assertEqual(client.get_model_version("router", unsigned.version).tags["signature"], "unsigned")
+        sig_uri = client.get_model_version("router", signed.version).tags["signature"]
+        self.assertEqual(sig_uri, f"runs:/{signed.run_id}/model.sig.json")
+        model_uri = client.get_model_version("router", signed.version).source
+        local = mlflow.artifacts.download_artifacts(artifact_uri=model_uri, dst_path=str(self.root / "dl"))
+        sig = mlflow.artifacts.download_artifacts(artifact_uri=sig_uri, dst_path=str(self.root / "sig"))
+        verify(local, sig, public)                                  # the stored files are what was signed
+
     def test_bad_data_stops_before_training(self):
         test = self.root / "data/test.csv"
         test.write_text(test.read_text().replace(",email,", ",fax,", 1))

@@ -30,6 +30,8 @@ def _parser() -> argparse.ArgumentParser:
     t.add_argument("--tracking-uri", default="sqlite:///mlflow.db",
                    help="MLflow tracking and registry URI (default: sqlite:///mlflow.db).")
     t.add_argument("--output", "-o", default="runs/latest", help="Where to write evaluation and gate files.")
+    t.add_argument("--signing-key", help="Private key to sign the model with (default: $SMLOPS_SIGNING_KEY; "
+                                         "unsigned if neither is set).")
     k = sub.add_parser("keys", help="Manage the local model signing key pair.")
     ksub = k.add_subparsers(dest="keys_command", required=True)
     kg = ksub.add_parser("generate", help="Make a P-256 key pair for signing models (private key stays local).")
@@ -96,7 +98,7 @@ def _cmd_train(args: argparse.Namespace) -> int:
     try:
         config, policy = load(args.config), load_policy(args.gate)
         mlflow.set_tracking_uri(args.tracking_uri)
-        outcome = train_and_gate(args.data, config, policy, args.model_name, args.output)
+        outcome = train_and_gate(args.data, config, policy, args.model_name, args.output, args.signing_key)
     except (ConfigError, StepError, OSError, ValueError) as exc:
         print(f"smlops: {exc}", file=sys.stderr)
         return 2
