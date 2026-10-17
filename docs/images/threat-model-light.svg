@@ -154,10 +154,10 @@
 <circle cx="669" cy="480" r="11" fill="#cf222e"/>
 <text x="669" y="483.8" font-size="10.5" font-weight="700" fill="#ffffff" text-anchor="middle">T8</text>
 <text x="689" y="478" font-size="12" font-weight="650" fill="#0b0b0b" text-anchor="start">Model file runs code when loaded (pickle)</text>
-<text x="689" y="491" font-size="10.5" font-weight="400" fill="#57564f" text-anchor="start">skops format, load only signed models</text>
+<text x="689" y="491" font-size="10.5" font-weight="400" fill="#57564f" text-anchor="start">skops only, pickles refused; signed-only next</text>
 <text x="1155" y="484" font-size="10" font-weight="600" fill="#8a887f" text-anchor="end">ML06</text>
-<rect x="1177" y="471" width="60" height="18" rx="9" fill="#fbfbfa" stroke="#c4c2bb" stroke-dasharray="3 2"/>
-<text x="1207" y="483.5" font-size="9.5" font-weight="700" fill="#77756d" text-anchor="middle" letter-spacing="0.5">PLANNED</text>
+<rect x="1177" y="471" width="60" height="18" rx="9" fill="#fff8ef" stroke="#f0cfa3"/>
+<text x="1207" y="483.5" font-size="9.5" font-weight="700" fill="#b35c00" text-anchor="middle" letter-spacing="0.5">PARTIAL</text>
 <rect x="651" y="500" width="596" height="28" rx="8" fill="#f3f2ee"/>
 <circle cx="669" cy="514" r="11" fill="#cf222e"/>
 <text x="669" y="517.8" font-size="10.5" font-weight="700" fill="#ffffff" text-anchor="middle">T9</text>

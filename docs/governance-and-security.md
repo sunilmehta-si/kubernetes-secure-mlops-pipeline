@@ -77,7 +77,7 @@ Decisions are made by versioned files, reviewed like code, rather than by settin
 | T5 | Unreviewed change to code or gate | Repository | Automated review of every pull request. CODEOWNERS and branch protection next | - | Partial |
 | T6 | Leakage or regression hides a worse model | Pipeline | Train/test overlap measured on every dataset; evaluation gate against the champion | ML08 | Built |
 | T7 | Model swapped or tampered after approval | Registry | Signature over the model, deployment pinned by digest, checked at admission | ML10 | Planned |
-| T8 | Model file runs code when loaded (pickle) | Serving | Models are saved with cloudpickle today: loading a tampered file could run code. Switch to skops and load only signed models | ML06 | Planned |
+| T8 | Model file runs code when loaded (pickle) | Serving | Models are stored as skops, which loads only trusted types; any model stored as pickle is refused from its metadata before it is opened ([`safeload.py`](../secure_mlops/safeload.py)). Next: load only signed models | ML06 | Partial |
 | T9 | Endpoint abuse: evasion, theft, flooding | Serving | Input schema, authentication and rate limits at the gateway, monitoring for unusual query patterns | ML01, ML05 | Planned |
 | T10 | Silent drift degrades decisions | Monitoring | Drift and accuracy alerts; one-step rollback (built) | - | Partial |
 
@@ -131,7 +131,7 @@ advice: classify each real use case with your legal team.
 ## 7. Gaps, in the order they will be closed
 
 1. **Release approval (G4):** CODEOWNERS, branch protection on `main`, and promotion by pull request.
-2. **Safe model format (T8):** save models with skops instead of cloudpickle.
+2. ~~**Safe model format (T8):** save models with skops instead of cloudpickle.~~ Done: pickles are refused.
 3. **Signing and admission (G5, G6, T7):** OCI model artifact, ML-BOM, signatures from CI's keyless identity, Kyverno
    policy that admits only those.
 4. **Reproducibility (G2):** record the git commit and pipeline image digest on every run.
