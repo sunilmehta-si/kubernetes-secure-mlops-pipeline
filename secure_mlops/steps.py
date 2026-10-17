@@ -20,7 +20,7 @@ from .dataset import fingerprint, read
 from .evaluate import evaluate
 from .gate import GatePolicy, decide
 from .report import gate_markdown
-from .tracking import log_run
+from .tracking import SAFE_FORMAT, log_run
 from .train import train
 from .validate import validate
 
@@ -110,7 +110,7 @@ def publish(model, config: TrainConfig, data_dir: str | Path, fingerprints: dict
 
 def save_model(model, path: str | Path) -> None:
     """Hand a model to the next pipeline step in MLflow's model format."""
-    mlflow.sklearn.save_model(model, str(path))
+    mlflow.sklearn.save_model(model, str(path), serialization_format=SAFE_FORMAT)
 
 
 def load_model(path: str | Path):

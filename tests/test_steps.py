@@ -56,6 +56,9 @@ class StepsTests(unittest.TestCase):
         save_model(model, self.root / "model")
         x = pd.DataFrame({"text": ["my account is locked after too many attempts"]})
         self.assertEqual(list(load_model(self.root / "model").predict(x)), list(model.predict(x)))
+        files = {p.name for p in (self.root / "model").iterdir()}
+        self.assertIn("model.skops", files)                           # never a pickle
+        self.assertFalse({f for f in files if f.endswith((".pkl", ".pickle"))})
 
     def test_bad_data_stops_before_training(self):
         test = self.root / "data/test.csv"

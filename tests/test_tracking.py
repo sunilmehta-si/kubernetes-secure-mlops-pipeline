@@ -35,6 +35,8 @@ class TrackingTests(unittest.TestCase):
                 self.assertEqual(run.data.tags["data.test"], fingerprint(s.test))
                 self.assertEqual(run.data.metrics["accuracy"], ev["accuracy"])
                 self.assertEqual(set(flatten(ev)) - set(run.data.metrics), set())
+                flavor = mlflow.models.get_model_info(logged.model_uri).flavors["sklearn"]
+                self.assertEqual(flavor["serialization_format"], "skops")
                 served = mlflow.pyfunc.load_model(logged.model_uri)
                 ticket = pd.DataFrame({"text": ["please refund the $40 charge from last week"]})
                 self.assertEqual(list(served.predict(ticket)), ["billing"])
