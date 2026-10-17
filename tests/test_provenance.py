@@ -34,3 +34,16 @@ class GitInfoTests(unittest.TestCase):
             self.assertEqual((info["code.git_commit"], info["code.source"]), ("a" * 40, "environment"))
             with mock.patch.dict(os.environ, {}, clear=True):
                 self.assertEqual(git_info(d)["code.git_commit"], "unknown")
+
+
+class EnvironmentTests(unittest.TestCase):
+    def test_frozen_requirements_and_hash_identify_the_environment(self):
+        from secure_mlops.provenance import environment_info, frozen_requirements
+        deps = frozen_requirements()
+        self.assertIn("scikit-learn==", deps)
+        self.assertEqual(deps, frozen_requirements())                  # stable order
+        info = environment_info()
+        self.assertTrue(info["env.deps_hash"].startswith("sha256:"))
+        self.assertEqual(info["env.image"], os.environ.get("SMLOPS_IMAGE", "local"))
+        with mock.patch.dict(os.environ, {"SMLOPS_IMAGE": "ghcr.io/x/y@sha256:" + "b" * 64}):
+            self.assertTrue(environment_info()["env.image"].endswith("b" * 64))

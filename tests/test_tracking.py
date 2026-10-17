@@ -34,6 +34,9 @@ class TrackingTests(unittest.TestCase):
                 self.assertEqual(run.data.tags["params_hash"], TrainConfig().params_hash())
                 self.assertRegex(run.data.tags["code.git_commit"], r"^([0-9a-f]{40}|unknown)$")
                 self.assertIn(run.data.tags["code.git_dirty"], ("true", "false", "unknown"))
+                self.assertTrue(run.data.tags["env.deps_hash"].startswith("sha256:"))
+                artifacts = [a.path for a in mlflow.MlflowClient().list_artifacts(logged.run_id, "environment")]
+                self.assertEqual(artifacts, ["environment/requirements-frozen.txt"])
                 self.assertEqual(run.data.tags["data.test"], fingerprint(s.test))
                 self.assertEqual(run.data.metrics["accuracy"], ev["accuracy"])
                 self.assertEqual(set(flatten(ev)) - set(run.data.metrics), set())

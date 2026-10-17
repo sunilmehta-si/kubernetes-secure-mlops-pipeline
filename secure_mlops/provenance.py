@@ -6,8 +6,11 @@ the environment (GITHUB_SHA in CI, SMLOPS_GIT_COMMIT when an image is built).
 """
 from __future__ import annotations
 
+import hashlib
 import os
+import platform
 import subprocess
+from importlib import metadata
 from pathlib import Path
 
 UNKNOWN = "unknown"
@@ -29,3 +32,22 @@ def git_info(root: str | Path | None = None) -> dict[str, str]:
         return {"code.git_commit": commit, "code.git_dirty": str(dirty).lower(), "code.source": "git"}
     env = os.environ.get("SMLOPS_GIT_COMMIT") or os.environ.get("GITHUB_SHA")
     return {"code.git_commit": env or UNKNOWN, "code.git_dirty": UNKNOWN, "code.source": "environment" if env else UNKNOWN}
+
+
+def frozen_requirements() -> str:
+    """Every installed distribution as name==version, sorted: what pip would need to rebuild this environment."""
+    names = {}
+    for dist in metadata.distributions():
+        name = (dist.metadata.get("Name") or "").strip()
+        if name:
+            names[name.lower()] = f"{name}=={dist.version}"
+    return "\n".join(names[k] for k in sorted(names)) + "\n"
+
+
+def environment_info() -> dict[str, str]:
+    """The runtime a model was trained in. The image is known inside the pipeline (SMLOPS_IMAGE); locally it is
+    "local", and the dependency hash then identifies the environment instead."""
+    deps = frozen_requirements()
+    return {"env.python": platform.python_version(), "env.platform": f"{platform.system()}-{platform.machine()}",
+            "env.image": os.environ.get("SMLOPS_IMAGE", "local"),
+            "env.deps_hash": "sha256:" + hashlib.sha256(deps.encode()).hexdigest()}
