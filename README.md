@@ -70,6 +70,19 @@ Each task is a thin wrapper around the same function `smlops train` calls, so th
 and a Kubeflow cluster all run the same code. Every run records the fingerprints of its data, the hash of its
 parameters, every metric (overall, per team and per slice), the gate decision and a model card.
 
+## Governance and security
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/governance-gates-dark.svg">
+  <img src="docs/images/governance-gates-light.svg" alt="Eight governance gates from use case to retirement, each with its question, evidence, owner, enforcement and status">
+</picture>
+
+Eight gates decide whether a model may reach production, each leaving evidence and enforced by code where possible.
+[docs/governance-and-security.md](docs/governance-and-security.md) has the full design: roles, policies as code, a
+threat model with ten threats mapped to the OWASP Machine Learning Top 10, the audit trail from a prediction back to
+its data, and the gaps in the order they will be closed. Every item is marked built, partial or planned, and tests
+check that nothing is marked built without the file that implements it.
+
 ## Caught by its own checks
 
 Two problems this project's checks found in itself while it was being built:
