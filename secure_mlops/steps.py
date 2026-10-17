@@ -20,7 +20,8 @@ from .dataset import fingerprint, read
 from .evaluate import evaluate
 from .gate import GatePolicy, decide
 from .report import gate_markdown
-from .tracking import SAFE_FORMAT, log_run
+from .safeload import SAFE_FORMAT, load as safe_load
+from .tracking import log_run
 from .train import train
 from .validate import validate
 
@@ -114,7 +115,7 @@ def save_model(model, path: str | Path) -> None:
 
 
 def load_model(path: str | Path):
-    return mlflow.sklearn.load_model(str(path))
+    return safe_load(str(path))
 
 
 def train_and_gate(data_dir: str | Path, config: TrainConfig, policy: GatePolicy, model_name: str,

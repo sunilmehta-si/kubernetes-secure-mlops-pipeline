@@ -12,6 +12,8 @@ import mlflow
 from mlflow import MlflowClient
 from mlflow.exceptions import MlflowException
 
+from .safeload import load as safe_load
+
 CHAMPION, CHALLENGER, PREVIOUS = "champion", "challenger", "previous"
 
 
@@ -40,7 +42,8 @@ def by_alias(name: str, alias: str) -> Version | None:
 
 
 def load(version: Version):
-    return mlflow.sklearn.load_model(version.uri)
+    """Load a registered version; anything not stored in a safe format is refused before it is opened."""
+    return safe_load(version.uri)
 
 
 def promote(version: Version, decision: dict) -> bool:

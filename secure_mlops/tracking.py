@@ -17,12 +17,10 @@ from mlflow.models import infer_signature
 from . import __version__
 from .config import TrainConfig
 from .report import gate_markdown
+from .safeload import SAFE_FORMAT  # models are stored with skops, never pickle
 from .train import features
 
 
-# Models are stored with skops, not (cloud)pickle: loading a pickle runs whatever code the file contains, so a
-# tampered model file could execute on the machine that loads it. skops loads only trusted types.
-SAFE_FORMAT = "skops"
 
 
 @dataclass(frozen=True)
