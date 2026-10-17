@@ -1,0 +1,178 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="624" viewBox="0 0 1280 624" role="img" aria-labelledby="title desc" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">
+<title id="title">Threat model of the ML system</title>
+<desc id="desc">Trust zones from left to right: developer laptop, GitHub, the Kubernetes cluster and clients, with the data flows between them. Ten numbered threats are placed where they act, and a table lists each threat, its control, the OWASP Machine Learning Top 10 entry it relates to, and whether the control is built, partial or planned.</desc>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#8a887f"/></marker></defs>
+<rect x="1" y="1" width="1278" height="622" rx="18" fill="#fbfbfa" stroke="#e4e2dc"/>
+<text x="33" y="42" font-size="22" font-weight="700" fill="#0b0b0b" text-anchor="start">Security: threats and controls across trust zones</text>
+<text x="33" y="64" font-size="13" font-weight="400" fill="#57564f" text-anchor="start">Where each threat acts, and the control that answers it. Arrows are data and artifact flows; dashed parts are planned.</text>
+<rect x="980" y="30" width="47" height="18" rx="9" fill="#f0f8f2" stroke="#b9dcc4"/>
+<text x="1004" y="42.5" font-size="9.5" font-weight="700" fill="#1a7f37" text-anchor="middle" letter-spacing="0.5">BUILT</text>
+<rect x="1037" y="30" width="60" height="18" rx="9" fill="#fff8ef" stroke="#f0cfa3"/>
+<text x="1067" y="42.5" font-size="9.5" font-weight="700" fill="#b35c00" text-anchor="middle" letter-spacing="0.5">PARTIAL</text>
+<rect x="1107" y="30" width="60" height="18" rx="9" fill="#fbfbfa" stroke="#c4c2bb" stroke-dasharray="3 2"/>
+<text x="1137" y="42.5" font-size="9.5" font-weight="700" fill="#77756d" text-anchor="middle" letter-spacing="0.5">PLANNED</text>
+<circle cx="894" cy="39" r="9" fill="#cf222e"/>
+<text x="894" y="43" font-size="10" font-weight="700" fill="#ffffff" text-anchor="middle">T</text>
+<text x="908" y="43" font-size="12" font-weight="600" fill="#0b0b0b" text-anchor="start">threat</text>
+<rect x="33" y="98" width="184" height="278" rx="14" fill="#f3f2ee" stroke="#dcdad3" stroke-dasharray="7 5"/>
+<text x="45" y="114" font-size="10" font-weight="700" fill="#57564f" text-anchor="start" letter-spacing="0.8">DEVELOPER LAPTOP</text>
+<rect x="229" y="98" width="188" height="278" rx="14" fill="#f3f2ee" stroke="#dcdad3" stroke-dasharray="7 5"/>
+<text x="241" y="114" font-size="10" font-weight="700" fill="#57564f" text-anchor="start" letter-spacing="0.8">GITHUB</text>
+<rect x="429" y="98" width="630" height="278" rx="14" fill="#f3f2ee" stroke="#dcdad3" stroke-dasharray="7 5"/>
+<text x="441" y="114" font-size="10" font-weight="700" fill="#57564f" text-anchor="start" letter-spacing="0.8">KUBERNETES CLUSTER  (local: kind)</text>
+<rect x="1071" y="98" width="176" height="278" rx="14" fill="#f3f2ee" stroke="#dcdad3" stroke-dasharray="7 5"/>
+<text x="1083" y="114" font-size="10" font-weight="700" fill="#57564f" text-anchor="start" letter-spacing="0.8">CLIENTS</text>
+<line x1="191.9" y1="214.0" x2="256.1" y2="190.0" stroke="#8a887f" stroke-width="1.8" marker-end="url(#arrow)"/>
+<line x1="323.0" y1="190.0" x2="323.0" y2="226.0" stroke="#8a887f" stroke-width="1.8" marker-end="url(#arrow)"/>
+<line x1="323.0" y1="276.0" x2="323.0" y2="312.0" stroke="#8a887f" stroke-width="1.8" marker-end="url(#arrow)"/>
+<line x1="353.9" y1="312.0" x2="492.1" y2="200.0" stroke="#8a887f" stroke-width="1.8" marker-end="url(#arrow)"/>
+<line x1="605.0" y1="175.0" x2="651.0" y2="175.0" stroke="#8a887f" stroke-width="1.8" marker-end="url(#arrow)"/>
+<line x1="815.0" y1="175.0" x2="861.0" y2="175.0" stroke="#8a887f" stroke-width="1.8" stroke-dasharray="5 4" marker-end="url(#arrow)"/>
+<line x1="815.0" y1="339.0" x2="861.0" y2="339.0" stroke="#8a887f" stroke-width="1.8" stroke-dasharray="5 4" marker-end="url(#arrow)"/>
+<line x1="943.0" y1="200.0" x2="943.0" y2="314.0" stroke="#8a887f" stroke-width="1.8" stroke-dasharray="5 4" marker-end="url(#arrow)"/>
+<line x1="1077.0" y1="339.0" x2="1025.0" y2="339.0" stroke="#8a887f" stroke-width="1.8" stroke-dasharray="5 4" marker-end="url(#arrow)"/>
+<line x1="861.0" y1="339.0" x2="605.0" y2="339.0" stroke="#8a887f" stroke-width="1.8" stroke-dasharray="5 4" marker-end="url(#arrow)"/>
+<line x1="523.0" y1="314.0" x2="523.0" y2="200.0" stroke="#8a887f" stroke-width="1.8" stroke-dasharray="5 4" marker-end="url(#arrow)"/>
+<rect x="43" y="214" width="164" height="50" rx="9" fill="#ffffff" stroke="#c8e4d1"/>
+<text x="55" y="235" font-size="12.5" font-weight="600" fill="#0b0b0b" text-anchor="start">Code + configs</text>
+<text x="55" y="251" font-size="10.5" font-weight="400" fill="#57564f" text-anchor="start">git commit, PR</text>
+<rect x="241" y="140" width="164" height="50" rx="9" fill="#ffffff" stroke="#c8e4d1"/>
+<text x="253" y="161" font-size="12.5" font-weight="600" fill="#0b0b0b" text-anchor="start">Repository</text>
+<text x="253" y="177" font-size="10.5" font-weight="400" fill="#57564f" text-anchor="start">PR review, main branch</text>
+<rect x="241" y="226" width="164" height="50" rx="9" fill="#ffffff" stroke="#c8e4d1"/>
+<text x="253" y="247" font-size="12.5" font-weight="600" fill="#0b0b0b" text-anchor="start">GitHub Actions</text>
+<text x="253" y="263" font-size="10.5" font-weight="400" fill="#57564f" text-anchor="start">tests, image, scans</text>
+<rect x="241" y="312" width="164" height="50" rx="9" fill="#ffffff" stroke="#c8e4d1"/>
+<text x="253" y="333" font-size="12.5" font-weight="600" fill="#0b0b0b" text-anchor="start">Image registry</text>
+<text x="253" y="349" font-size="10.5" font-weight="400" fill="#57564f" text-anchor="start">pipeline image digest</text>
+<rect x="441" y="150" width="164" height="50" rx="9" fill="#ffffff" stroke="#c8e4d1"/>
+<text x="453" y="171" font-size="12.5" font-weight="600" fill="#0b0b0b" text-anchor="start">Kubeflow Pipelines</text>
+<text x="453" y="187" font-size="10.5" font-weight="400" fill="#57564f" text-anchor="start">train, gate, SeaweedFS</text>
+<rect x="651" y="150" width="164" height="50" rx="9" fill="#ffffff" stroke="#c8e4d1"/>
+<text x="663" y="171" font-size="12.5" font-weight="600" fill="#0b0b0b" text-anchor="start">MLflow + zot</text>
+<text x="663" y="187" font-size="10.5" font-weight="400" fill="#57564f" text-anchor="start">versions, OCI models</text>
+<rect x="861" y="150" width="164" height="50" rx="9" fill="#fbfbfa" stroke="#c4c2bb" stroke-dasharray="5 4"/>
+<text x="873" y="171" font-size="12.5" font-weight="600" fill="#57564f" text-anchor="start">Kyverno</text>
+<text x="873" y="187" font-size="10.5" font-weight="400" fill="#8a887f" text-anchor="start">verify model signature</text>
+<rect x="441" y="314" width="164" height="50" rx="9" fill="#fbfbfa" stroke="#c4c2bb" stroke-dasharray="5 4"/>
+<text x="453" y="335" font-size="12.5" font-weight="600" fill="#57564f" text-anchor="start">Prometheus</text>
+<text x="453" y="351" font-size="10.5" font-weight="400" fill="#8a887f" text-anchor="start">metrics + Evidently drift</text>
+<rect x="651" y="314" width="164" height="50" rx="9" fill="#fbfbfa" stroke="#c4c2bb" stroke-dasharray="5 4"/>
+<text x="663" y="335" font-size="12.5" font-weight="600" fill="#57564f" text-anchor="start">Argo CD</text>
+<text x="663" y="351" font-size="10.5" font-weight="400" fill="#8a887f" text-anchor="start">deploys digest from Git</text>
+<rect x="861" y="314" width="164" height="50" rx="9" fill="#fbfbfa" stroke="#c4c2bb" stroke-dasharray="5 4"/>
+<text x="873" y="335" font-size="12.5" font-weight="600" fill="#57564f" text-anchor="start">KServe</text>
+<text x="873" y="351" font-size="10.5" font-weight="400" fill="#8a887f" text-anchor="start">ticket-router endpoint</text>
+<rect x="1077" y="314" width="164" height="50" rx="9" fill="#fbfbfa" stroke="#c4c2bb" stroke-dasharray="5 4"/>
+<text x="1089" y="335" font-size="12.5" font-weight="600" fill="#57564f" text-anchor="start">Support tool</text>
+<text x="1089" y="351" font-size="10.5" font-weight="400" fill="#8a887f" text-anchor="start">sends tickets</text>
+<rect x="214.7" y="190.1" width="34" height="16" rx="8" fill="#f3f2ee"/>
+<text x="232" y="203" font-size="10" font-weight="600" fill="#8a887f" text-anchor="middle">push</text>
+<rect x="404.6" y="233.6" width="70" height="16" rx="8" fill="#f3f2ee"/>
+<text x="440" y="246" font-size="10" font-weight="600" fill="#8a887f" text-anchor="middle">pull image</text>
+<rect x="920.0" y="248.0" width="46" height="16" rx="8" fill="#f3f2ee"/>
+<text x="943" y="260" font-size="10" font-weight="600" fill="#8a887f" text-anchor="middle">verify</text>
+<rect x="497.0" y="248.0" width="52" height="16" rx="8" fill="#f3f2ee"/>
+<text x="523" y="260" font-size="10" font-weight="600" fill="#8a887f" text-anchor="middle">retrain</text>
+<circle cx="595" cy="149" r="11" fill="#cf222e" stroke="#fbfbfa" stroke-width="2"/>
+<text x="595" y="152.8" font-size="10.5" font-weight="700" fill="#ffffff" text-anchor="middle">T1</text>
+<circle cx="571" cy="149" r="11" fill="#cf222e" stroke="#fbfbfa" stroke-width="2"/>
+<text x="571" y="152.8" font-size="10.5" font-weight="700" fill="#ffffff" text-anchor="middle">T2</text>
+<circle cx="395" cy="311" r="11" fill="#cf222e" stroke="#fbfbfa" stroke-width="2"/>
+<text x="395" y="314.8" font-size="10.5" font-weight="700" fill="#ffffff" text-anchor="middle">T3</text>
+<circle cx="395" cy="225" r="11" fill="#cf222e" stroke="#fbfbfa" stroke-width="2"/>
+<text x="395" y="228.8" font-size="10.5" font-weight="700" fill="#ffffff" text-anchor="middle">T4</text>
+<circle cx="395" cy="139" r="11" fill="#cf222e" stroke="#fbfbfa" stroke-width="2"/>
+<text x="395" y="142.8" font-size="10.5" font-weight="700" fill="#ffffff" text-anchor="middle">T5</text>
+<circle cx="547" cy="149" r="11" fill="#cf222e" stroke="#fbfbfa" stroke-width="2"/>
+<text x="547" y="152.8" font-size="10.5" font-weight="700" fill="#ffffff" text-anchor="middle">T6</text>
+<circle cx="805" cy="149" r="11" fill="#cf222e" stroke="#fbfbfa" stroke-width="2"/>
+<text x="805" y="152.8" font-size="10.5" font-weight="700" fill="#ffffff" text-anchor="middle">T7</text>
+<circle cx="1015" cy="313" r="11" fill="#cf222e" stroke="#fbfbfa" stroke-width="2"/>
+<text x="1015" y="316.8" font-size="10.5" font-weight="700" fill="#ffffff" text-anchor="middle">T8</text>
+<circle cx="991" cy="313" r="11" fill="#cf222e" stroke="#fbfbfa" stroke-width="2"/>
+<text x="991" y="316.8" font-size="10.5" font-weight="700" fill="#ffffff" text-anchor="middle">T9</text>
+<circle cx="595" cy="313" r="11" fill="#cf222e" stroke="#fbfbfa" stroke-width="2"/>
+<text x="595" y="316.8" font-size="9.5" font-weight="700" fill="#ffffff" text-anchor="middle">T10</text>
+<rect x="33" y="398" width="596" height="28" rx="8" fill="#f3f2ee"/>
+<circle cx="51" cy="412" r="11" fill="#cf222e"/>
+<text x="51" y="415.8" font-size="10.5" font-weight="700" fill="#ffffff" text-anchor="middle">T1</text>
+<text x="71" y="410" font-size="12" font-weight="650" fill="#0b0b0b" text-anchor="start">Poisoned or broken training data</text>
+<text x="71" y="423" font-size="10.5" font-weight="400" fill="#57564f" text-anchor="start">data contract on every split, content fingerprints</text>
+<text x="537" y="416" font-size="10" font-weight="600" fill="#8a887f" text-anchor="end">ML02</text>
+<rect x="559" y="403" width="60" height="18" rx="9" fill="#fff8ef" stroke="#f0cfa3"/>
+<text x="589" y="415.5" font-size="9.5" font-weight="700" fill="#b35c00" text-anchor="middle" letter-spacing="0.5">PARTIAL</text>
+<rect x="33" y="432" width="596" height="28" rx="8" fill="#f3f2ee"/>
+<circle cx="51" cy="446" r="11" fill="#cf222e"/>
+<text x="51" y="449.8" font-size="10.5" font-weight="700" fill="#ffffff" text-anchor="middle">T2</text>
+<text x="71" y="444" font-size="12" font-weight="650" fill="#0b0b0b" text-anchor="start">Personal data in training data</text>
+<text x="71" y="457" font-size="10.5" font-weight="400" fill="#57564f" text-anchor="start">PII scan before training (today: synthetic data only)</text>
+<text x="537" y="450" font-size="10" font-weight="600" fill="#8a887f" text-anchor="end"></text>
+<rect x="559" y="437" width="60" height="18" rx="9" fill="#fbfbfa" stroke="#c4c2bb" stroke-dasharray="3 2"/>
+<text x="589" y="449.5" font-size="9.5" font-weight="700" fill="#77756d" text-anchor="middle" letter-spacing="0.5">PLANNED</text>
+<rect x="33" y="466" width="596" height="28" rx="8" fill="#f3f2ee"/>
+<circle cx="51" cy="480" r="11" fill="#cf222e"/>
+<text x="51" y="483.8" font-size="10.5" font-weight="700" fill="#ffffff" text-anchor="middle">T3</text>
+<text x="71" y="478" font-size="12" font-weight="650" fill="#0b0b0b" text-anchor="start">Compromised dependency or base image</text>
+<text x="71" y="491" font-size="10.5" font-weight="400" fill="#57564f" text-anchor="start">pinned versions and base digest, Trivy gate, Dependabot</text>
+<text x="537" y="484" font-size="10" font-weight="600" fill="#8a887f" text-anchor="end">ML06</text>
+<rect x="572" y="471" width="47" height="18" rx="9" fill="#f0f8f2" stroke="#b9dcc4"/>
+<text x="596" y="483.5" font-size="9.5" font-weight="700" fill="#1a7f37" text-anchor="middle" letter-spacing="0.5">BUILT</text>
+<rect x="33" y="500" width="596" height="28" rx="8" fill="#f3f2ee"/>
+<circle cx="51" cy="514" r="11" fill="#cf222e"/>
+<text x="51" y="517.8" font-size="10.5" font-weight="700" fill="#ffffff" text-anchor="middle">T4</text>
+<text x="71" y="512" font-size="12" font-weight="650" fill="#0b0b0b" text-anchor="start">Compromised CI or leaked secret</text>
+<text x="71" y="525" font-size="10.5" font-weight="400" fill="#57564f" text-anchor="start">actions pinned by SHA, read-only tokens, no stored secrets</text>
+<text x="537" y="518" font-size="10" font-weight="600" fill="#8a887f" text-anchor="end">ML06</text>
+<rect x="559" y="505" width="60" height="18" rx="9" fill="#fff8ef" stroke="#f0cfa3"/>
+<text x="589" y="517.5" font-size="9.5" font-weight="700" fill="#b35c00" text-anchor="middle" letter-spacing="0.5">PARTIAL</text>
+<rect x="33" y="534" width="596" height="28" rx="8" fill="#f3f2ee"/>
+<circle cx="51" cy="548" r="11" fill="#cf222e"/>
+<text x="51" y="551.8" font-size="10.5" font-weight="700" fill="#ffffff" text-anchor="middle">T5</text>
+<text x="71" y="546" font-size="12" font-weight="650" fill="#0b0b0b" text-anchor="start">Unreviewed change to code or gate</text>
+<text x="71" y="559" font-size="10.5" font-weight="400" fill="#57564f" text-anchor="start">automated PR review; CODEOWNERS and branch rules next</text>
+<text x="537" y="552" font-size="10" font-weight="600" fill="#8a887f" text-anchor="end"></text>
+<rect x="559" y="539" width="60" height="18" rx="9" fill="#fff8ef" stroke="#f0cfa3"/>
+<text x="589" y="551.5" font-size="9.5" font-weight="700" fill="#b35c00" text-anchor="middle" letter-spacing="0.5">PARTIAL</text>
+<rect x="651" y="398" width="596" height="28" rx="8" fill="#f3f2ee"/>
+<circle cx="669" cy="412" r="11" fill="#cf222e"/>
+<text x="669" y="415.8" font-size="10.5" font-weight="700" fill="#ffffff" text-anchor="middle">T6</text>
+<text x="689" y="410" font-size="12" font-weight="650" fill="#0b0b0b" text-anchor="start">Leakage or regression hides a worse model</text>
+<text x="689" y="423" font-size="10.5" font-weight="400" fill="#57564f" text-anchor="start">train/test overlap measure, evaluation gate</text>
+<text x="1155" y="416" font-size="10" font-weight="600" fill="#8a887f" text-anchor="end">ML08</text>
+<rect x="1190" y="403" width="47" height="18" rx="9" fill="#f0f8f2" stroke="#b9dcc4"/>
+<text x="1214" y="415.5" font-size="9.5" font-weight="700" fill="#1a7f37" text-anchor="middle" letter-spacing="0.5">BUILT</text>
+<rect x="651" y="432" width="596" height="28" rx="8" fill="#f3f2ee"/>
+<circle cx="669" cy="446" r="11" fill="#cf222e"/>
+<text x="669" y="449.8" font-size="10.5" font-weight="700" fill="#ffffff" text-anchor="middle">T7</text>
+<text x="689" y="444" font-size="12" font-weight="650" fill="#0b0b0b" text-anchor="start">Model swapped or tampered after approval</text>
+<text x="689" y="457" font-size="10.5" font-weight="400" fill="#57564f" text-anchor="start">signature and digest pinning, checked at admission</text>
+<text x="1155" y="450" font-size="10" font-weight="600" fill="#8a887f" text-anchor="end">ML10</text>
+<rect x="1177" y="437" width="60" height="18" rx="9" fill="#fbfbfa" stroke="#c4c2bb" stroke-dasharray="3 2"/>
+<text x="1207" y="449.5" font-size="9.5" font-weight="700" fill="#77756d" text-anchor="middle" letter-spacing="0.5">PLANNED</text>
+<rect x="651" y="466" width="596" height="28" rx="8" fill="#f3f2ee"/>
+<circle cx="669" cy="480" r="11" fill="#cf222e"/>
+<text x="669" y="483.8" font-size="10.5" font-weight="700" fill="#ffffff" text-anchor="middle">T8</text>
+<text x="689" y="478" font-size="12" font-weight="650" fill="#0b0b0b" text-anchor="start">Model file runs code when loaded (pickle)</text>
+<text x="689" y="491" font-size="10.5" font-weight="400" fill="#57564f" text-anchor="start">skops format, load only signed models</text>
+<text x="1155" y="484" font-size="10" font-weight="600" fill="#8a887f" text-anchor="end">ML06</text>
+<rect x="1177" y="471" width="60" height="18" rx="9" fill="#fbfbfa" stroke="#c4c2bb" stroke-dasharray="3 2"/>
+<text x="1207" y="483.5" font-size="9.5" font-weight="700" fill="#77756d" text-anchor="middle" letter-spacing="0.5">PLANNED</text>
+<rect x="651" y="500" width="596" height="28" rx="8" fill="#f3f2ee"/>
+<circle cx="669" cy="514" r="11" fill="#cf222e"/>
+<text x="669" y="517.8" font-size="10.5" font-weight="700" fill="#ffffff" text-anchor="middle">T9</text>
+<text x="689" y="512" font-size="12" font-weight="650" fill="#0b0b0b" text-anchor="start">Endpoint abuse: evasion, theft, flooding</text>
+<text x="689" y="525" font-size="10.5" font-weight="400" fill="#57564f" text-anchor="start">input schema, auth and rate limits at the gateway</text>
+<text x="1155" y="518" font-size="10" font-weight="600" fill="#8a887f" text-anchor="end">ML01, ML05</text>
+<rect x="1177" y="505" width="60" height="18" rx="9" fill="#fbfbfa" stroke="#c4c2bb" stroke-dasharray="3 2"/>
+<text x="1207" y="517.5" font-size="9.5" font-weight="700" fill="#77756d" text-anchor="middle" letter-spacing="0.5">PLANNED</text>
+<rect x="651" y="534" width="596" height="28" rx="8" fill="#f3f2ee"/>
+<circle cx="669" cy="548" r="11" fill="#cf222e"/>
+<text x="669" y="551.8" font-size="9.5" font-weight="700" fill="#ffffff" text-anchor="middle">T10</text>
+<text x="689" y="546" font-size="12" font-weight="650" fill="#0b0b0b" text-anchor="start">Silent drift degrades decisions</text>
+<text x="689" y="559" font-size="10.5" font-weight="400" fill="#57564f" text-anchor="start">drift and accuracy alerts; one-step rollback</text>
+<text x="1155" y="552" font-size="10" font-weight="600" fill="#8a887f" text-anchor="end"></text>
+<rect x="1177" y="539" width="60" height="18" rx="9" fill="#fff8ef" stroke="#f0cfa3"/>
+<text x="1207" y="551.5" font-size="9.5" font-weight="700" fill="#b35c00" text-anchor="middle" letter-spacing="0.5">PARTIAL</text>
+<text x="33" y="590" font-size="11" font-weight="500" fill="#8a887f" text-anchor="start">OWASP Machine Learning Security Top 10 (2023): ML01 input manipulation · ML02 data poisoning · ML05 model theft · ML06 AI supply chain · ML08 model skewing · ML10 model poisoning.</text>
+</svg>

@@ -1,0 +1,85 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="330" viewBox="0 0 1280 330" role="img" aria-labelledby="title desc" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">
+<title id="title">Audit trail from a prediction back to its data</title>
+<desc id="desc">Seven linked records: tickets with their data contract report, data splits with content fingerprints, the training run with its parameter hash and run id, the model version with its gate decision and model card, then the signed artifact, the deployment and the prediction, which are planned. Each record points to the one before it, so any prediction can be traced back to its data and its approval.</desc>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#6e7681"/></marker></defs>
+<rect x="1" y="1" width="1278" height="328" rx="18" fill="#0f141a" stroke="#2a313c"/>
+<text x="33" y="42" font-size="22" font-weight="700" fill="#e6edf3" text-anchor="start">Audit trail: from any prediction back to its data</text>
+<text x="33" y="64" font-size="13" font-weight="400" fill="#a3adb8" text-anchor="start">Each record links to the one it was made from, so an auditor can ask “which model, trained on what, approved by whom?” and get an answer from records, not memory.</text>
+<rect x="980" y="30" width="47" height="18" rx="9" fill="#0f1f16" stroke="#23472f"/>
+<text x="1004" y="42.5" font-size="9.5" font-weight="700" fill="#3fb950" text-anchor="middle" letter-spacing="0.5">BUILT</text>
+<rect x="1037" y="30" width="60" height="18" rx="9" fill="#1f1608" stroke="#5a4116"/>
+<text x="1067" y="42.5" font-size="9.5" font-weight="700" fill="#e3a33a" text-anchor="middle" letter-spacing="0.5">PARTIAL</text>
+<rect x="1107" y="30" width="60" height="18" rx="9" fill="#0f141a" stroke="#3b434e" stroke-dasharray="3 2"/>
+<text x="1137" y="42.5" font-size="9.5" font-weight="700" fill="#8b949e" text-anchor="middle" letter-spacing="0.5">PLANNED</text>
+<rect x="33.0" y="108" width="158.0" height="132" rx="12" fill="#0f1f16" stroke="#23472f"/>
+<circle cx="53.0" cy="130" r="11" fill="#3fb950"/>
+<text x="53" y="134" font-size="11" font-weight="700" fill="#0f141a" text-anchor="middle">1</text>
+<text x="71" y="135" font-size="13" font-weight="700" fill="#e6edf3" text-anchor="start">Tickets</text>
+<text x="47" y="164" font-size="9" font-weight="700" fill="#7d8590" text-anchor="start" letter-spacing="0.6">RECORDS</text>
+<text x="47" y="180" font-size="11" font-weight="500" fill="#e6edf3" text-anchor="start">data contract report</text>
+<text x="47" y="208" font-size="10.5" font-family="SFMono-Regular, Menlo, Consolas, monospace" fill="#a3adb8">schema ok, 20+/team</text>
+<rect x="134" y="216" width="47" height="18" rx="9" fill="#0f1f16" stroke="#23472f"/>
+<text x="158" y="228.5" font-size="9.5" font-weight="700" fill="#3fb950" text-anchor="middle" letter-spacing="0.5">BUILT</text>
+<rect x="209.0" y="108" width="158.0" height="132" rx="12" fill="#0f1f16" stroke="#23472f"/>
+<circle cx="229.0" cy="130" r="11" fill="#3fb950"/>
+<text x="229" y="134" font-size="11" font-weight="700" fill="#0f141a" text-anchor="middle">2</text>
+<text x="247" y="135" font-size="13" font-weight="700" fill="#e6edf3" text-anchor="start">Data splits</text>
+<text x="223" y="164" font-size="9" font-weight="700" fill="#7d8590" text-anchor="start" letter-spacing="0.6">RECORDS</text>
+<text x="223" y="180" font-size="11" font-weight="500" fill="#e6edf3" text-anchor="start">content fingerprint</text>
+<text x="223" y="208" font-size="10.5" font-family="SFMono-Regular, Menlo, Consolas, monospace" fill="#a3adb8">sha256:e3bf3b58…</text>
+<rect x="310" y="216" width="47" height="18" rx="9" fill="#0f1f16" stroke="#23472f"/>
+<text x="334" y="228.5" font-size="9.5" font-weight="700" fill="#3fb950" text-anchor="middle" letter-spacing="0.5">BUILT</text>
+<line x1="194.0" y1="174" x2="206.0" y2="174" stroke="#6e7681" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="385.0" y="108" width="158.0" height="132" rx="12" fill="#0f1f16" stroke="#23472f"/>
+<circle cx="405.0" cy="130" r="11" fill="#3fb950"/>
+<text x="405" y="134" font-size="11" font-weight="700" fill="#0f141a" text-anchor="middle">3</text>
+<text x="423" y="135" font-size="13" font-weight="700" fill="#e6edf3" text-anchor="start">Training run</text>
+<text x="399" y="164" font-size="9" font-weight="700" fill="#7d8590" text-anchor="start" letter-spacing="0.6">RECORDS</text>
+<text x="399" y="180" font-size="11" font-weight="500" fill="#e6edf3" text-anchor="start">params hash, run id</text>
+<text x="399" y="208" font-size="10.5" font-family="SFMono-Regular, Menlo, Consolas, monospace" fill="#a3adb8">run 9cd31c76…</text>
+<rect x="486" y="216" width="47" height="18" rx="9" fill="#0f1f16" stroke="#23472f"/>
+<text x="510" y="228.5" font-size="9.5" font-weight="700" fill="#3fb950" text-anchor="middle" letter-spacing="0.5">BUILT</text>
+<line x1="370.0" y1="174" x2="382.0" y2="174" stroke="#6e7681" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="561.0" y="108" width="158.0" height="132" rx="12" fill="#0f1f16" stroke="#23472f"/>
+<circle cx="581.0" cy="130" r="11" fill="#3fb950"/>
+<text x="581" y="134" font-size="11" font-weight="700" fill="#0f141a" text-anchor="middle">4</text>
+<text x="599" y="135" font-size="13" font-weight="700" fill="#e6edf3" text-anchor="start">Model version</text>
+<text x="575" y="164" font-size="9" font-weight="700" fill="#7d8590" text-anchor="start" letter-spacing="0.6">RECORDS</text>
+<text x="575" y="180" font-size="11" font-weight="500" fill="#e6edf3" text-anchor="start">gate decision, card</text>
+<text x="575" y="208" font-size="10.5" font-family="SFMono-Regular, Menlo, Consolas, monospace" fill="#a3adb8">ticket-router v1</text>
+<rect x="662" y="216" width="47" height="18" rx="9" fill="#0f1f16" stroke="#23472f"/>
+<text x="686" y="228.5" font-size="9.5" font-weight="700" fill="#3fb950" text-anchor="middle" letter-spacing="0.5">BUILT</text>
+<line x1="546.0" y1="174" x2="558.0" y2="174" stroke="#6e7681" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="737.0" y="108" width="158.0" height="132" rx="12" fill="#131820" stroke="#3b434e" stroke-dasharray="6 5"/>
+<circle cx="757.0" cy="130" r="11" fill="#8b949e"/>
+<text x="757" y="134" font-size="11" font-weight="700" fill="#0f141a" text-anchor="middle">5</text>
+<text x="775" y="135" font-size="13" font-weight="700" fill="#a3adb8" text-anchor="start">Signed artifact</text>
+<text x="751" y="164" font-size="9" font-weight="700" fill="#7d8590" text-anchor="start" letter-spacing="0.6">RECORDS</text>
+<text x="751" y="180" font-size="11" font-weight="500" fill="#a3adb8" text-anchor="start">OCI digest, signature</text>
+<text x="751" y="208" font-size="10.5" font-family="SFMono-Regular, Menlo, Consolas, monospace" fill="#a3adb8">sha256:… + cosign</text>
+<rect x="825" y="216" width="60" height="18" rx="9" fill="#0f141a" stroke="#3b434e" stroke-dasharray="3 2"/>
+<text x="855" y="228.5" font-size="9.5" font-weight="700" fill="#8b949e" text-anchor="middle" letter-spacing="0.5">PLANNED</text>
+<line x1="722.0" y1="174" x2="734.0" y2="174" stroke="#6e7681" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="913.0" y="108" width="158.0" height="132" rx="12" fill="#131820" stroke="#3b434e" stroke-dasharray="6 5"/>
+<circle cx="933.0" cy="130" r="11" fill="#8b949e"/>
+<text x="933" y="134" font-size="11" font-weight="700" fill="#0f141a" text-anchor="middle">6</text>
+<text x="951" y="135" font-size="13" font-weight="700" fill="#a3adb8" text-anchor="start">Deployment</text>
+<text x="927" y="164" font-size="9" font-weight="700" fill="#7d8590" text-anchor="start" letter-spacing="0.6">RECORDS</text>
+<text x="927" y="180" font-size="11" font-weight="500" fill="#a3adb8" text-anchor="start">digest in Git, admission</text>
+<text x="927" y="208" font-size="10.5" font-family="SFMono-Regular, Menlo, Consolas, monospace" fill="#a3adb8">PR #… → Argo CD</text>
+<rect x="1001" y="216" width="60" height="18" rx="9" fill="#0f141a" stroke="#3b434e" stroke-dasharray="3 2"/>
+<text x="1031" y="228.5" font-size="9.5" font-weight="700" fill="#8b949e" text-anchor="middle" letter-spacing="0.5">PLANNED</text>
+<line x1="898.0" y1="174" x2="910.0" y2="174" stroke="#6e7681" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="1089.0" y="108" width="158.0" height="132" rx="12" fill="#131820" stroke="#3b434e" stroke-dasharray="6 5"/>
+<circle cx="1109.0" cy="130" r="11" fill="#8b949e"/>
+<text x="1109" y="134" font-size="11" font-weight="700" fill="#0f141a" text-anchor="middle">7</text>
+<text x="1127" y="135" font-size="13" font-weight="700" fill="#a3adb8" text-anchor="start">Prediction</text>
+<text x="1103" y="164" font-size="9" font-weight="700" fill="#7d8590" text-anchor="start" letter-spacing="0.6">RECORDS</text>
+<text x="1103" y="180" font-size="11" font-weight="500" fill="#a3adb8" text-anchor="start">model digest per request</text>
+<text x="1103" y="208" font-size="10.5" font-family="SFMono-Regular, Menlo, Consolas, monospace" fill="#a3adb8">logged with response</text>
+<rect x="1177" y="216" width="60" height="18" rx="9" fill="#0f141a" stroke="#3b434e" stroke-dasharray="3 2"/>
+<text x="1207" y="228.5" font-size="9.5" font-weight="700" fill="#8b949e" text-anchor="middle" letter-spacing="0.5">PLANNED</text>
+<line x1="1074.0" y1="174" x2="1086.0" y2="174" stroke="#6e7681" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="33" y="268" width="1214" height="40" rx="12" fill="#131820" stroke="#2c333d"/>
+<text x="51" y="293" font-size="12" font-weight="500" fill="#a3adb8" text-anchor="start">Records are made left to right; an audit reads right to left. Today the chain is unbroken from tickets to the registered model; signing and deployment records extend it to production.</text>
+</svg>

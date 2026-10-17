@@ -1,0 +1,165 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="600" viewBox="0 0 1280 600" role="img" aria-labelledby="title desc" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">
+<title id="title">Governance gates for the ML pipeline</title>
+<desc id="desc">Eight gates from idea to retirement. G0 use case and risk, G1 data approval, G2 reproducible training, G3 evaluation gate, G4 release approval, G5 supply chain, G6 deploy admission, G7 operate and retire. Each gate asks one question and lists the checks, the evidence it leaves, its owner and what enforces it, with a status of built, partial or planned.</desc>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#6e7681"/></marker></defs>
+<rect x="1" y="1" width="1278" height="598" rx="18" fill="#0f141a" stroke="#2a313c"/>
+<text x="33" y="42" font-size="22" font-weight="700" fill="#e6edf3" text-anchor="start">Governance: no model ships without evidence</text>
+<text x="33" y="64" font-size="13" font-weight="400" fill="#a3adb8" text-anchor="start">Eight gates from idea to retirement. Each asks one question, leaves evidence, has an owner, and is enforced by code wherever possible.</text>
+<rect x="980" y="30" width="47" height="18" rx="9" fill="#0f1f16" stroke="#23472f"/>
+<text x="1004" y="42.5" font-size="9.5" font-weight="700" fill="#3fb950" text-anchor="middle" letter-spacing="0.5">BUILT</text>
+<rect x="1037" y="30" width="60" height="18" rx="9" fill="#1f1608" stroke="#5a4116"/>
+<text x="1067" y="42.5" font-size="9.5" font-weight="700" fill="#e3a33a" text-anchor="middle" letter-spacing="0.5">PARTIAL</text>
+<rect x="1107" y="30" width="60" height="18" rx="9" fill="#0f141a" stroke="#3b434e" stroke-dasharray="3 2"/>
+<text x="1137" y="42.5" font-size="9.5" font-weight="700" fill="#8b949e" text-anchor="middle" letter-spacing="0.5">PLANNED</text>
+<rect x="33" y="104" width="284.5" height="176" rx="12" fill="#0d1117" stroke="#5a4116"/>
+<rect x="47" y="118" width="34" height="22" rx="6" fill="#e3a33a"/>
+<text x="64" y="133.5" font-size="12" font-weight="700" fill="#0f141a" text-anchor="middle">G0</text>
+<text x="89" y="134" font-size="14.5" font-weight="700" fill="#e6edf3" text-anchor="start">Use case &amp; risk</text>
+<rect x="245" y="120" width="60" height="18" rx="9" fill="#1f1608" stroke="#5a4116"/>
+<text x="275" y="132.5" font-size="9.5" font-weight="700" fill="#e3a33a" text-anchor="middle" letter-spacing="0.5">PARTIAL</text>
+<text x="47" y="160" font-size="12" font-weight="500" fill="#a3adb8" text-anchor="start" font-style="italic">Should we build this at all?</text>
+<line x1="47" y1="172" x2="303.5" y2="172" stroke="#2c333d"/>
+<text x="47" y="194" font-size="9.5" font-weight="700" fill="#7d8590" text-anchor="start" letter-spacing="0.6">CHECKS</text>
+<text x="121" y="194" font-size="12" font-weight="500" fill="#e6edf3" text-anchor="start">intended use, risk tier</text>
+<text x="47" y="216" font-size="9.5" font-weight="700" fill="#7d8590" text-anchor="start" letter-spacing="0.6">EVIDENCE</text>
+<text x="121" y="216" font-size="12" font-weight="500" fill="#e6edf3" text-anchor="start">model card, risk register</text>
+<text x="47" y="238" font-size="9.5" font-weight="700" fill="#7d8590" text-anchor="start" letter-spacing="0.6">OWNER</text>
+<text x="121" y="238" font-size="12" font-weight="500" fill="#e6edf3" text-anchor="start">model owner</text>
+<text x="47" y="260" font-size="9.5" font-weight="700" fill="#7d8590" text-anchor="start" letter-spacing="0.6">ENFORCED</text>
+<text x="121" y="260" font-size="12" font-weight="500" fill="#e6edf3" text-anchor="start">review before work starts</text>
+<rect x="341.5" y="104" width="284.5" height="176" rx="12" fill="#0d1117" stroke="#5a4116"/>
+<rect x="355.5" y="118" width="34" height="22" rx="6" fill="#e3a33a"/>
+<text x="372.5" y="133.5" font-size="12" font-weight="700" fill="#0f141a" text-anchor="middle">G1</text>
+<text x="397.5" y="134" font-size="14.5" font-weight="700" fill="#e6edf3" text-anchor="start">Data approval</text>
+<rect x="554" y="120" width="60" height="18" rx="9" fill="#1f1608" stroke="#5a4116"/>
+<text x="584" y="132.5" font-size="9.5" font-weight="700" fill="#e3a33a" text-anchor="middle" letter-spacing="0.5">PARTIAL</text>
+<text x="355.5" y="160" font-size="12" font-weight="500" fill="#a3adb8" text-anchor="start" font-style="italic">Can we trust the data?</text>
+<line x1="355.5" y1="172" x2="612" y2="172" stroke="#2c333d"/>
+<text x="355.5" y="194" font-size="9.5" font-weight="700" fill="#7d8590" text-anchor="start" letter-spacing="0.6">CHECKS</text>
+<text x="429.5" y="194" font-size="12" font-weight="500" fill="#e6edf3" text-anchor="start">schema, balance, dupes, PII</text>
+<text x="355.5" y="216" font-size="9.5" font-weight="700" fill="#7d8590" text-anchor="start" letter-spacing="0.6">EVIDENCE</text>
+<text x="429.5" y="216" font-size="12" font-weight="500" fill="#e6edf3" text-anchor="start">contract report, hashes</text>
+<text x="355.5" y="238" font-size="9.5" font-weight="700" fill="#7d8590" text-anchor="start" letter-spacing="0.6">OWNER</text>
+<text x="429.5" y="238" font-size="12" font-weight="500" fill="#e6edf3" text-anchor="start">data owner</text>
+<text x="355.5" y="260" font-size="9.5" font-weight="700" fill="#7d8590" text-anchor="start" letter-spacing="0.6">ENFORCED</text>
+<text x="429.5" y="260" font-size="12" font-weight="500" fill="#e6edf3" text-anchor="start">pandera, every run</text>
+<rect x="650" y="104" width="284.5" height="176" rx="12" fill="#0d1117" stroke="#5a4116"/>
+<rect x="664" y="118" width="34" height="22" rx="6" fill="#e3a33a"/>
+<text x="681" y="133.5" font-size="12" font-weight="700" fill="#0f141a" text-anchor="middle">G2</text>
+<text x="706" y="134" font-size="14.5" font-weight="700" fill="#e6edf3" text-anchor="start">Reproducibility</text>
+<rect x="862" y="120" width="60" height="18" rx="9" fill="#1f1608" stroke="#5a4116"/>
+<text x="892" y="132.5" font-size="9.5" font-weight="700" fill="#e3a33a" text-anchor="middle" letter-spacing="0.5">PARTIAL</text>
+<text x="664" y="160" font-size="12" font-weight="500" fill="#a3adb8" text-anchor="start" font-style="italic">Can we rebuild this model?</text>
+<line x1="664" y1="172" x2="920.5" y2="172" stroke="#2c333d"/>
+<text x="664" y="194" font-size="9.5" font-weight="700" fill="#7d8590" text-anchor="start" letter-spacing="0.6">CHECKS</text>
+<text x="738" y="194" font-size="12" font-weight="500" fill="#e6edf3" text-anchor="start">same inputs, same model</text>
+<text x="664" y="216" font-size="9.5" font-weight="700" fill="#7d8590" text-anchor="start" letter-spacing="0.6">EVIDENCE</text>
+<text x="738" y="216" font-size="12" font-weight="500" fill="#e6edf3" text-anchor="start">params + data hashes</text>
+<text x="664" y="238" font-size="9.5" font-weight="700" fill="#7d8590" text-anchor="start" letter-spacing="0.6">OWNER</text>
+<text x="738" y="238" font-size="12" font-weight="500" fill="#e6edf3" text-anchor="start">ML engineer</text>
+<text x="664" y="260" font-size="9.5" font-weight="700" fill="#7d8590" text-anchor="start" letter-spacing="0.6">ENFORCED</text>
+<text x="738" y="260" font-size="12" font-weight="500" fill="#e6edf3" text-anchor="start">MLflow run tags</text>
+<rect x="958.5" y="104" width="284.5" height="176" rx="12" fill="#0f1f16" stroke="#23472f"/>
+<rect x="972.5" y="118" width="34" height="22" rx="6" fill="#3fb950"/>
+<text x="989.5" y="133.5" font-size="12" font-weight="700" fill="#0f141a" text-anchor="middle">G3</text>
+<text x="1014.5" y="134" font-size="14.5" font-weight="700" fill="#e6edf3" text-anchor="start">Evaluation gate</text>
+<rect x="1184" y="120" width="47" height="18" rx="9" fill="#0f1f16" stroke="#23472f"/>
+<text x="1208" y="132.5" font-size="9.5" font-weight="700" fill="#3fb950" text-anchor="middle" letter-spacing="0.5">BUILT</text>
+<text x="972.5" y="160" font-size="12" font-weight="500" fill="#a3adb8" text-anchor="start" font-style="italic">Is it better than what runs?</text>
+<line x1="972.5" y1="172" x2="1229" y2="172" stroke="#2c333d"/>
+<text x="972.5" y="194" font-size="9.5" font-weight="700" fill="#7d8590" text-anchor="start" letter-spacing="0.6">CHECKS</text>
+<text x="1046.5" y="194" font-size="12" font-weight="500" fill="#e6edf3" text-anchor="start">floors, no regression</text>
+<text x="972.5" y="216" font-size="9.5" font-weight="700" fill="#7d8590" text-anchor="start" letter-spacing="0.6">EVIDENCE</text>
+<text x="1046.5" y="216" font-size="12" font-weight="500" fill="#e6edf3" text-anchor="start">gate.json, gate.md</text>
+<text x="972.5" y="238" font-size="9.5" font-weight="700" fill="#7d8590" text-anchor="start" letter-spacing="0.6">OWNER</text>
+<text x="1046.5" y="238" font-size="12" font-weight="500" fill="#e6edf3" text-anchor="start">ML engineer</text>
+<text x="972.5" y="260" font-size="9.5" font-weight="700" fill="#7d8590" text-anchor="start" letter-spacing="0.6">ENFORCED</text>
+<text x="1046.5" y="260" font-size="12" font-weight="500" fill="#e6edf3" text-anchor="start">smlops gate, exit 1</text>
+<rect x="33" y="328" width="284.5" height="176" rx="12" fill="#131820" stroke="#3b434e" stroke-dasharray="6 5"/>
+<rect x="47" y="342" width="34" height="22" rx="6" fill="#8b949e"/>
+<text x="64" y="357.5" font-size="12" font-weight="700" fill="#0f141a" text-anchor="middle">G4</text>
+<text x="89" y="358" font-size="14.5" font-weight="700" fill="#e6edf3" text-anchor="start">Release approval</text>
+<rect x="245" y="344" width="60" height="18" rx="9" fill="#0f141a" stroke="#3b434e" stroke-dasharray="3 2"/>
+<text x="275" y="356.5" font-size="9.5" font-weight="700" fill="#8b949e" text-anchor="middle" letter-spacing="0.5">PLANNED</text>
+<text x="47" y="384" font-size="12" font-weight="500" fill="#a3adb8" text-anchor="start" font-style="italic">Did someone else approve it?</text>
+<line x1="47" y1="396" x2="303.5" y2="396" stroke="#2c333d"/>
+<text x="47" y="418" font-size="9.5" font-weight="700" fill="#7d8590" text-anchor="start" letter-spacing="0.6">CHECKS</text>
+<text x="121" y="418" font-size="12" font-weight="500" fill="#a3adb8" text-anchor="start">second-person review</text>
+<text x="47" y="440" font-size="9.5" font-weight="700" fill="#7d8590" text-anchor="start" letter-spacing="0.6">EVIDENCE</text>
+<text x="121" y="440" font-size="12" font-weight="500" fill="#a3adb8" text-anchor="start">promotion pull request</text>
+<text x="47" y="462" font-size="9.5" font-weight="700" fill="#7d8590" text-anchor="start" letter-spacing="0.6">OWNER</text>
+<text x="121" y="462" font-size="12" font-weight="500" fill="#a3adb8" text-anchor="start">approver, not author</text>
+<text x="47" y="484" font-size="9.5" font-weight="700" fill="#7d8590" text-anchor="start" letter-spacing="0.6">ENFORCED</text>
+<text x="121" y="484" font-size="12" font-weight="500" fill="#a3adb8" text-anchor="start">CODEOWNERS, branch rules</text>
+<rect x="341.5" y="328" width="284.5" height="176" rx="12" fill="#0d1117" stroke="#5a4116"/>
+<rect x="355.5" y="342" width="34" height="22" rx="6" fill="#e3a33a"/>
+<text x="372.5" y="357.5" font-size="12" font-weight="700" fill="#0f141a" text-anchor="middle">G5</text>
+<text x="397.5" y="358" font-size="14.5" font-weight="700" fill="#e6edf3" text-anchor="start">Supply chain</text>
+<rect x="554" y="344" width="60" height="18" rx="9" fill="#1f1608" stroke="#5a4116"/>
+<text x="584" y="356.5" font-size="9.5" font-weight="700" fill="#e3a33a" text-anchor="middle" letter-spacing="0.5">PARTIAL</text>
+<text x="355.5" y="384" font-size="12" font-weight="500" fill="#a3adb8" text-anchor="start" font-style="italic">Is the artifact what we built?</text>
+<line x1="355.5" y1="396" x2="612" y2="396" stroke="#2c333d"/>
+<text x="355.5" y="418" font-size="9.5" font-weight="700" fill="#7d8590" text-anchor="start" letter-spacing="0.6">CHECKS</text>
+<text x="429.5" y="418" font-size="12" font-weight="500" fill="#e6edf3" text-anchor="start">signed, provenance, CVEs</text>
+<text x="355.5" y="440" font-size="9.5" font-weight="700" fill="#7d8590" text-anchor="start" letter-spacing="0.6">EVIDENCE</text>
+<text x="429.5" y="440" font-size="12" font-weight="500" fill="#e6edf3" text-anchor="start">signature, ML-BOM, SLSA</text>
+<text x="355.5" y="462" font-size="9.5" font-weight="700" fill="#7d8590" text-anchor="start" letter-spacing="0.6">OWNER</text>
+<text x="429.5" y="462" font-size="12" font-weight="500" fill="#e6edf3" text-anchor="start">platform security</text>
+<text x="355.5" y="484" font-size="9.5" font-weight="700" fill="#7d8590" text-anchor="start" letter-spacing="0.6">ENFORCED</text>
+<text x="429.5" y="484" font-size="12" font-weight="500" fill="#e6edf3" text-anchor="start">cosign; Trivy in CI</text>
+<rect x="650" y="328" width="284.5" height="176" rx="12" fill="#131820" stroke="#3b434e" stroke-dasharray="6 5"/>
+<rect x="664" y="342" width="34" height="22" rx="6" fill="#8b949e"/>
+<text x="681" y="357.5" font-size="12" font-weight="700" fill="#0f141a" text-anchor="middle">G6</text>
+<text x="706" y="358" font-size="14.5" font-weight="700" fill="#e6edf3" text-anchor="start">Deploy admission</text>
+<rect x="862" y="344" width="60" height="18" rx="9" fill="#0f141a" stroke="#3b434e" stroke-dasharray="3 2"/>
+<text x="892" y="356.5" font-size="9.5" font-weight="700" fill="#8b949e" text-anchor="middle" letter-spacing="0.5">PLANNED</text>
+<text x="664" y="384" font-size="12" font-weight="500" fill="#a3adb8" text-anchor="start" font-style="italic">Will the cluster run only that?</text>
+<line x1="664" y1="396" x2="920.5" y2="396" stroke="#2c333d"/>
+<text x="664" y="418" font-size="9.5" font-weight="700" fill="#7d8590" text-anchor="start" letter-spacing="0.6">CHECKS</text>
+<text x="738" y="418" font-size="12" font-weight="500" fill="#a3adb8" text-anchor="start">only signed digests run</text>
+<text x="664" y="440" font-size="9.5" font-weight="700" fill="#7d8590" text-anchor="start" letter-spacing="0.6">EVIDENCE</text>
+<text x="738" y="440" font-size="12" font-weight="500" fill="#a3adb8" text-anchor="start">admission decisions</text>
+<text x="664" y="462" font-size="9.5" font-weight="700" fill="#7d8590" text-anchor="start" letter-spacing="0.6">OWNER</text>
+<text x="738" y="462" font-size="12" font-weight="500" fill="#a3adb8" text-anchor="start">platform</text>
+<text x="664" y="484" font-size="9.5" font-weight="700" fill="#7d8590" text-anchor="start" letter-spacing="0.6">ENFORCED</text>
+<text x="738" y="484" font-size="12" font-weight="500" fill="#a3adb8" text-anchor="start">Kyverno verifyImages</text>
+<rect x="958.5" y="328" width="284.5" height="176" rx="12" fill="#0d1117" stroke="#5a4116"/>
+<rect x="972.5" y="342" width="34" height="22" rx="6" fill="#e3a33a"/>
+<text x="989.5" y="357.5" font-size="12" font-weight="700" fill="#0f141a" text-anchor="middle">G7</text>
+<text x="1014.5" y="358" font-size="14.5" font-weight="700" fill="#e6edf3" text-anchor="start">Operate &amp; retire</text>
+<rect x="1171" y="344" width="60" height="18" rx="9" fill="#1f1608" stroke="#5a4116"/>
+<text x="1201" y="356.5" font-size="9.5" font-weight="700" fill="#e3a33a" text-anchor="middle" letter-spacing="0.5">PARTIAL</text>
+<text x="972.5" y="384" font-size="12" font-weight="500" fill="#a3adb8" text-anchor="start" font-style="italic">Still working? Can we undo it?</text>
+<line x1="972.5" y1="396" x2="1229" y2="396" stroke="#2c333d"/>
+<text x="972.5" y="418" font-size="9.5" font-weight="700" fill="#7d8590" text-anchor="start" letter-spacing="0.6">CHECKS</text>
+<text x="1046.5" y="418" font-size="12" font-weight="500" fill="#e6edf3" text-anchor="start">drift, accuracy, rollback</text>
+<text x="972.5" y="440" font-size="9.5" font-weight="700" fill="#7d8590" text-anchor="start" letter-spacing="0.6">EVIDENCE</text>
+<text x="1046.5" y="440" font-size="12" font-weight="500" fill="#e6edf3" text-anchor="start">alerts, rollback record</text>
+<text x="972.5" y="462" font-size="9.5" font-weight="700" fill="#7d8590" text-anchor="start" letter-spacing="0.6">OWNER</text>
+<text x="1046.5" y="462" font-size="12" font-weight="500" fill="#e6edf3" text-anchor="start">model owner, on-call</text>
+<text x="972.5" y="484" font-size="9.5" font-weight="700" fill="#7d8590" text-anchor="start" letter-spacing="0.6">ENFORCED</text>
+<text x="1046.5" y="484" font-size="12" font-weight="500" fill="#e6edf3" text-anchor="start">Evidently; registry alias</text>
+<line x1="320.5" y1="192.0" x2="338.5" y2="192.0" stroke="#6e7681" stroke-width="2" marker-end="url(#arrow)"/>
+<line x1="629" y1="192.0" x2="647" y2="192.0" stroke="#6e7681" stroke-width="2" marker-end="url(#arrow)"/>
+<line x1="937.5" y1="192.0" x2="955.5" y2="192.0" stroke="#6e7681" stroke-width="2" marker-end="url(#arrow)"/>
+<line x1="320.5" y1="416.0" x2="338.5" y2="416.0" stroke="#6e7681" stroke-width="2" marker-end="url(#arrow)"/>
+<line x1="629" y1="416.0" x2="647" y2="416.0" stroke="#6e7681" stroke-width="2" marker-end="url(#arrow)"/>
+<line x1="937.5" y1="416.0" x2="955.5" y2="416.0" stroke="#6e7681" stroke-width="2" marker-end="url(#arrow)"/>
+<path d="M1100.75 282 V296 Q1100.75 304 1092.75 304 H183.25 Q175.25 304 175.25 312 V324" fill="none" stroke="#6e7681" stroke-width="2" marker-end="url(#arrow)"/>
+<text x="33" y="544" font-size="10" font-weight="700" fill="#a3adb8" text-anchor="start" letter-spacing="0.8">POLICIES AS CODE</text>
+<rect x="170" y="526" width="143" height="26" rx="13" fill="#0f1f16" stroke="#23472f"/>
+<circle cx="184" cy="539" r="4" fill="#3fb950"/>
+<text x="194" y="543.5" font-size="11.5" font-weight="500" fill="#e6edf3" text-anchor="start">configs/gate.yaml</text>
+<rect x="323" y="526" width="207" height="26" rx="13" fill="#0f1f16" stroke="#23472f"/>
+<circle cx="337" cy="539" r="4" fill="#3fb950"/>
+<text x="347" y="543.5" font-size="11.5" font-weight="500" fill="#e6edf3" text-anchor="start">data contract · validate.py</text>
+<rect x="540" y="526" width="303" height="26" rx="13" fill="#0f1f16" stroke="#23472f"/>
+<circle cx="554" cy="539" r="4" fill="#3fb950"/>
+<text x="564" y="543.5" font-size="11.5" font-weight="500" fill="#e6edf3" text-anchor="start">configs/train.yaml (unknown keys rejected)</text>
+<rect x="852" y="526" width="162" height="26" rx="13" fill="#131820" stroke="#3b434e" stroke-dasharray="6 5"/>
+<circle cx="866" cy="539" r="4" fill="#8b949e"/>
+<text x="876" y="543.5" font-size="11.5" font-weight="500" fill="#a3adb8" text-anchor="start">Kyverno model policy</text>
+<rect x="1024" y="526" width="194" height="26" rx="13" fill="#131820" stroke="#3b434e" stroke-dasharray="6 5"/>
+<circle cx="1038" cy="539" r="4" fill="#8b949e"/>
+<text x="1048" y="543.5" font-size="11.5" font-weight="500" fill="#a3adb8" text-anchor="start">CODEOWNERS + branch rules</text>
+</svg>
