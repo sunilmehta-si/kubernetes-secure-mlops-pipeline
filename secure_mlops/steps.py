@@ -101,6 +101,8 @@ def publish(model, config: TrainConfig, data_dir: str | Path, fingerprints: dict
     promoted = registry.promote(version, decision)
     out = Path(output_dir)
     out.mkdir(parents=True, exist_ok=True)
+    (out / "release.json").write_text(json.dumps({"name": model_name, "version": version.version,
+                                                   "run_id": logged.run_id, "promoted": promoted}, indent=2) + "\n")
     (out / "evaluation.json").write_text(json.dumps(evaluation, indent=2) + "\n")
     (out / "gate.json").write_text(json.dumps(decision, indent=2) + "\n")
     (out / "gate.md").write_text(gate_markdown(decision, f"{model_name} v{version.version}"))

@@ -30,6 +30,9 @@ def _parser() -> argparse.ArgumentParser:
     t.add_argument("--tracking-uri", default="sqlite:///mlflow.db",
                    help="MLflow tracking and registry URI (default: sqlite:///mlflow.db).")
     t.add_argument("--output", "-o", default="runs/latest", help="Where to write evaluation and gate files.")
+    pr = sub.add_parser("promotion-request", help="Write the pull request body for promoting a run's model (gate G4).")
+    pr.add_argument("--run-dir", default="runs/latest", help="Output directory of smlops train (default: runs/latest).")
+    pr.add_argument("--output", "-o", help="Write Markdown here instead of stdout.")
     pl = sub.add_parser("pipeline", help="Compile or run the Kubeflow pipeline.")
     psub = pl.add_subparsers(dest="pipeline_command", required=True)
     c = psub.add_parser("compile", help="Write the pipeline as KFP v2 YAML, ready to upload to Kubeflow.")
@@ -154,6 +157,20 @@ def _cmd_pipeline(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_promotion_request(args: argparse.Namespace) -> int:
+    from .promotion import PromotionError, promotion_request
+    try:
+        text = promotion_request(args.run_dir)
+    except PromotionError as exc:
+        print(f"smlops: {exc}", file=sys.stderr)
+        return 1
+    if args.output:
+        Path(args.output).write_text(text)
+    else:
+        print(text, end="")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     args = _parser().parse_args(argv)
     if args.command == "data":
@@ -162,5 +179,7 @@ def main(argv: list[str] | None = None) -> int:
         return _cmd_train(args)
     if args.command == "pipeline":
         return _cmd_pipeline(args)
+    if args.command == "promotion-request":
+        return _cmd_promotion_request(args)
     _parser().print_help()
     return 0

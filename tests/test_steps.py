@@ -62,6 +62,20 @@ class StepsTests(unittest.TestCase):
         self.assertIn("model.skops", files)                           # never a pickle
         self.assertFalse({f for f in files if f.endswith((".pkl", ".pickle"))})
 
+    def test_promotion_request_only_for_a_passing_model(self):
+        from secure_mlops.promotion import PromotionError, promotion_request
+        self.run_once()
+        body = promotion_request(self.root / "out")
+        self.assertIn("# Promote router v1 to production", body)
+        self.assertIn("Replaces: nothing (first model)", body)
+        self.assertIn("- [ ] I am not the author", body)
+        self.assertIn("# Model card: router v1", body)
+        self.run_once(TrainConfig(c=0.05, min_df=5))
+        with self.assertRaisesRegex(PromotionError, "router v2 failed the evaluation gate"):
+            promotion_request(self.root / "out")
+        with self.assertRaisesRegex(PromotionError, "missing release.json"):
+            promotion_request(self.root / "nowhere")
+
     def test_bad_data_stops_before_training(self):
         test = self.root / "data/test.csv"
         test.write_text(test.read_text().replace(",email,", ",fax,", 1))
