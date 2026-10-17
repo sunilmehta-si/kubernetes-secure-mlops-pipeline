@@ -8,6 +8,7 @@ from tests.test_pipeline import compiled
 
 ROOT = Path(__file__).resolve().parents[1]
 DOC = (ROOT / "docs/architecture.md").read_text()
+DOC_GOV = (ROOT / "docs/governance-and-security.md").read_text()
 
 
 class ArchitectureDocTests(unittest.TestCase):
@@ -27,3 +28,12 @@ class ArchitectureDocTests(unittest.TestCase):
     def test_diagrams_are_closed_mermaid_blocks(self):
         for doc in (DOC, (ROOT / "README.md").read_text()):
             self.assertEqual(doc.count("```mermaid"), len(re.findall(r"```mermaid\n.*?\n```", doc, re.S)))
+
+
+class SecurityPolicyTests(unittest.TestCase):
+    def test_policy_asks_for_private_reports_and_links_the_threat_model(self):
+        text = (ROOT / "SECURITY.md").read_text()
+        self.assertIn("Report a vulnerability", text)
+        self.assertIn("not in a public issue", text)
+        self.assertIn("docs/governance-and-security.md#4-threat-model", text)
+        self.assertIn("## 4. Threat model", DOC_GOV)
