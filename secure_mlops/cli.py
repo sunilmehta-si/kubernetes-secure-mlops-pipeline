@@ -30,6 +30,10 @@ def _parser() -> argparse.ArgumentParser:
     t.add_argument("--tracking-uri", default="sqlite:///mlflow.db",
                    help="MLflow tracking and registry URI (default: sqlite:///mlflow.db).")
     t.add_argument("--output", "-o", default="runs/latest", help="Where to write evaluation and gate files.")
+    k = sub.add_parser("keys", help="Manage the local model signing key pair.")
+    ksub = k.add_subparsers(dest="keys_command", required=True)
+    kg = ksub.add_parser("generate", help="Make a P-256 key pair for signing models (private key stays local).")
+    kg.add_argument("--output", "-o", default="keys", help="Directory for the key pair (default: keys, git-ignored).")
     pr = sub.add_parser("promotion-request", help="Write the pull request body for promoting a run's model (gate G4).")
     pr.add_argument("--run-dir", default="runs/latest", help="Output directory of smlops train (default: runs/latest).")
     pr.add_argument("--output", "-o", help="Write Markdown here instead of stdout.")
@@ -157,6 +161,17 @@ def _cmd_pipeline(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_keys(args: argparse.Namespace) -> int:
+    from .signing import SignatureError, generate_keys
+    try:
+        private, public = generate_keys(args.output)
+    except SignatureError as exc:
+        print(f"smlops: {exc}", file=sys.stderr)
+        return 1
+    print(f"smlops: wrote {private} (keep it private) and {public} (share it with verifiers)", file=sys.stderr)
+    return 0
+
+
 def _cmd_promotion_request(args: argparse.Namespace) -> int:
     from .promotion import PromotionError, promotion_request
     try:
@@ -181,5 +196,7 @@ def main(argv: list[str] | None = None) -> int:
         return _cmd_pipeline(args)
     if args.command == "promotion-request":
         return _cmd_promotion_request(args)
+    if args.command == "keys":
+        return _cmd_keys(args)
     _parser().print_help()
     return 0

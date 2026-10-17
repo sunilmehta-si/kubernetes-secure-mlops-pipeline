@@ -13,3 +13,6 @@ venv/
 /local_outputs/
 .pytest_cache/
 .DS_Store
+# signing keys made by smlops keys generate: never commit them
+/keys/
+*.pem
