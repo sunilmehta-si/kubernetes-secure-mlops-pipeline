@@ -1,0 +1,14 @@
+# Risk register entry for ticket-router (gate G0). No model is promoted without a current entry.
+# Reviewed by the model owner when the use case, the data or the audience changes, and at least by review_by.
+name: ticket-router
+owner: "@sunilmehta-si"
+intended_use: Route customer support tickets to the owning team's queue.
+out_of_scope:
+  - Deciding refunds, account closures or any outcome for the customer.
+  - Tickets in languages other than English.
+risk_tier: minimal            # minimal | limited | high; see docs/governance-and-security.md, G0
+affected_people: Customers who open support tickets; support agents who receive them.
+human_in_the_loop: true       # an agent handles every ticket; the model only picks the queue
+personal_data: none           # none | pseudonymised | personal; synthetic tickets today
+reviewed: 2026-10-18
+review_by: 2027-04-18
