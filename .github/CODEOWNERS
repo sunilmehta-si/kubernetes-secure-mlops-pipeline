@@ -1,0 +1,17 @@
+# Who must review changes, once branch protection requires code-owner review on main (gate G4).
+# The files that decide what may reach production are listed on their own lines, so a future change of owner for
+# the rest of the code cannot quietly change who approves releases.
+
+*                                  @sunilmehta-si
+
+# release decisions: gate limits, data contract, training config, promotion and signing code
+/configs/                          @sunilmehta-si
+/secure_mlops/gate.py              @sunilmehta-si
+/secure_mlops/validate.py          @sunilmehta-si
+/secure_mlops/registry.py          @sunilmehta-si
+/secure_mlops/safeload.py          @sunilmehta-si
+
+# the build and its supply chain
+/.github/                          @sunilmehta-si
+/Dockerfile                        @sunilmehta-si
+/pyproject.toml                    @sunilmehta-si
