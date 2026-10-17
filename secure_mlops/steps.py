@@ -20,6 +20,7 @@ from .dataset import fingerprint, read
 from .evaluate import evaluate
 from .gate import GatePolicy, decide
 from .report import gate_markdown
+from .provenance import environment_info, git_info
 from .safeload import SAFE_FORMAT, load as safe_load
 from .tracking import log_run
 from .train import train
@@ -103,7 +104,8 @@ def publish(model, config: TrainConfig, data_dir: str | Path, fingerprints: dict
     (out / "evaluation.json").write_text(json.dumps(evaluation, indent=2) + "\n")
     (out / "gate.json").write_text(json.dumps(decision, indent=2) + "\n")
     (out / "gate.md").write_text(gate_markdown(decision, f"{model_name} v{version.version}"))
-    card = model_card(model_name, version.version, config, fingerprints, evaluation, decision)
+    card = model_card(model_name, version.version, config, fingerprints, evaluation, decision,
+                      provenance={**git_info(), **environment_info()})
     (out / "model_card.md").write_text(card)
     mlflow.MlflowClient().log_text(logged.run_id, card, "model_card.md")
     return Outcome(logged.run_id, version.version, promoted, decision["passed"], decision["failed"])

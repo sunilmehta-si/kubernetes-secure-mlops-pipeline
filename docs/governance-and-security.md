@@ -25,7 +25,7 @@ the code does.
 |---|---|---|---|---|
 | G0 Use case & risk | Should we build this at all? | Partial: every model card states the intended use and limits | [`card.py`](../secure_mlops/card.py) | A risk register entry and risk tier per model, reviewed before work starts |
 | G1 Data approval | Can we trust the data? | Partial: schema, per-team minimum, balance and duplicate checks on the whole set and on every split; content fingerprints | [`validate.py`](../secure_mlops/validate.py), [`dataset.py`](../secure_mlops/dataset.py) | PII scan before training; source provenance for real data |
-| G2 Reproducibility | Can we rebuild this exact model? | Partial: parameter hash, data fingerprints and package version on every run; unknown config keys rejected | [`tracking.py`](../secure_mlops/tracking.py), [`config.py`](../secure_mlops/config.py) | Record the git commit and the pipeline image digest, not only the package version |
+| G2 Reproducibility | Can we rebuild this exact model? | Partial: parameter hash, data fingerprints, git commit (runs from uncommitted changes are flagged), Python, platform and a hash of every installed package, with the frozen package list attached; unknown config keys rejected | [`tracking.py`](../secure_mlops/tracking.py), [`provenance.py`](../secure_mlops/provenance.py), [`config.py`](../secure_mlops/config.py) | The pipeline image by digest, recorded when the pipeline runs on a cluster |
 | G3 Evaluation gate | Is it better than what runs now? | **Built**: absolute floors, then no regression against the champion overall, per team and per slice; blocks with exit 1 | [`gate.py`](../secure_mlops/gate.py) | Fairness review when real user groups exist |
 | G4 Release approval | Did someone other than the author approve it? | Planned | | Promotion by pull request; CODEOWNERS and branch protection so the author cannot approve their own release |
 | G5 Supply chain | Is the artifact what we built? | Partial: dependencies and base image pinned, Trivy blocks fixable HIGH/CRITICAL CVEs, Dependabot | [`Dockerfile`](../Dockerfile), [`ci.yml`](../.github/workflows/ci.yml) | Model packaged as an OCI artifact with an ML-BOM, OpenSSF model signature, cosign signature and provenance |
@@ -99,7 +99,7 @@ The questions an auditor or incident review asks, and where the answer comes fro
 | Which model version is the champion, and which did it replace? | MLflow registry aliases `champion` and `previous` |
 | Why was it allowed to ship? | `gate.json` and `gate.md` on its training run: every check, value and limit |
 | What data was it trained and tested on? | Run tags `data.train`, `data.validation`, `data.test`: content fingerprints that match the data itself |
-| With which parameters and code? | Run tag `params_hash` and the logged parameters; `code_version` (git commit: planned) |
+| With which parameters and code? | Run tags `params_hash`, `code.git_commit` and `code.git_dirty`; `env.deps_hash` and `environment/requirements-frozen.txt` for the packages |
 | What is it for, and what are its limits? | `model_card.md` on the run, written from the records above |
 | Which model answered a given request? | Planned: the serving digest logged with every prediction |
 
@@ -134,7 +134,8 @@ advice: classify each real use case with your legal team.
 2. ~~**Safe model format (T8):** save models with skops instead of cloudpickle.~~ Done: pickles are refused.
 3. **Signing and admission (G5, G6, T7):** OCI model artifact, ML-BOM, signatures from CI's keyless identity, Kyverno
    policy that admits only those.
-4. **Reproducibility (G2):** record the git commit and pipeline image digest on every run.
+4. **Reproducibility (G2):** ~~record the git commit~~ done, with the environment; the pipeline image digest comes
+   with cluster runs.
 5. **Monitoring (G7, T9, T10):** gateway with authentication and rate limits, drift and accuracy alerts, prediction
    logging with the model digest.
 6. **Data (G1, T2):** PII scan, risk register entry per model (G0).

@@ -47,6 +47,8 @@ class StepsTests(unittest.TestCase):
         self.assertIn("against champion v1", card)
         self.assertIn("| security |", card)
         self.assertIn("synthetic tickets", card)
+        self.assertRegex(card, r"- Code: commit `([0-9a-f]{40}|unknown)`")
+        self.assertIn("packages `sha256:", card)
         run = mlflow.get_run(worse.run_id)
         self.assertIn("model_card.md", [a.path for a in mlflow.MlflowClient().list_artifacts(run.info.run_id)])
 

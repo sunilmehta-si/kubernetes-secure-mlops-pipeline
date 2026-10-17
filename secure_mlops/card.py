@@ -13,7 +13,8 @@ LIMITS = [
 ]
 
 
-def model_card(name: str, version: str, config: TrainConfig, fingerprints: dict, evaluation: dict, decision: dict) -> str:
+def model_card(name: str, version: str, config: TrainConfig, fingerprints: dict, evaluation: dict, decision: dict,
+               provenance: dict | None = None) -> str:
     gate = "passed" if decision["passed"] else "failed: " + ", ".join(decision["failed"])
     lines = [f"# Model card: {name} v{version}", "",
              "**Intended use:** route customer support tickets to the owning team (billing, technical, account, "
@@ -21,6 +22,11 @@ def model_card(name: str, version: str, config: TrainConfig, fingerprints: dict,
              "## Provenance", "",
              f"- Parameters: `{config.params_hash()}` (TF-IDF 1-{config.ngram_max} grams, logistic regression, C={config.c})"]
     lines += [f"- Data, {split}: `{fp}`" for split, fp in sorted(fingerprints.items())]
+    if provenance:
+        dirty = " (uncommitted changes: not reproducible from the commit)" if provenance.get("code.git_dirty") == "true" else ""
+        lines += [f"- Code: commit `{provenance.get('code.git_commit', 'unknown')}`{dirty}",
+                  f"- Environment: Python {provenance.get('env.python')}, image `{provenance.get('env.image')}`, "
+                  f"packages `{provenance.get('env.deps_hash')}`"]
     lines += [f"- Evaluation gate: {gate}" + (f" (against champion v{decision['champion_version']})"
                                              if decision.get("champion_version") else " (first model, floors only)"),
               "", "## Results on the test split", "",
