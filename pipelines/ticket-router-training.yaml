@@ -103,6 +103,8 @@ components:
             schemaTitle: system.Dataset
             schemaVersion: 0.0.1
       parameters:
+        model_name:
+          parameterType: STRING
         train_config:
           parameterType: STRING
     outputDefinitions:
@@ -257,12 +259,12 @@ deploymentSpec:
           '
         - "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import\
           \ *\n\ndef train_model(data: dsl.Input[dsl.Dataset], train_config: str,\
-          \ model: dsl.Output[dsl.Model]):\n    \"\"\"Train the classifier and hand\
-          \ it on in MLflow's model format.\"\"\"\n    from secure_mlops.config import\
-          \ parse\n    from secure_mlops.steps import fit, save_model\n\n    config\
-          \ = parse(train_config, \"train_config parameter\")\n    save_model(fit(data.path,\
-          \ config), model.path)\n    model.metadata.update({\"params_hash\": config.params_hash()})\n\
-          \n"
+          \ model_name: str, model: dsl.Output[dsl.Model]):\n    \"\"\"Train the classifier\
+          \ and hand it on in MLflow's model format.\"\"\"\n    from secure_mlops.config\
+          \ import parse\n    from secure_mlops.steps import fit, save_model\n\n \
+          \   config = parse(train_config, \"train_config parameter\")\n    save_model(fit(data.path,\
+          \ config, model_name), model.path)\n    model.metadata.update({\"params_hash\"\
+          : config.params_hash()})\n\n"
         image: ghcr.io/sunilmehta-si/kubernetes-secure-mlops-pipeline:dev
 pipelineInfo:
   description: Prepare data, train, evaluate against the champion, and publish ticket-router
@@ -359,6 +361,8 @@ root:
                 outputArtifactKey: data
                 producerTask: prepare-data
           parameters:
+            model_name:
+              componentInputParameter: model_name
             train_config:
               componentInputParameter: train_config
         taskInfo:

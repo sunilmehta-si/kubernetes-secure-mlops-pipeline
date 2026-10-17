@@ -3,6 +3,7 @@ import os
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 import mlflow
 import pandas as pd
@@ -23,8 +24,15 @@ class StepsTests(unittest.TestCase):
         self.root = Path(self.dir.name)
         mlflow.set_tracking_uri(f"sqlite:///{self.root}/mlflow.db")
         write(split(pd.DataFrame(generate(DataSpec(n=3000)))), self.root / "data")
+        register = self.root / "register"
+        register.mkdir()
+        entry = (Path(__file__).resolve().parents[1] / "configs/models/ticket-router.yaml").read_text()
+        (register / "router.yaml").write_text(entry.replace("name: ticket-router", "name: router"))
+        self.env = mock.patch.dict(os.environ, {"SMLOPS_RISK_DIR": str(register)})
+        self.env.start()
 
     def tearDown(self):
+        self.env.stop()
         mlflow.set_tracking_uri("")
         self.dir.cleanup()
 
@@ -49,12 +57,20 @@ class StepsTests(unittest.TestCase):
         self.assertIn("synthetic tickets", card)
         self.assertRegex(card, r"- Code: commit `([0-9a-f]{40}|unknown)`")
         self.assertIn("packages `sha256:", card)
+        self.assertIn("tier **minimal**", card)
+        self.assertIn("- Not for: Deciding refunds", card)
         run = mlflow.get_run(worse.run_id)
         self.assertIn("model_card.md", [a.path for a in mlflow.MlflowClient().list_artifacts(run.info.run_id)])
 
+    def test_no_training_without_a_current_risk_entry(self):
+        (self.root / "register/router.yaml").unlink()
+        with self.assertRaisesRegex(StepError, "no risk register entry"):
+            self.run_once()
+        self.assertIsNone(registry.by_alias("router", registry.CHALLENGER))
+
     def test_a_model_survives_the_hand_off_between_steps(self):
         from secure_mlops.steps import fit, load_model, save_model
-        model = fit(self.root / "data", TrainConfig())
+        model = fit(self.root / "data", TrainConfig(), "router")
         save_model(model, self.root / "model")
         x = pd.DataFrame({"text": ["my account is locked after too many attempts"]})
         self.assertEqual(list(load_model(self.root / "model").predict(x)), list(model.predict(x)))

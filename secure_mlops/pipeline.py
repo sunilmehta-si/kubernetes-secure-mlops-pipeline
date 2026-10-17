@@ -38,13 +38,13 @@ def prepare_data(n: int, seed: int, drift: float, data: dsl.Output[dsl.Dataset])
 
 
 @dsl.component(base_image=IMAGE)
-def train_model(data: dsl.Input[dsl.Dataset], train_config: str, model: dsl.Output[dsl.Model]):
+def train_model(data: dsl.Input[dsl.Dataset], train_config: str, model_name: str, model: dsl.Output[dsl.Model]):
     """Train the classifier and hand it on in MLflow's model format."""
     from secure_mlops.config import parse
     from secure_mlops.steps import fit, save_model
 
     config = parse(train_config, "train_config parameter")
-    save_model(fit(data.path, config), model.path)
+    save_model(fit(data.path, config, model_name), model.path)
     model.metadata.update({"params_hash": config.params_hash()})
 
 
@@ -102,7 +102,7 @@ def training_pipeline(n: int = 3000, seed: int = 7, drift: float = 0.0, train_co
                       gate_policy: str = _default("gate.yaml"), model_name: str = "ticket-router",
                       tracking_uri: str = "http://mlflow.mlflow.svc.cluster.local:5000"):
     data = prepare_data(n=n, seed=seed, drift=drift)
-    model = train_model(data=data.outputs["data"], train_config=train_config)
+    model = train_model(data=data.outputs["data"], train_config=train_config, model_name=model_name)
     gate = evaluate_and_gate(data=data.outputs["data"], model=model.outputs["model"], gate_policy=gate_policy,
                              model_name=model_name, tracking_uri=tracking_uri)
     publish_model(data=data.outputs["data"], model=model.outputs["model"], decision=gate.outputs["decision"],

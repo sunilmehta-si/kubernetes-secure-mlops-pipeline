@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import datetime as dt
 from dataclasses import dataclass
+import os
 from pathlib import Path
 
 import yaml
@@ -62,11 +63,23 @@ def parse(data: dict, source: str = "risk entry") -> RiskEntry:
                      data["personal_data"], reviewed, review_by)
 
 
-def load(model_name: str, directory: str | Path = "configs/models") -> RiskEntry:
-    path = Path(directory) / f"{model_name}.yaml"
+def register_dir() -> Path:
+    """configs/models in a checkout; the pipeline image sets SMLOPS_RISK_DIR to its copy of the register."""
+    return Path(os.environ.get("SMLOPS_RISK_DIR", "configs/models"))
+
+
+def load(model_name: str, directory: str | Path | None = None) -> RiskEntry:
+    path = Path(directory or register_dir()) / f"{model_name}.yaml"
     if not path.exists():
         raise RiskError(f"{model_name} has no risk register entry ({path}); add one before promoting")
     entry = parse(yaml.safe_load(path.read_text()), str(path))
     if entry.name != model_name:
         raise RiskError(f"{path}: entry is for {entry.name}, not {model_name}")
+    return entry
+
+
+def require_current(model_name: str, directory: str | Path | None = None) -> RiskEntry:
+    """Gate G0: a valid entry whose review is not overdue, or a RiskError."""
+    entry = load(model_name, directory)
+    entry.check_current()
     return entry

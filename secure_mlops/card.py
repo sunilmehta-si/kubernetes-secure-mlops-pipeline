@@ -14,13 +14,17 @@ LIMITS = [
 
 
 def model_card(name: str, version: str, config: TrainConfig, fingerprints: dict, evaluation: dict, decision: dict,
-               provenance: dict | None = None) -> str:
+               provenance: dict | None = None, risk=None) -> str:
     gate = "passed" if decision["passed"] else "failed: " + ", ".join(decision["failed"])
     lines = [f"# Model card: {name} v{version}", "",
              "**Intended use:** route customer support tickets to the owning team (billing, technical, account, "
              "shipping, security).", "",
              "## Provenance", "",
              f"- Parameters: `{config.params_hash()}` (TF-IDF 1-{config.ngram_max} grams, logistic regression, C={config.c})"]
+    if risk is not None:
+        lines += [f"- Risk register: tier **{risk.risk_tier}**, owner {risk.owner}, "
+                  f"human in the loop: {'yes' if risk.human_in_the_loop else 'no'}, review due {risk.review_by}"]
+        lines += [f"- Not for: {item}" for item in risk.out_of_scope]
     lines += [f"- Data, {split}: `{fp}`" for split, fp in sorted(fingerprints.items())]
     if provenance:
         dirty = " (uncommitted changes: not reproducible from the commit)" if provenance.get("code.git_dirty") == "true" else ""

@@ -21,6 +21,7 @@ from .evaluate import evaluate
 from .gate import GatePolicy, decide
 from .report import gate_markdown
 from .provenance import environment_info, git_info
+from .risk import RiskError, require_current
 from .safeload import SAFE_FORMAT, load as safe_load
 from .tracking import log_run
 from .train import train
@@ -74,7 +75,12 @@ def validate_splits(data_dir: str | Path) -> dict[str, str]:
     return prints
 
 
-def fit(data_dir: str | Path, config: TrainConfig):
+def fit(data_dir: str | Path, config: TrainConfig, model_name: str):
+    """Gate G0 comes first: no model is trained for a use case without a current risk register entry."""
+    try:
+        require_current(model_name)
+    except RiskError as exc:
+        raise StepError(str(exc)) from exc
     return train(read(data_dir, "train"), config)
 
 
@@ -107,7 +113,7 @@ def publish(model, config: TrainConfig, data_dir: str | Path, fingerprints: dict
     (out / "gate.json").write_text(json.dumps(decision, indent=2) + "\n")
     (out / "gate.md").write_text(gate_markdown(decision, f"{model_name} v{version.version}"))
     card = model_card(model_name, version.version, config, fingerprints, evaluation, decision,
-                      provenance={**git_info(), **environment_info()})
+                      provenance={**git_info(), **environment_info()}, risk=require_current(model_name))
     (out / "model_card.md").write_text(card)
     mlflow.MlflowClient().log_text(logged.run_id, card, "model_card.md")
     return Outcome(logged.run_id, version.version, promoted, decision["passed"], decision["failed"])
@@ -125,6 +131,6 @@ def load_model(path: str | Path):
 def train_and_gate(data_dir: str | Path, config: TrainConfig, policy: GatePolicy, model_name: str,
                    output_dir: str | Path) -> Outcome:
     fingerprints = validate_splits(data_dir)
-    model = fit(data_dir, config)
+    model = fit(data_dir, config, model_name)
     evaluation, decision = judge(model, data_dir, policy, model_name)
     return publish(model, config, data_dir, fingerprints, evaluation, decision, model_name, output_dir)
