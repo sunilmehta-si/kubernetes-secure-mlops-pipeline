@@ -31,6 +31,14 @@ class SigningTests(unittest.TestCase):
         with self.assertRaisesRegex(SignatureError, "changed after signing"):
             verify(self.model, sig, self.public)
 
+    def test_registry_bookkeeping_written_after_signing_is_not_tampering(self):
+        sig = sign(self.model, self.root / "model.sig.json", self.private)
+        (self.model / "registered_model_meta").write_text("model_name: router\nmodel_version: '1'\n")
+        verify(self.model, sig, self.public)                       # what MLflow writes on registration
+        (self.model / "registered_model_meta.py").write_text("print('not bookkeeping')")
+        with self.assertRaises(SignatureError):                    # only that exact name is excluded
+            verify(self.model, sig, self.public)
+
     def test_added_file_wrong_key_and_missing_signature_fail(self):
         sig = sign(self.model, self.root / "model.sig.json", self.private)
         (self.model / "extra.py").write_text("print('hi')")

@@ -6,6 +6,7 @@ on the current test set when a challenger is judged, so both are always compared
 """
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -57,9 +58,30 @@ def by_alias(name: str, alias: str) -> Version | None:
     return Version(name, str(mv.version))
 
 
-def load(version: Version):
-    """Load a registered version; anything not stored in a safe format is refused before it is opened."""
-    return safe_load(version.uri)
+def verify_key(explicit: str | Path | None = None) -> Path | None:
+    """The public key models must be signed with: an explicit path, or SMLOPS_VERIFY_KEY."""
+    value = explicit or os.environ.get("SMLOPS_VERIFY_KEY")
+    return Path(value) if value else None
+
+
+def load(version: Version, public_key: str | Path | None = None):
+    """Load a registered version. With a verification key, the stored files must match the version's signature
+    first (an unsigned version is refused); in every case only the safe format is opened."""
+    key = verify_key(public_key)
+    if key is None:
+        return safe_load(version.uri)
+    import tempfile
+
+    from .signing import SignatureError, verify
+    mv = MlflowClient().get_model_version(version.name, version.version)
+    signature = mv.tags.get("signature", "unsigned")
+    if signature == "unsigned":
+        raise SignatureError(f"{version.name} v{version.version} is unsigned; refusing to load it")
+    with tempfile.TemporaryDirectory() as d:
+        local = mlflow.artifacts.download_artifacts(artifact_uri=version.uri, dst_path=f"{d}/model")
+        sig = mlflow.artifacts.download_artifacts(artifact_uri=signature, dst_path=f"{d}/sig")
+        verify(local, sig, key)
+        return safe_load(local)                       # load the verified copy, not a second download
 
 
 def promote(version: Version, decision: dict) -> bool:

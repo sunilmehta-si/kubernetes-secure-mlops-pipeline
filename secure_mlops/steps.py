@@ -24,6 +24,7 @@ from .report import gate_markdown
 from .provenance import environment_info, git_info
 from .risk import RiskError, require_current
 from .safeload import SAFE_FORMAT, load as safe_load
+from .signing import SignatureError
 from .tracking import log_run
 from .train import train
 from .validate import validate
@@ -85,12 +86,17 @@ def fit(data_dir: str | Path, config: TrainConfig, model_name: str):
     return train(read(data_dir, "train"), config)
 
 
-def judge(model, data_dir: str | Path, policy: GatePolicy, model_name: str) -> tuple[dict, dict]:
-    """Evaluate the challenger and the current champion on the same test split, and decide."""
+def judge(model, data_dir: str | Path, policy: GatePolicy, model_name: str,
+          public_key: str | Path | None = None) -> tuple[dict, dict]:
+    """Evaluate the challenger and the current champion on the same test split, and decide. With a verification
+    key, a champion whose files no longer match its signature stops the run: a tampered baseline is never trusted."""
     test_frame = read(data_dir, "test")
     challenger = evaluate(model, test_frame)
     current = registry.by_alias(model_name, registry.CHAMPION)
-    champion = evaluate(registry.load(current), test_frame) if current else None
+    try:
+        champion = evaluate(registry.load(current, public_key), test_frame) if current else None
+    except SignatureError as exc:
+        raise StepError(f"champion {model_name} v{current.version} failed verification: {exc}") from exc
     decision = decide(challenger, champion, policy)
     if current:
         decision["champion_version"] = current.version
@@ -140,8 +146,9 @@ def load_model(path: str | Path):
 
 
 def train_and_gate(data_dir: str | Path, config: TrainConfig, policy: GatePolicy, model_name: str,
-                   output_dir: str | Path, private_key: str | Path | None = None) -> Outcome:
+                   output_dir: str | Path, private_key: str | Path | None = None,
+                   public_key: str | Path | None = None) -> Outcome:
     fingerprints = validate_splits(data_dir)
     model = fit(data_dir, config, model_name)
-    evaluation, decision = judge(model, data_dir, policy, model_name)
+    evaluation, decision = judge(model, data_dir, policy, model_name, public_key)
     return publish(model, config, data_dir, fingerprints, evaluation, decision, model_name, output_dir, private_key)

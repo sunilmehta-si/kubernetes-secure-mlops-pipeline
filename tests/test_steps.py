@@ -108,6 +108,31 @@ class StepsTests(unittest.TestCase):
         sig = mlflow.artifacts.download_artifacts(artifact_uri=sig_uri, dst_path=str(self.root / "sig"))
         verify(local, sig, public)                                  # the stored files are what was signed
 
+    def test_drill_a_tampered_champion_stops_the_next_run(self):
+        from mlflow import MlflowClient
+
+        from secure_mlops.signing import generate_keys
+        private, public = generate_keys(self.root / "keys")
+        first = train_and_gate(self.root / "data", TrainConfig(), GatePolicy(), "router", self.root / "out", private, public)
+        second = train_and_gate(self.root / "data", TrainConfig(), GatePolicy(), "router", self.root / "out", private, public)
+        self.assertTrue(first.promoted and second.passed)            # verified champion: normal comparison
+        client = MlflowClient()
+        champion = registry.by_alias("router", registry.CHAMPION)
+        model_id = client.get_model_version("router", champion.version).source.rsplit("/", 1)[-1]   # models:/m-...
+        stored = Path(client.get_logged_model(model_id).artifact_location.removeprefix("file://")) / "model.skops"
+        data = bytearray(stored.read_bytes())
+        data[len(data) // 2] ^= 0xFF                                 # flip one byte: always a real change
+        stored.write_bytes(bytes(data))
+        with self.assertRaisesRegex(StepError, f"champion router v{champion.version} failed verification"):
+            train_and_gate(self.root / "data", TrainConfig(), GatePolicy(), "router", self.root / "out", private, public)
+
+    def test_unsigned_champion_is_refused_when_verification_is_on(self):
+        from secure_mlops.signing import generate_keys
+        _, public = generate_keys(self.root / "keys")
+        self.run_once()                                              # unsigned v1 becomes champion
+        with self.assertRaisesRegex(StepError, "v1 is unsigned"):
+            train_and_gate(self.root / "data", TrainConfig(), GatePolicy(), "router", self.root / "out", None, public)
+
     def test_bad_data_stops_before_training(self):
         test = self.root / "data/test.csv"
         test.write_text(test.read_text().replace(",email,", ",fax,", 1))

@@ -15,6 +15,10 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ec
 
 PRIVATE, PUBLIC = "signing-key.pem", "signing-key.pub.pem"
+# Files a model registry writes into a model directory after it was signed. MLflow adds `registered_model_meta`
+# (the registered name and version) when a model is registered; it is bookkeeping, not model content. Exactly these
+# names are excluded, the same way when signing and verifying; every other file, including any new one, is covered.
+REGISTRY_BOOKKEEPING = ("registered_model_meta",)
 
 
 class SignatureError(RuntimeError):
@@ -38,10 +42,16 @@ def generate_keys(directory: str | Path) -> tuple[Path, Path]:
     return private, public
 
 
+def _hashing(model_dir: str | Path) -> model_signing.hashing.Config:
+    return model_signing.hashing.Config().set_ignored_paths(
+        paths=[Path(model_dir) / name for name in REGISTRY_BOOKKEEPING])
+
+
 def sign(model_dir: str | Path, signature: str | Path, private_key: str | Path) -> Path:
     if Path(signature).resolve().is_relative_to(Path(model_dir).resolve()):
         raise SignatureError("the signature must be stored outside the model directory it signs")
-    model_signing.signing.Config().use_elliptic_key_signer(private_key=str(private_key)).sign(model_dir, signature)
+    (model_signing.signing.Config().use_elliptic_key_signer(private_key=str(private_key))
+     .set_hashing_config(_hashing(model_dir)).sign(model_dir, signature))
     return Path(signature)
 
 
@@ -49,7 +59,8 @@ def verify(model_dir: str | Path, signature: str | Path, public_key: str | Path)
     if not Path(signature).exists():
         raise SignatureError(f"{model_dir} has no signature; refusing to trust it")
     try:
-        model_signing.verifying.Config().use_elliptic_key_verifier(public_key=str(public_key)).verify(model_dir, signature)
+        (model_signing.verifying.Config().use_elliptic_key_verifier(public_key=str(public_key))
+         .set_hashing_config(_hashing(model_dir)).verify(model_dir, signature))
     except ValueError as exc:
         raise SignatureError(f"{model_dir} does not match its signature: the model was changed after signing "
                              f"({str(exc)[:160]})") from exc
