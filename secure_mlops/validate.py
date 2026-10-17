@@ -1,7 +1,7 @@
 """The data contract: what every batch of tickets must satisfy before a model trains on it.
 
 Row checks come from a pandera schema; dataset checks (enough examples of every team, no team swamping the rest,
-no duplicated tickets) are what make a training set usable, not just well-typed. Validation reports every failure
+no duplicated tickets, no personal data) are what make a training set usable, not just well-typed. Validation reports every failure
 at once, so a broken export is fixed in one pass.
 """
 from __future__ import annotations
@@ -12,6 +12,7 @@ import pandas as pd
 import pandera.pandas as pa
 
 from .data import CHANNELS, LABELS, TIERS
+from .pii import summary as pii_summary
 
 SCHEMA = pa.DataFrameSchema(
     {
@@ -56,6 +57,10 @@ def validate(frame: pd.DataFrame) -> Report:
     if len(frame) and counts.max() / len(frame) > MAX_LABEL_SHARE:
         report.problems.append(f"label: '{counts.idxmax()}' is {counts.max() / len(frame):.0%} of tickets "
                                f"(more than {MAX_LABEL_SHARE:.0%})")
+    rows, kinds, examples = pii_summary(frame["text"])
+    if rows:
+        found = ", ".join(f"{kind}: {n}" for kind, n in sorted(kinds.items()))
+        report.problems.append(f"text: {rows} ticket(s) contain personal data ({found}), e.g. {'; '.join(examples)}")
     dup = frame["text"].duplicated().mean() if len(frame) else 0.0
     if dup > MAX_DUPLICATE_TEXT_SHARE:
         report.problems.append(f"text: {dup:.0%} of tickets duplicate another ticket's text "

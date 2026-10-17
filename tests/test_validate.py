@@ -37,3 +37,15 @@ class ValidateTests(unittest.TestCase):
         self.assertIn("only 5 'security' tickets", " ".join(validate(lopsided).problems))
         dup = pd.concat([f] + [f.assign(ticket_id=f["ticket_id"] + f"-{k}") for k in range(2)])
         self.assertIn("duplicate another ticket", " ".join(validate(dup).problems))
+
+
+class PersonalDataTests(unittest.TestCase):
+    def test_personal_data_fails_the_contract_with_masked_examples(self):
+        f = frame()
+        f.loc[3, "text"] += " email me at jane.doe@example.com"
+        f.loc[4, "text"] += " my card 4111 1111 1111 1111 was charged"
+        problems = validate(f).problems
+        self.assertEqual(len(problems), 1, problems)
+        self.assertIn("2 ticket(s) contain personal data (email: 1, payment card: 1)", problems[0])
+        self.assertNotIn("jane.doe", problems[0])
+        self.assertNotIn("4111 1111", problems[0])
