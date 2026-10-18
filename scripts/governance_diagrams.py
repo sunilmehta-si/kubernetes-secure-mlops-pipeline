@@ -40,12 +40,12 @@ GATES = [
      "ML engineer", "smlops gate, exit 1", "built", "secure_mlops/gate.py"),
     ("G4", "Release approval", "Did someone else approve it?", "second-person review", "promotion request, PR",
      "approver, not author", "CODEOWNERS; branch rules", "partial", ".github/CODEOWNERS"),
-    ("G5", "Supply chain", "Is the artifact what we built?", "signed, provenance, CVEs", "signature, ML-BOM, SLSA",
-     "platform security", "cosign; Trivy in CI", "partial", ".github/workflows/ci.yml"),
+    ("G5", "Supply chain", "Is the artifact what we built?", "signed, provenance, CVEs", "signature, ML-BOM",
+     "platform security", "model signing; Trivy", "partial", "secure_mlops/signing.py"),
     ("G6", "Deploy admission", "Will the cluster run only that?", "only signed digests run", "admission decisions",
      "platform", "Kyverno verifyImages", "planned", ""),
-    ("G7", "Operate & retire", "Still working? Can we undo it?", "drift, accuracy, rollback", "alerts, rollback record",
-     "model owner, on-call", "Evidently; registry alias", "partial", "secure_mlops/registry.py"),
+    ("G7", "Operate & retire", "Still working? Can we undo it?", "drift, accuracy, rollback", "drift report, rollback",
+     "model owner, on-call", "smlops drift; alias", "partial", "secure_mlops/drift.py"),
 ]
 
 # (id, threat, where (node key), control, OWASP ML Top 10 2023, status, file when built/partial)
@@ -62,14 +62,14 @@ THREATS = [
      "-", "partial", ".github/CODEOWNERS"),
     ("T6", "Leakage or regression hides a worse model", "pipelines", "train/test overlap measure, evaluation gate",
      "ML08", "built", "secure_mlops/gate.py"),
-    ("T7", "Model swapped or tampered after approval", "registry", "signature and digest pinning, checked at admission",
-     "ML10", "planned", ""),
+    ("T7", "Model swapped or tampered after approval", "registry", "signed files verified before load; admission next",
+     "ML10", "partial", "secure_mlops/signing.py"),
     ("T8", "Model file runs code when loaded (pickle)", "serving", "skops only, pickles refused; signed-only next",
      "ML06", "partial", "secure_mlops/safeload.py"),
     ("T9", "Endpoint abuse: evasion, theft, flooding", "serving", "input schema, auth and rate limits at the gateway",
      "ML01, ML05", "planned", ""),
-    ("T10", "Silent drift degrades decisions", "monitoring", "drift and accuracy alerts; one-step rollback",
-     "-", "partial", "secure_mlops/registry.py"),
+    ("T10", "Silent drift degrades decisions", "monitoring", "drift check (PSI, new words, accuracy); rollback",
+     "-", "partial", "secure_mlops/drift.py"),
 ]
 
 # (stage, identifier recorded, example, status, file when built)
@@ -78,7 +78,7 @@ TRAIL = [
     ("Data splits", "content fingerprint", "sha256:e3bf3b58…", "built", "secure_mlops/dataset.py"),
     ("Training run", "params hash, run id", "run 9cd31c76…", "built", "secure_mlops/tracking.py"),
     ("Model version", "gate decision, card", "ticket-router v1", "built", "secure_mlops/registry.py"),
-    ("Signed artifact", "OCI digest, signature", "sha256:… + cosign", "planned", ""),
+    ("Signed artifact", "signature, ML-BOM", "model.sig.json", "partial", "secure_mlops/signing.py"),
     ("Deployment", "digest in Git, admission", "PR #… → Argo CD", "planned", ""),
     ("Prediction", "model digest per request", "logged with response", "planned", ""),
 ]
@@ -157,12 +157,13 @@ def governance_gates(theme: str) -> str:
     parts.append(f'<path d="M{a:g} {GROW1 + GCH + 2} V{mid - 8} Q{a:g} {mid} {a - 8:g} {mid} H{b + 8:g} Q{b:g} {mid} '
                  f'{b:g} {mid + 8} V{GROW2 - 4}" fill="none" stroke="{c["arrow"]}" stroke-width="2" '
                  f'marker-end="url(#arrow)"/>')
-    by = GROW2 + GCH + 22                                           # policies as code
-    parts += [_t(33, by + 18, "POLICIES AS CODE", 10, c["muted"], 700, spacing="0.8")]
-    x = 170
-    for label, status in (("configs/gate.yaml", "built"), ("data contract + PII", "built"),
+    by = GROW2 + GCH + 30                                           # policies as code: label above the chips
+    parts += [_t(33, by - 8, "POLICIES AS CODE", 10, c["muted"], 700, spacing="0.8")]
+    x = 33
+    for label, status in (("gate limits", "built"), ("data contract + PII", "built"),
                           ("risk register", "built"), ("train config", "built"), ("CODEOWNERS", "built"),
-                          ("branch protection", "planned"), ("Kyverno model policy", "planned")):
+                          ("drift thresholds", "built"), ("branch protection", "planned"),
+                          ("Kyverno model policy", "planned")):
         w = 34 + sum(8.2 if ch.isupper() else 6.4 for ch in label)    # capitals are wider
         fill, line, dash = _card_style(status, c)
         dot = c["built"] if status == "built" else c["planned"]

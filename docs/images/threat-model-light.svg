@@ -146,10 +146,10 @@
 <circle cx="669" cy="446" r="11" fill="#cf222e"/>
 <text x="669" y="449.8" font-size="10.5" font-weight="700" fill="#ffffff" text-anchor="middle">T7</text>
 <text x="689" y="444" font-size="12" font-weight="650" fill="#0b0b0b" text-anchor="start">Model swapped or tampered after approval</text>
-<text x="689" y="457" font-size="10.5" font-weight="400" fill="#57564f" text-anchor="start">signature and digest pinning, checked at admission</text>
+<text x="689" y="457" font-size="10.5" font-weight="400" fill="#57564f" text-anchor="start">signed files verified before load; admission next</text>
 <text x="1155" y="450" font-size="10" font-weight="600" fill="#8a887f" text-anchor="end">ML10</text>
-<rect x="1177" y="437" width="60" height="18" rx="9" fill="#fbfbfa" stroke="#c4c2bb" stroke-dasharray="3 2"/>
-<text x="1207" y="449.5" font-size="9.5" font-weight="700" fill="#77756d" text-anchor="middle" letter-spacing="0.5">PLANNED</text>
+<rect x="1177" y="437" width="60" height="18" rx="9" fill="#fff8ef" stroke="#f0cfa3"/>
+<text x="1207" y="449.5" font-size="9.5" font-weight="700" fill="#b35c00" text-anchor="middle" letter-spacing="0.5">PARTIAL</text>
 <rect x="651" y="466" width="596" height="28" rx="8" fill="#f3f2ee"/>
 <circle cx="669" cy="480" r="11" fill="#cf222e"/>
 <text x="669" y="483.8" font-size="10.5" font-weight="700" fill="#ffffff" text-anchor="middle">T8</text>
@@ -170,7 +170,7 @@
 <circle cx="669" cy="548" r="11" fill="#cf222e"/>
 <text x="669" y="551.8" font-size="9.5" font-weight="700" fill="#ffffff" text-anchor="middle">T10</text>
 <text x="689" y="546" font-size="12" font-weight="650" fill="#0b0b0b" text-anchor="start">Silent drift degrades decisions</text>
-<text x="689" y="559" font-size="10.5" font-weight="400" fill="#57564f" text-anchor="start">drift and accuracy alerts; one-step rollback</text>
+<text x="689" y="559" font-size="10.5" font-weight="400" fill="#57564f" text-anchor="start">drift check (PSI, new words, accuracy); rollback</text>
 <text x="1155" y="552" font-size="10" font-weight="600" fill="#8a887f" text-anchor="end"></text>
 <rect x="1177" y="539" width="60" height="18" rx="9" fill="#fff8ef" stroke="#f0cfa3"/>
 <text x="1207" y="551.5" font-size="9.5" font-weight="700" fill="#b35c00" text-anchor="middle" letter-spacing="0.5">PARTIAL</text>

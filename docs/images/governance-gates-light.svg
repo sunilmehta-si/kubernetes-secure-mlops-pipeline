@@ -102,11 +102,11 @@
 <text x="355.5" y="418" font-size="9.5" font-weight="700" fill="#8a887f" text-anchor="start" letter-spacing="0.6">CHECKS</text>
 <text x="429.5" y="418" font-size="12" font-weight="500" fill="#0b0b0b" text-anchor="start">signed, provenance, CVEs</text>
 <text x="355.5" y="440" font-size="9.5" font-weight="700" fill="#8a887f" text-anchor="start" letter-spacing="0.6">EVIDENCE</text>
-<text x="429.5" y="440" font-size="12" font-weight="500" fill="#0b0b0b" text-anchor="start">signature, ML-BOM, SLSA</text>
+<text x="429.5" y="440" font-size="12" font-weight="500" fill="#0b0b0b" text-anchor="start">signature, ML-BOM</text>
 <text x="355.5" y="462" font-size="9.5" font-weight="700" fill="#8a887f" text-anchor="start" letter-spacing="0.6">OWNER</text>
 <text x="429.5" y="462" font-size="12" font-weight="500" fill="#0b0b0b" text-anchor="start">platform security</text>
 <text x="355.5" y="484" font-size="9.5" font-weight="700" fill="#8a887f" text-anchor="start" letter-spacing="0.6">ENFORCED</text>
-<text x="429.5" y="484" font-size="12" font-weight="500" fill="#0b0b0b" text-anchor="start">cosign; Trivy in CI</text>
+<text x="429.5" y="484" font-size="12" font-weight="500" fill="#0b0b0b" text-anchor="start">model signing; Trivy</text>
 <rect x="650" y="328" width="284.5" height="176" rx="12" fill="#f6f6f3" stroke="#c4c2bb" stroke-dasharray="6 5"/>
 <rect x="664" y="342" width="34" height="22" rx="6" fill="#77756d"/>
 <text x="681" y="357.5" font-size="12" font-weight="700" fill="#fbfbfa" text-anchor="middle">G6</text>
@@ -134,11 +134,11 @@
 <text x="972.5" y="418" font-size="9.5" font-weight="700" fill="#8a887f" text-anchor="start" letter-spacing="0.6">CHECKS</text>
 <text x="1046.5" y="418" font-size="12" font-weight="500" fill="#0b0b0b" text-anchor="start">drift, accuracy, rollback</text>
 <text x="972.5" y="440" font-size="9.5" font-weight="700" fill="#8a887f" text-anchor="start" letter-spacing="0.6">EVIDENCE</text>
-<text x="1046.5" y="440" font-size="12" font-weight="500" fill="#0b0b0b" text-anchor="start">alerts, rollback record</text>
+<text x="1046.5" y="440" font-size="12" font-weight="500" fill="#0b0b0b" text-anchor="start">drift report, rollback</text>
 <text x="972.5" y="462" font-size="9.5" font-weight="700" fill="#8a887f" text-anchor="start" letter-spacing="0.6">OWNER</text>
 <text x="1046.5" y="462" font-size="12" font-weight="500" fill="#0b0b0b" text-anchor="start">model owner, on-call</text>
 <text x="972.5" y="484" font-size="9.5" font-weight="700" fill="#8a887f" text-anchor="start" letter-spacing="0.6">ENFORCED</text>
-<text x="1046.5" y="484" font-size="12" font-weight="500" fill="#0b0b0b" text-anchor="start">Evidently; registry alias</text>
+<text x="1046.5" y="484" font-size="12" font-weight="500" fill="#0b0b0b" text-anchor="start">smlops drift; alias</text>
 <line x1="320.5" y1="192.0" x2="338.5" y2="192.0" stroke="#8a887f" stroke-width="2" marker-end="url(#arrow)"/>
 <line x1="629" y1="192.0" x2="647" y2="192.0" stroke="#8a887f" stroke-width="2" marker-end="url(#arrow)"/>
 <line x1="937.5" y1="192.0" x2="955.5" y2="192.0" stroke="#8a887f" stroke-width="2" marker-end="url(#arrow)"/>
@@ -146,26 +146,29 @@
 <line x1="629" y1="416.0" x2="647" y2="416.0" stroke="#8a887f" stroke-width="2" marker-end="url(#arrow)"/>
 <line x1="937.5" y1="416.0" x2="955.5" y2="416.0" stroke="#8a887f" stroke-width="2" marker-end="url(#arrow)"/>
 <path d="M1100.75 282 V296 Q1100.75 304 1092.75 304 H183.25 Q175.25 304 175.25 312 V324" fill="none" stroke="#8a887f" stroke-width="2" marker-end="url(#arrow)"/>
-<text x="33" y="544" font-size="10" font-weight="700" fill="#57564f" text-anchor="start" letter-spacing="0.8">POLICIES AS CODE</text>
-<rect x="170" y="526" width="143" height="26" rx="13" fill="#f0f8f2" stroke="#b9dcc4"/>
-<circle cx="184" cy="539" r="4" fill="#1a7f37"/>
-<text x="194" y="543.5" font-size="11.5" font-weight="500" fill="#0b0b0b" text-anchor="start">configs/gate.yaml</text>
-<rect x="323" y="526" width="161" height="26" rx="13" fill="#f0f8f2" stroke="#b9dcc4"/>
-<circle cx="337" cy="539" r="4" fill="#1a7f37"/>
-<text x="347" y="543.5" font-size="11.5" font-weight="500" fill="#0b0b0b" text-anchor="start">data contract + PII</text>
-<rect x="494" y="526" width="117" height="26" rx="13" fill="#f0f8f2" stroke="#b9dcc4"/>
-<circle cx="508" cy="539" r="4" fill="#1a7f37"/>
-<text x="518" y="543.5" font-size="11.5" font-weight="500" fill="#0b0b0b" text-anchor="start">risk register</text>
-<rect x="621" y="526" width="111" height="26" rx="13" fill="#f0f8f2" stroke="#b9dcc4"/>
-<circle cx="635" cy="539" r="4" fill="#1a7f37"/>
-<text x="645" y="543.5" font-size="11.5" font-weight="500" fill="#0b0b0b" text-anchor="start">train config</text>
-<rect x="742" y="526" width="116" height="26" rx="13" fill="#f0f8f2" stroke="#b9dcc4"/>
-<circle cx="756" cy="539" r="4" fill="#1a7f37"/>
-<text x="766" y="543.5" font-size="11.5" font-weight="500" fill="#0b0b0b" text-anchor="start">CODEOWNERS</text>
-<rect x="868" y="526" width="143" height="26" rx="13" fill="#f6f6f3" stroke="#c4c2bb" stroke-dasharray="6 5"/>
-<circle cx="882" cy="539" r="4" fill="#77756d"/>
-<text x="892" y="543.5" font-size="11.5" font-weight="500" fill="#57564f" text-anchor="start">branch protection</text>
-<rect x="1021" y="526" width="164" height="26" rx="13" fill="#f6f6f3" stroke="#c4c2bb" stroke-dasharray="6 5"/>
-<circle cx="1035" cy="539" r="4" fill="#77756d"/>
-<text x="1045" y="543.5" font-size="11.5" font-weight="500" fill="#57564f" text-anchor="start">Kyverno model policy</text>
+<text x="33" y="526" font-size="10" font-weight="700" fill="#57564f" text-anchor="start" letter-spacing="0.8">POLICIES AS CODE</text>
+<rect x="33" y="534" width="104" height="26" rx="13" fill="#f0f8f2" stroke="#b9dcc4"/>
+<circle cx="47" cy="547" r="4" fill="#1a7f37"/>
+<text x="57" y="551.5" font-size="11.5" font-weight="500" fill="#0b0b0b" text-anchor="start">gate limits</text>
+<rect x="147" y="534" width="161" height="26" rx="13" fill="#f0f8f2" stroke="#b9dcc4"/>
+<circle cx="161" cy="547" r="4" fill="#1a7f37"/>
+<text x="171" y="551.5" font-size="11.5" font-weight="500" fill="#0b0b0b" text-anchor="start">data contract + PII</text>
+<rect x="318" y="534" width="117" height="26" rx="13" fill="#f0f8f2" stroke="#b9dcc4"/>
+<circle cx="332" cy="547" r="4" fill="#1a7f37"/>
+<text x="342" y="551.5" font-size="11.5" font-weight="500" fill="#0b0b0b" text-anchor="start">risk register</text>
+<rect x="446" y="534" width="111" height="26" rx="13" fill="#f0f8f2" stroke="#b9dcc4"/>
+<circle cx="460" cy="547" r="4" fill="#1a7f37"/>
+<text x="470" y="551.5" font-size="11.5" font-weight="500" fill="#0b0b0b" text-anchor="start">train config</text>
+<rect x="566" y="534" width="116" height="26" rx="13" fill="#f0f8f2" stroke="#b9dcc4"/>
+<circle cx="580" cy="547" r="4" fill="#1a7f37"/>
+<text x="590" y="551.5" font-size="11.5" font-weight="500" fill="#0b0b0b" text-anchor="start">CODEOWNERS</text>
+<rect x="692" y="534" width="136" height="26" rx="13" fill="#f0f8f2" stroke="#b9dcc4"/>
+<circle cx="706" cy="547" r="4" fill="#1a7f37"/>
+<text x="716" y="551.5" font-size="11.5" font-weight="500" fill="#0b0b0b" text-anchor="start">drift thresholds</text>
+<rect x="839" y="534" width="143" height="26" rx="13" fill="#f6f6f3" stroke="#c4c2bb" stroke-dasharray="6 5"/>
+<circle cx="853" cy="547" r="4" fill="#77756d"/>
+<text x="863" y="551.5" font-size="11.5" font-weight="500" fill="#57564f" text-anchor="start">branch protection</text>
+<rect x="992" y="534" width="164" height="26" rx="13" fill="#f6f6f3" stroke="#c4c2bb" stroke-dasharray="6 5"/>
+<circle cx="1006" cy="547" r="4" fill="#77756d"/>
+<text x="1016" y="551.5" font-size="11.5" font-weight="500" fill="#57564f" text-anchor="start">Kyverno model policy</text>
 </svg>

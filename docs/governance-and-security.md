@@ -28,9 +28,9 @@ the code does.
 | G2 Reproducibility | Can we rebuild this exact model? | Partial: parameter hash, data fingerprints, git commit (runs from uncommitted changes are flagged), Python, platform and a hash of every installed package, with the frozen package list attached; unknown config keys rejected | [`tracking.py`](../secure_mlops/tracking.py), [`provenance.py`](../secure_mlops/provenance.py), [`config.py`](../secure_mlops/config.py) | The pipeline image by digest, recorded when the pipeline runs on a cluster |
 | G3 Evaluation gate | Is it better than what runs now? | **Built**: absolute floors, then no regression against the champion overall, per team and per slice; blocks with exit 1 | [`gate.py`](../secure_mlops/gate.py) | Fairness review when real user groups exist |
 | G4 Release approval | Did someone other than the author approve it? | Partial: CODEOWNERS names the owner of every file that decides releases; `smlops promotion-request` writes the PR body with an approver checklist | [`.github/CODEOWNERS`](../.github/CODEOWNERS), [`promotion.py`](../secure_mlops/promotion.py) | Branch protection on `main` requiring code-owner review, so the author cannot approve their own release |
-| G5 Supply chain | Is the artifact what we built? | Partial: dependencies and base image pinned, Trivy blocks fixable HIGH/CRITICAL CVEs, Dependabot | [`Dockerfile`](../Dockerfile), [`ci.yml`](../.github/workflows/ci.yml) | Model packaged as an OCI artifact with an ML-BOM, OpenSSF model signature, cosign signature and provenance |
+| G5 Supply chain | Is the artifact what we built? | Partial: every model file signed with OpenSSF model signing and verified before any load; a CycloneDX 1.6 ML-BOM per version (file hashes, datasets, packages, release facts); dependencies and base image pinned, Trivy blocks fixable HIGH/CRITICAL CVEs, Dependabot | [`signing.py`](../secure_mlops/signing.py), [`mlbom.py`](../secure_mlops/mlbom.py), [`ci.yml`](../.github/workflows/ci.yml) | Keyless signing by CI's identity; the model as an OCI artifact with provenance |
 | G6 Deploy admission | Will the cluster run only that artifact? | Planned | | Kyverno `verifyImages` admits only model images signed by the trusted CI identity, pinned by digest |
-| G7 Operate & retire | Is it still working, and can we undo it? | Partial: one-step rollback of the `champion` alias | [`registry.py`](../secure_mlops/registry.py) | Drift and accuracy alerts; a retirement step that archives the model and its records |
+| G7 Operate & retire | Is it still working, and can we undo it? | Partial: `smlops drift` checks production batches (PSI of channel, tier and predictions, new-word rate, accuracy against the champion's own test score) and exits 1 on an alert; one-step rollback of the `champion` alias | [`drift.py`](../secure_mlops/drift.py), [`registry.py`](../secure_mlops/registry.py) | Scheduled drift checks on live traffic that start retraining; a retirement step |
 
 A model is promoted only when G3 passes today; when G4 to G6 exist, it will be promoted only when all of them pass.
 
@@ -61,6 +61,7 @@ Decisions are made by versioned files, reviewed like code, rather than by settin
 | Who may train a model, for what | [`configs/models/`](../configs/models/) risk register | Built |
 | Who approves releases | [`.github/CODEOWNERS`](../.github/CODEOWNERS) | Built |
 | Code-owner review required on `main` | Branch protection | Planned |
+| Drift thresholds | [`configs/drift.yaml`](../configs/drift.yaml) | Built |
 | Which model images may run | Kyverno policy in `deploy/` | Planned |
 
 ## 4. Threat model
@@ -78,10 +79,10 @@ Decisions are made by versioned files, reviewed like code, rather than by settin
 | T4 | Compromised CI or leaked secret | GitHub Actions | Actions pinned by commit SHA, read-only token, no stored secrets. Keyless signing next | ML06 | Partial |
 | T5 | Unreviewed change to code or gate | Repository | Automated review of every pull request; CODEOWNERS for release-deciding files. Branch protection next | - | Partial |
 | T6 | Leakage or regression hides a worse model | Pipeline | Train/test overlap measured on every dataset; evaluation gate against the champion | ML08 | Built |
-| T7 | Model swapped or tampered after approval | Registry | Signature over the model, deployment pinned by digest, checked at admission | ML10 | Planned |
+| T7 | Model swapped or tampered after approval | Registry | Every model file is signed; with a verification key, any load (including the champion the gate compares against) checks the signature first, and unsigned or changed models are refused. A drill changes one byte and the run stops. Next: the same check at admission | ML10 | Partial |
 | T8 | Model file runs code when loaded (pickle) | Serving | Models are stored as skops, which loads only trusted types; any model stored as pickle is refused from its metadata before it is opened ([`safeload.py`](../secure_mlops/safeload.py)). Next: load only signed models | ML06 | Partial |
 | T9 | Endpoint abuse: evasion, theft, flooding | Serving | Input schema, authentication and rate limits at the gateway, monitoring for unusual query patterns | ML01, ML05 | Planned |
-| T10 | Silent drift degrades decisions | Monitoring | Drift and accuracy alerts; one-step rollback (built) | - | Partial |
+| T10 | Silent drift degrades decisions | Monitoring | `smlops drift` with calibrated thresholds; one-step rollback. Drift is a reason to look, not proof of harm: a fully shifted batch alerts while accuracy falls only about two points | - | Partial |
 
 **What T6 has already caught.** While the README was being written, the overlap measure showed that 37% of test
 tickets were exact copies of training tickets, which had inflated accuracy to 0.958. The generator was fixed; the
@@ -103,6 +104,8 @@ The questions an auditor or incident review asks, and where the answer comes fro
 | What data was it trained and tested on? | Run tags `data.train`, `data.validation`, `data.test`: content fingerprints that match the data itself |
 | With which parameters and code? | Run tags `params_hash`, `code.git_commit` and `code.git_dirty`; `env.deps_hash` and `environment/requirements-frozen.txt` for the packages |
 | What is it for, and what are its limits? | `model_card.md` on the run, written from the records above |
+| Is this the model that was approved? | `smlops verify`: every file against its signature (`model.sig.json` on the run) |
+| What exactly is in it? | `mlbom.cdx.json` on the run: file hashes, datasets by fingerprint, every package |
 | Which model answered a given request? | Planned: the serving digest logged with every prediction |
 
 ## 6. Mapping to frameworks
@@ -134,12 +137,12 @@ advice: classify each real use case with your legal team.
 
 1. **Release approval (G4):** ~~CODEOWNERS~~ and ~~a promotion request~~ done; branch protection on `main` next.
 2. ~~**Safe model format (T8):** save models with skops instead of cloudpickle.~~ Done: pickles are refused.
-3. **Signing and admission (G5, G6, T7):** OCI model artifact, ML-BOM, signatures from CI's keyless identity, Kyverno
-   policy that admits only those.
+3. **Signing and admission (G5, G6, T7):** ~~model signing, verification before load, ML-BOM~~ done; next an OCI
+   model artifact, keyless signing by CI's identity, and a Kyverno policy that admits only those.
 4. **Reproducibility (G2):** ~~record the git commit~~ done, with the environment; the pipeline image digest comes
    with cluster runs.
-5. **Monitoring (G7, T9, T10):** gateway with authentication and rate limits, drift and accuracy alerts, prediction
-   logging with the model digest.
+5. **Monitoring (G7, T9, T10):** ~~drift check~~ done; scheduled checks on live traffic, gateway with authentication
+   and rate limits, prediction logging with the model digest.
 6. **Data (G1, T2):** ~~PII scan~~ and ~~risk register (G0)~~ done; a statistical detector for names and addresses.
 
 Sources for the framework references: [OWASP Machine Learning Security Top Ten](https://owasp.org/www-project-machine-learning-security-top-10/),
