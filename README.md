@@ -14,9 +14,10 @@ model it replaces, signed, verified at deploy time, rolled out gradually and rol
   <img src="docs/images/architecture-light.svg" alt="The ML system in six stages, ingest, prepare, train, evaluate, deploy and monitor, with what this repo uses at each stage, other common tools, automatic retraining, and CI on every change">
 </picture>
 
-**Status: under construction.** Stages 1 to 4 and the model registry are built and tested (solid green above);
-signed packaging, deployment to Kubernetes and monitoring are next (dashed). This README describes only what works.
-Each stage also lists other tools commonly used for the same job, so the diagram doubles as a map of MLOps.
+**Status: under construction.** Stages 1 to 4 and the model registry are built and tested (solid green above), and
+so are the governance controls around them: a risk register, a PII scan, signed models verified before every load,
+an ML-BOM per model, and drift checks. Deployment to Kubernetes, admission control and live monitoring are next
+(dashed). This README describes only what works.
 
 ## The gate in action
 
@@ -58,6 +59,26 @@ smlops pipeline run-local               # the same steps as a Kubeflow pipeline,
 smlops pipeline compile                 # pipelines/ticket-router-training.yaml, ready to upload to Kubeflow
 mlflow ui --backend-store-uri sqlite:///mlflow.db   # browse runs, metrics, gate reports and model cards
 ```
+
+## Security in practice
+
+Every command below runs in CI on every push (the `drills` job), so this section cannot drift from the code.
+
+```bash
+smlops keys generate                                   # P-256 key pair in keys/ (git-ignored, private key 0600)
+smlops train --data data --signing-key keys/signing-key.pem   # model files signed as stored; ML-BOM attached
+smlops verify --public-key keys/signing-key.pub.pem    # exit 1 if the champion is unsigned or any byte changed
+smlops promotion-request -o promotion.md               # PR body with gate result, model card, approver checklist
+smlops drift --reference data/train.csv --current batch.csv   # PSI, new words, accuracy; exit 1 on alert
+```
+
+- **No pickles:** models are stored with skops, and anything stored as pickle is refused before it is opened.
+- **No model without a risk entry:** [`configs/models/`](configs/models/) holds one reviewed entry per model; an
+  overdue review blocks training.
+- **No personal data in training:** the data contract fails on emails, phone, card and IBAN numbers, and reports
+  only masked values.
+- **No tampered baseline:** with a verification key, the champion is checked before the gate compares against it.
+  A drill flips one byte of the stored champion and the next run stops.
 
 ## How the pipeline runs
 
