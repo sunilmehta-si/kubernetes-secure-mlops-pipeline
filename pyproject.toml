@@ -19,6 +19,7 @@ dependencies = [
     "kfp==2.17.0",
     "skops==0.16.0",
     "model-signing==1.1.1",
+    "cyclonedx-python-lib[json-validation]==11.12.0",
 ]
 
 [project.scripts]
