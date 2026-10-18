@@ -17,7 +17,8 @@ model it replaces, signed, verified at deploy time, rolled out gradually and rol
 **Status: under construction.** Stages 1 to 4 and the model registry are built and tested (solid green above), and
 so are the governance controls around them: a risk register, a PII scan, signed models verified before every load,
 an ML-BOM per model, and drift checks. Deployment to Kubernetes, admission control and live monitoring are next
-(dashed). This README describes only what works.
+(dashed). This README describes only what works. Each stage also lists other tools commonly used for the same job,
+so the diagram doubles as a map of MLOps.
 
 ## The gate in action
 
