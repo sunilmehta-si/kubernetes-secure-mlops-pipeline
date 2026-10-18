@@ -49,6 +49,12 @@ class StepsTests(unittest.TestCase):
         gate = json.loads((self.root / "out/gate.json").read_text())
         self.assertEqual((gate["compared_with_champion"], gate["champion_version"]), (True, "1"))
         self.assertIn("router v2 **failed**", (self.root / "out/gate.md").read_text())
+        from secure_mlops.mlbom import summary
+        bom = summary((self.root / "out/mlbom.cdx.json").read_text())
+        self.assertEqual((bom["model"], bom["version"], bom["datasets"]), ("router", "2", 3))
+        from mlflow import MlflowClient
+        self.assertEqual(MlflowClient().get_model_version("router", "2").tags["mlbom"],
+                         f"runs:/{worse.run_id}/mlbom.cdx.json")
         card = (self.root / "out/model_card.md").read_text()
         self.assertIn("# Model card: router v2", card)
         self.assertIn("Evaluation gate: failed: ", card)

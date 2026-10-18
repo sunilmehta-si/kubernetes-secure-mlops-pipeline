@@ -103,6 +103,22 @@ def judge(model, data_dir: str | Path, policy: GatePolicy, model_name: str,
     return challenger, decision
 
 
+def _ml_bom(logged, model_name: str, version: str, fingerprints: dict, decision: dict, config: TrainConfig,
+            provenance: dict, risk, signature: str) -> str:
+    """The ML-BOM of the model exactly as stored: its files are hashed from a fresh download."""
+    import tempfile
+
+    from .mlbom import build, file_hashes
+    from .provenance import frozen_requirements
+    with tempfile.TemporaryDirectory() as d:
+        local = mlflow.artifacts.download_artifacts(artifact_uri=logged.model_uri, dst_path=f"{d}/model")
+        files = file_hashes(local)
+    facts = {"gate": "passed" if decision["passed"] else "failed", "params_hash": config.params_hash(),
+             "git_commit": provenance.get("code.git_commit", "unknown"), "risk_tier": risk.risk_tier,
+             "run_id": logged.run_id, "signature": signature or "unsigned"}
+    return build(model_name, version, files, fingerprints, frozen_requirements(), facts)
+
+
 def signing_key(explicit: str | Path | None = None) -> Path | None:
     """The private key to sign models with: an explicit path, or SMLOPS_SIGNING_KEY (a mounted secret in a cluster)."""
     value = explicit or os.environ.get("SMLOPS_SIGNING_KEY")
@@ -124,13 +140,20 @@ def publish(model, config: TrainConfig, data_dir: str | Path, fingerprints: dict
     promoted = registry.promote(version, decision)
     out = Path(output_dir)
     out.mkdir(parents=True, exist_ok=True)
+    provenance = {**git_info(), **environment_info()}
+    risk = require_current(model_name)
+    bom = _ml_bom(logged, model_name, version.version, fingerprints, decision, config, provenance, risk, signature)
+    (out / "mlbom.cdx.json").write_text(bom)
+    mlflow.MlflowClient().log_text(logged.run_id, bom, "mlbom.cdx.json")
+    mlflow.MlflowClient().set_model_version_tag(model_name, version.version, "mlbom",
+                                                f"runs:/{logged.run_id}/mlbom.cdx.json")
     (out / "release.json").write_text(json.dumps({"name": model_name, "version": version.version,
                                                    "run_id": logged.run_id, "promoted": promoted}, indent=2) + "\n")
     (out / "evaluation.json").write_text(json.dumps(evaluation, indent=2) + "\n")
     (out / "gate.json").write_text(json.dumps(decision, indent=2) + "\n")
     (out / "gate.md").write_text(gate_markdown(decision, f"{model_name} v{version.version}"))
     card = model_card(model_name, version.version, config, fingerprints, evaluation, decision,
-                      provenance={**git_info(), **environment_info()}, risk=require_current(model_name))
+                      provenance=provenance, risk=risk)
     (out / "model_card.md").write_text(card)
     mlflow.MlflowClient().log_text(logged.run_id, card, "model_card.md")
     return Outcome(logged.run_id, version.version, promoted, decision["passed"], decision["failed"])
