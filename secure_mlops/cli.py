@@ -44,6 +44,13 @@ def _parser() -> argparse.ArgumentParser:
     vf.add_argument("--version", help="A version number instead of an alias.")
     vf.add_argument("--public-key", required=True, help="Public key the model must be signed with.")
     vf.add_argument("--tracking-uri", default="sqlite:///mlflow.db", help="MLflow URI (default: sqlite:///mlflow.db).")
+    dr = sub.add_parser("drift", help="Check a batch of production tickets for drift against the champion; exit 1 on alert.")
+    dr.add_argument("--reference", required=True, help="Training tickets CSV (the reference distribution).")
+    dr.add_argument("--current", required=True, help="Production tickets CSV; a label column adds an accuracy check.")
+    dr.add_argument("--model-name", default="ticket-router", help="Registered model name (default: ticket-router).")
+    dr.add_argument("--policy", default="configs/drift.yaml", help="Drift thresholds (default: configs/drift.yaml).")
+    dr.add_argument("--public-key", help="Verify the champion's signature first (default: $SMLOPS_VERIFY_KEY).")
+    dr.add_argument("--tracking-uri", default="sqlite:///mlflow.db", help="MLflow URI (default: sqlite:///mlflow.db).")
     pr = sub.add_parser("promotion-request", help="Write the pull request body for promoting a run's model (gate G4).")
     pr.add_argument("--run-dir", default="runs/latest", help="Output directory of smlops train (default: runs/latest).")
     pr.add_argument("--output", "-o", help="Write Markdown here instead of stdout.")
@@ -193,6 +200,33 @@ def _cmd_verify(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_drift(args: argparse.Namespace) -> int:
+    import mlflow
+    import pandas as pd
+
+    from . import registry
+    from .drift import check, load_policy, markdown
+    from .safeload import UnsafeModelError
+    from .signing import SignatureError
+    mlflow.set_tracking_uri(args.tracking_uri)
+    champion = registry.by_alias(args.model_name, registry.CHAMPION)
+    if champion is None:
+        print(f"smlops: {args.model_name} has no champion to check", file=sys.stderr)
+        return 2
+    try:
+        model = registry.load(champion, args.public_key)
+        reference = pd.read_csv(args.reference, dtype=str, keep_default_na=False)
+        current = pd.read_csv(args.current, dtype=str, keep_default_na=False)
+        run_id = mlflow.MlflowClient().get_model_version(args.model_name, champion.version).tags["run_id"]
+        baseline = mlflow.get_run(run_id).data.metrics.get("accuracy")      # the champion's own test accuracy
+        report = check(model, reference, current, load_policy(args.policy), baseline)
+    except (SignatureError, UnsafeModelError, OSError, ValueError, KeyError) as exc:
+        print(f"smlops: {exc}", file=sys.stderr)
+        return 2
+    print(markdown(report, f"{args.model_name} v{champion.version}"), end="")
+    return 1 if report["level"] == "alert" else 0
+
+
 def _cmd_keys(args: argparse.Namespace) -> int:
     from .signing import SignatureError, generate_keys
     try:
@@ -232,5 +266,7 @@ def main(argv: list[str] | None = None) -> int:
         return _cmd_keys(args)
     if args.command == "verify":
         return _cmd_verify(args)
+    if args.command == "drift":
+        return _cmd_drift(args)
     _parser().print_help()
     return 0

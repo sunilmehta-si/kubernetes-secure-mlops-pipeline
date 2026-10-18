@@ -88,3 +88,12 @@ def check(model, reference: pd.DataFrame, current: pd.DataFrame, policy: DriftPo
     level = max((c["level"] for c in checks), key=LEVELS.index)
     return {"level": level, "batch": len(current), "checks": checks, "policy": asdict(policy),
             "retrain": level == "alert"}
+
+
+def markdown(report: dict, model: str) -> str:
+    mark = {"ok": "ok", "warn": "**warn**", "alert": "**ALERT**"}
+    lines = [f"## Drift check: {model} on {report['batch']} tickets: {mark[report['level']]}", "",
+             "Retraining recommended." if report["retrain"] else "No action needed.", "",
+             "| Check | Value | Level |", "|---|---|---|"]
+    lines += [f"| {c['name']} | {c['value']:.4f} | {mark[c['level']]} |" for c in report["checks"]]
+    return "\n".join(lines) + "\n"

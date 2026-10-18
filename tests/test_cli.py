@@ -105,3 +105,34 @@ class SigningCliTests(unittest.TestCase):
                 self.assertEqual(main([*verify, "--alias", "missing"]), 2)
             finally:
                 mlflow.set_tracking_uri("")
+
+
+class DriftCliTests(unittest.TestCase):
+    def test_drill_drifted_batch_alerts_and_clean_batch_passes(self):
+        import tempfile
+        from contextlib import redirect_stderr
+        from pathlib import Path
+
+        import mlflow
+        root = Path(__file__).resolve().parents[1]
+        with tempfile.TemporaryDirectory() as d, redirect_stderr(io.StringIO()):
+            uri = f"sqlite:///{d}/mlflow.db"
+            try:
+                self.assertEqual(main(["data", "generate", "-o", f"{d}/data"]), 0)
+                self.assertEqual(main(["data", "generate", "--seed", "21", "-o", f"{d}/clean"]), 0)
+                self.assertEqual(main(["data", "generate", "--seed", "22", "--drift", "1", "-o", f"{d}/shifted"]), 0)
+                with redirect_stdout(io.StringIO()):
+                    self.assertEqual(main(["train", "--data", f"{d}/data", "--tracking-uri", uri, "-o", f"{d}/out",
+                                           "--config", str(root / "configs/train.yaml"),
+                                           "--gate", str(root / "configs/gate.yaml")]), 0)
+                drift = ["drift", "--reference", f"{d}/data/train.csv", "--tracking-uri", uri,
+                         "--policy", str(root / "configs/drift.yaml")]
+                out = io.StringIO()
+                with redirect_stdout(out):
+                    self.assertEqual(main([*drift, "--current", f"{d}/clean/test.csv"]), 0)
+                    self.assertEqual(main([*drift, "--current", f"{d}/shifted/test.csv"]), 1)
+                self.assertIn("**ALERT**", out.getvalue())
+                self.assertIn("Retraining recommended.", out.getvalue())
+                self.assertIn("| accuracy drop |", out.getvalue())
+            finally:
+                mlflow.set_tracking_uri("")
