@@ -55,3 +55,35 @@ jobs:
           severity: HIGH,CRITICAL
           ignore-unfixed: true
           exit-code: "1"
+
+  drills:
+    # The governance and security controls, run as a user would run them; outputs go to the job summary.
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      MLFLOW_DISABLE_AGENT_HINT: "1"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+      - run: pip install -e .
+      - name: Sign, verify and request promotion
+        run: |
+          smlops keys generate -o "$RUNNER_TEMP/keys"
+          smlops data generate -o data
+          smlops train --data data --signing-key "$RUNNER_TEMP/keys/signing-key.pem" > gate.md
+          smlops verify --public-key "$RUNNER_TEMP/keys/signing-key.pub.pem"
+          smlops promotion-request -o promotion.md
+          { cat gate.md; echo; cat promotion.md; } >> "$GITHUB_STEP_SUMMARY"
+      - name: Drift drill (clean batch passes, shifted batch alerts)
+        run: |
+          smlops data generate --seed 21 -o clean
+          smlops data generate --seed 22 --drift 1 -o shifted
+          smlops drift --reference data/train.csv --current clean/test.csv >> "$GITHUB_STEP_SUMMARY"
+          if smlops drift --reference data/train.csv --current shifted/test.csv > shifted.md; then
+            echo "the shifted batch should have raised a drift alert"; exit 1
+          fi
+          cat shifted.md >> "$GITHUB_STEP_SUMMARY"
