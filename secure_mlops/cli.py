@@ -38,6 +38,12 @@ def _parser() -> argparse.ArgumentParser:
     ksub = k.add_subparsers(dest="keys_command", required=True)
     kg = ksub.add_parser("generate", help="Make a P-256 key pair for signing models (private key stays local).")
     kg.add_argument("--output", "-o", default="keys", help="Directory for the key pair (default: keys, git-ignored).")
+    vf = sub.add_parser("verify", help="Check a registered model against its signature; exit 1 if unsigned or changed.")
+    vf.add_argument("--model-name", default="ticket-router", help="Registered model name (default: ticket-router).")
+    vf.add_argument("--alias", default="champion", help="Alias to check (default: champion).")
+    vf.add_argument("--version", help="A version number instead of an alias.")
+    vf.add_argument("--public-key", required=True, help="Public key the model must be signed with.")
+    vf.add_argument("--tracking-uri", default="sqlite:///mlflow.db", help="MLflow URI (default: sqlite:///mlflow.db).")
     pr = sub.add_parser("promotion-request", help="Write the pull request body for promoting a run's model (gate G4).")
     pr.add_argument("--run-dir", default="runs/latest", help="Output directory of smlops train (default: runs/latest).")
     pr.add_argument("--output", "-o", help="Write Markdown here instead of stdout.")
@@ -166,6 +172,27 @@ def _cmd_pipeline(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_verify(args: argparse.Namespace) -> int:
+    import mlflow
+
+    from . import registry
+    from .safeload import UnsafeModelError
+    from .signing import SignatureError
+    mlflow.set_tracking_uri(args.tracking_uri)
+    version = registry.Version(args.model_name, args.version) if args.version else \
+        registry.by_alias(args.model_name, args.alias)
+    if version is None:
+        print(f"smlops: {args.model_name} has no alias {args.alias}", file=sys.stderr)
+        return 2
+    try:
+        registry.load(version, args.public_key)
+    except (SignatureError, UnsafeModelError) as exc:
+        print(f"smlops: NOT VERIFIED: {exc}", file=sys.stderr)
+        return 1
+    print(f"smlops: {version.name} v{version.version} verified: every file matches its signature", file=sys.stderr)
+    return 0
+
+
 def _cmd_keys(args: argparse.Namespace) -> int:
     from .signing import SignatureError, generate_keys
     try:
@@ -203,5 +230,7 @@ def main(argv: list[str] | None = None) -> int:
         return _cmd_promotion_request(args)
     if args.command == "keys":
         return _cmd_keys(args)
+    if args.command == "verify":
+        return _cmd_verify(args)
     _parser().print_help()
     return 0

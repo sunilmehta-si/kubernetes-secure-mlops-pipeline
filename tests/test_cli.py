@@ -80,3 +80,28 @@ class TrainCliTests(unittest.TestCase):
                 self.assertEqual(main([*common, "--config", f"{d}/missing.yaml"]), 2)
             finally:
                 mlflow.set_tracking_uri("")
+
+
+class SigningCliTests(unittest.TestCase):
+    def test_keys_train_signed_and_verify(self):
+        import tempfile
+        from contextlib import redirect_stderr
+        from pathlib import Path
+
+        import mlflow
+        root = Path(__file__).resolve().parents[1]
+        with tempfile.TemporaryDirectory() as d, redirect_stderr(io.StringIO()) as err, redirect_stdout(io.StringIO()):
+            uri = f"sqlite:///{d}/mlflow.db"
+            try:
+                self.assertEqual(main(["keys", "generate", "-o", f"{d}/keys"]), 0)
+                self.assertEqual(main(["keys", "generate", "-o", f"{d}/keys"]), 1)        # never overwrites
+                self.assertEqual(main(["data", "generate", "-o", f"{d}/data"]), 0)
+                self.assertEqual(main(["train", "--data", f"{d}/data", "--tracking-uri", uri, "-o", f"{d}/out",
+                                       "--config", str(root / "configs/train.yaml"), "--gate", str(root / "configs/gate.yaml"),
+                                       "--signing-key", f"{d}/keys/signing-key.pem"]), 0)
+                verify = ["verify", "--public-key", f"{d}/keys/signing-key.pub.pem", "--tracking-uri", uri]
+                self.assertEqual(main(verify), 0)
+                self.assertIn("v1 verified", err.getvalue())
+                self.assertEqual(main([*verify, "--alias", "missing"]), 2)
+            finally:
+                mlflow.set_tracking_uri("")
