@@ -1,0 +1,9 @@
+# Drift check: when production tickets no longer look like the training data (gate G7, threat T10).
+# PSI (population stability index) bands follow common practice: < 0.10 stable, 0.10-0.25 moderate, > 0.25 large.
+# Thresholds were calibrated on the generator: clean batches score PSI <= 0.01 and a 0.4% new-word rate.
+psi_warn: 0.10
+psi_alert: 0.25
+new_word_rate_warn: 0.015
+new_word_rate_alert: 0.03
+max_accuracy_drop: 0.03        # only when the batch has labels (agent-confirmed teams)
+min_batch: 200                 # fewer tickets than this are too noisy to judge
