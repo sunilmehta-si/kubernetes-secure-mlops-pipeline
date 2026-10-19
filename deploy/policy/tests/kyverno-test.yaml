@@ -1,0 +1,21 @@
+# Offline tests for the admission policies, run with the Kyverno CLI in CI (`kyverno test deploy/policy/tests`).
+# Signature verification needs a registry, so it is exercised by the cluster drill instead.
+apiVersion: cli.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: serving-image-policies
+policies:
+  - ../require-digests.yaml
+resources:
+  - pods.yaml
+results:
+  - policy: require-registry-and-digest
+    rule: registry-and-digest
+    resources: ["serving/pinned-from-local-registry"]
+    kind: Pod
+    result: pass
+  - policy: require-registry-and-digest
+    rule: registry-and-digest
+    resources: ["serving/uses-a-tag", "serving/other-registry", "serving/init-container-by-tag"]
+    kind: Pod
+    result: fail
