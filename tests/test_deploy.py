@@ -79,3 +79,16 @@ class InferenceServiceTests(unittest.TestCase):
         self.assertEqual(pred["model"]["modelFormat"]["name"], rt["spec"]["supportedModelFormats"][0]["name"])
         (_, sa) = docs("deploy/serving/namespace.yaml")
         self.assertEqual(pred["serviceAccountName"], sa["metadata"]["name"])
+
+
+
+class NetworkPolicyTests(unittest.TestCase):
+    def test_default_deny_both_ways_and_one_narrow_ingress(self):
+        deny, allow = docs("deploy/serving/networkpolicy.yaml")
+        self.assertEqual((deny["spec"]["podSelector"], sorted(deny["spec"]["policyTypes"])), ({}, ["Egress", "Ingress"]))
+        self.assertNotIn("ingress", deny["spec"])
+        self.assertNotIn("egress", deny["spec"])
+        self.assertEqual(allow["spec"]["policyTypes"], ["Ingress"])                 # no egress is ever allowed
+        (rule,) = allow["spec"]["ingress"]
+        self.assertEqual(rule["ports"], [{"protocol": "TCP", "port": 8080}])
+        self.assertEqual(rule["from"][0]["namespaceSelector"]["matchLabels"], {"smlops.io/model-clients": "true"})
