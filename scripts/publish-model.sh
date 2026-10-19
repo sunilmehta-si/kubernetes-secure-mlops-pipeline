@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+# Train, sign and publish a model and its server to the cluster registry, ready for scripts/deploy-model.sh.
+#   1. two key pairs in WORK/keys: model-file signing (OpenSSF) and image signing (cosign), never committed
+#   2. smlops: generate data, train with the gate, sign the stored model, package the verified champion
+#   3. build and push the model image (modelcar) and the server image, then sign both by digest with cosign
+#      (no transparency-log upload: a local key needs no public record)
+# Usage: scripts/publish-model.sh WORK    Writes WORK/images.env with MODEL_IMAGE and SERVER_IMAGE digests.
+set -euo pipefail
+cd "$(dirname "$0")/.."
+. deploy/versions.env
+work="${1:?usage: publish-model.sh WORK_DIR}"
+mkdir -p "$work"
+keys="$work/keys"
+
+[ -f "$keys/signing-key.pem" ] || smlops keys generate -o "$keys"
+if [ ! -f "$keys/cosign.key" ]; then
+  (cd "$keys" && COSIGN_PASSWORD="" cosign generate-key-pair)
+fi
+
+export MLFLOW_DISABLE_AGENT_HINT=1
+uri="sqlite:///$work/mlflow.db"
+smlops data generate -o "$work/data"
+smlops train --data "$work/data" --tracking-uri "$uri" -o "$work/run" --signing-key "$keys/signing-key.pem" \
+  --public-key "$keys/signing-key.pub.pem"
+rm -rf "$work/bundle"
+smlops package --tracking-uri "$uri" --public-key "$keys/signing-key.pub.pem" -o "$work/bundle"
+version="$(jq -r .version "$work/bundle/release.json")"
+
+push() {   # build context, repository:tag -> prints repository@sha256:digest
+  docker build -q -t "$2" "$1" >/dev/null
+  docker push -q "$2" >/dev/null
+  docker inspect --format '{{index .RepoDigests 0}}' "$2"
+}
+model_image="$(push "$work/bundle" "${REGISTRY}/ticket-router:v${version}")"
+server_image="$(push . "${REGISTRY}/smlops-server:$(git rev-parse --short HEAD)")"
+
+for image in "$model_image" "$server_image"; do
+  COSIGN_PASSWORD="" cosign sign --yes --key "$keys/cosign.key" --tlog-upload=false --use-signing-config=false \
+    --new-bundle-format=false --allow-http-registry "$image"
+done
+printf 'MODEL_IMAGE=%s\nSERVER_IMAGE=%s\n' "$model_image" "$server_image" | tee "$work/images.env"
