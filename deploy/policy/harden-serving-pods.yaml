@@ -1,8 +1,9 @@
 # KServe injects two containers into a predictor pod to mount the model image: "modelcar-init" and "modelcar". They
 # come without the settings Pod Security "restricted" requires, so the namespace rejected every predictor pod. Rather
-# than weaken the namespace to "baseline", this mutation adds the missing settings to any container in serving that
-# does not declare them; settings a container already has are never changed ("+()" adds only when absent). Mutating
-# admission runs before Pod Security is checked, so the hardened pod is what gets validated.
+# than weaken the namespace to "baseline", this mutation hardens every pod in serving: pod-level runAsNonRoot and
+# seccomp are added when absent, and every container is set to allowPrivilegeEscalation: false with all capabilities
+# dropped. Those two values are exactly what "restricted" requires, so setting them can only tighten a container.
+# Mutating admission runs before Pod Security is checked, so the hardened pod is what gets validated.
 apiVersion: kyverno.io/v1
 kind: ClusterPolicy
 metadata:
@@ -41,8 +42,8 @@ spec:
                 containers:
                   - name: "{{ element.name }}"
                     securityContext:
-                      +(allowPrivilegeEscalation): false
-                      +(capabilities):
+                      allowPrivilegeEscalation: false
+                      capabilities:
                         drop: ["ALL"]
           - list: "request.object.spec.initContainers || `[]`"
             patchStrategicMerge:
@@ -50,6 +51,6 @@ spec:
                 initContainers:
                   - name: "{{ element.name }}"
                     securityContext:
-                      +(allowPrivilegeEscalation): false
-                      +(capabilities):
+                      allowPrivilegeEscalation: false
+                      capabilities:
                         drop: ["ALL"]

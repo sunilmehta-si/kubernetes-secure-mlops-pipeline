@@ -61,6 +61,8 @@ jobs:
           kubectl -n serving describe inferenceservice ticket-router || true
           kubectl -n serving describe pods || true
           kubectl -n serving logs -l serving.kserve.io/inferenceservice=ticket-router --all-containers --tail=100 || true
+          kubectl get mutatingwebhookconfigurations -o custom-columns=NAME:.metadata.name,REINVOKE:.webhooks[*].reinvocationPolicy || true
+          kubectl -n kyverno logs deployment/kyverno-admission-controller --tail=300 | grep -i -E "mutat|harden|modelcar" | tail -40 || true
           kubectl -n kyverno logs deployment/kyverno-admission-controller --tail=100 || true
           kubectl -n kserve logs deployment/kserve-controller-manager --tail=100 || true
           kubectl get events -A --sort-by=.lastTimestamp | tail -60 || true
