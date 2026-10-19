@@ -1,0 +1,66 @@
+name: cluster
+
+# The whole path on a real cluster: kind with a local registry, KServe, Kyverno; train and sign a model, publish
+# signed model and server images, deploy by digest, call the endpoint, then drill the controls (unsigned image,
+# tag reference, outside client). No secrets: keys are made for the run and never leave it.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cluster-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  serve:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      WORK: ${{ github.workspace }}/.work
+      MLFLOW_DISABLE_AGENT_HINT: "1"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+      - run: pip install -e .
+      - uses: helm/kind-action@1544676c07bb3570fcb70166beaa07c4528fd4aa # v1.15.1
+        with:
+          version: v0.33.0
+          install_only: true
+      - uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
+        with:
+          cosign-release: v3.1.3
+      - name: Cluster and registry
+        run: |
+          echo "127.0.0.1 kind-registry" | sudo tee -a /etc/hosts
+          scripts/cluster-up.sh
+      - name: Train, sign and publish
+        run: scripts/publish-model.sh "$WORK"
+      - name: Install the platform and policies
+        run: scripts/install-platform.sh "$WORK/keys"
+      - name: Deploy and call the model
+        run: scripts/deploy-model.sh "$WORK"
+      - name: Drill the controls
+        run: |
+          scripts/drill-admission.sh "$WORK" | tee "$WORK/drill.txt"
+          {
+            echo "### Model served on kind"; echo '```json'; jq . "$WORK/smoke.json"; echo '```'
+            echo "### Admission and network drills"; echo '```'; cat "$WORK/drill.txt"; echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Diagnostics
+        if: failure()
+        run: |
+          kubectl get pods -A -o wide || true
+          kubectl -n serving describe inferenceservice ticket-router || true
+          kubectl -n serving describe pods || true
+          kubectl -n serving logs -l serving.kserve.io/inferenceservice=ticket-router --all-containers --tail=100 || true
+          kubectl -n kyverno logs deployment/kyverno-admission-controller --tail=100 || true
+          kubectl -n kserve logs deployment/kserve-controller-manager --tail=100 || true
+          kubectl get events -A --sort-by=.lastTimestamp | tail -60 || true
