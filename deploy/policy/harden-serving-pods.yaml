@@ -12,7 +12,9 @@ metadata:
 spec:
   background: false
   rules:
-    - name: restricted-defaults
+    # Kyverno allows only one of foreach / patchStrategicMerge per mutate rule (enforced by the cluster's policy
+    # validation, not by the offline CLI), so pod-level and per-container settings are two rules.
+    - name: restricted-pod-defaults
       match:
         any:
           - resources:
@@ -25,6 +27,13 @@ spec:
               +(runAsNonRoot): true
               +(seccompProfile):
                 type: RuntimeDefault
+    - name: restricted-container-defaults
+      match:
+        any:
+          - resources:
+              kinds: ["Pod"]
+              namespaces: ["serving"]
+      mutate:
         foreach:
           - list: "request.object.spec.containers"
             patchStrategicMerge:
