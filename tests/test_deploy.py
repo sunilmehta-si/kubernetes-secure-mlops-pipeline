@@ -36,3 +36,32 @@ class ServingNamespaceTests(unittest.TestCase):
         ns, sa = docs("deploy/serving/namespace.yaml")
         self.assertEqual(ns["metadata"]["labels"]["pod-security.kubernetes.io/enforce"], "restricted")
         self.assertEqual((sa["kind"], sa["automountServiceAccountToken"]), ("ServiceAccount", False))
+
+
+
+def render(path: str, **values) -> list[dict]:
+    from string import Template
+    text = Template((ROOT / path).read_text()).substitute(values)
+    return [d for d in yaml.safe_load_all(text) if d]
+
+
+DIGEST = "registry.local/x@sha256:" + "a" * 64
+
+
+class ServingRuntimeTests(unittest.TestCase):
+    def test_runs_smlops_serve_with_the_key_mounted_read_only(self):
+        (rt,) = render("deploy/serving/servingruntime.yaml", SERVER_IMAGE=DIGEST)
+        c = rt["spec"]["containers"][0]
+        self.assertEqual(c["image"], DIGEST)
+        self.assertEqual(c["args"][:3], ["serve", "--bundle", "/mnt/models"])
+        key = c["args"][c["args"].index("--public-key") + 1]
+        mount = next(m for m in c["volumeMounts"] if m["name"] == "verify-key")
+        self.assertTrue(key.startswith(mount["mountPath"]) and mount["readOnly"])
+
+    def test_container_meets_pod_security_restricted(self):
+        (rt,) = render("deploy/serving/servingruntime.yaml", SERVER_IMAGE=DIGEST)
+        sc = rt["spec"]["containers"][0]["securityContext"]
+        self.assertEqual((sc["runAsNonRoot"], sc["allowPrivilegeEscalation"], sc["readOnlyRootFilesystem"]),
+                         (True, False, True))
+        self.assertEqual((sc["capabilities"]["drop"], sc["seccompProfile"]["type"]), (["ALL"], "RuntimeDefault"))
+        self.assertIn("limits", rt["spec"]["containers"][0]["resources"])
