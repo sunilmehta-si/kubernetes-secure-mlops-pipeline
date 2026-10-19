@@ -1,5 +1,34 @@
 # Changelog
 
+## [0.2.0] - 2026-10-19
+
+Serving, and deploy-time security proven on a real cluster: a model that was not built and signed by the pipeline
+cannot start, and a server cannot run a model whose signature does not verify.
+
+### Added
+- **Model server** (`smlops serve`): KServe v1 protocol; starts only after the bundle's signature verifies, with no
+  bypass flag; 1-64 tickets of 1-2000 characters, no extra fields, 256 KB bodies; every response and audit line names
+  the model version and signature digest; audit log without ticket text; Prometheus metrics.
+- **Packaging** (`smlops package`): the verified champion as a KServe modelcar image, with its signature and ML-BOM,
+  on a digest-pinned base.
+- **Kubernetes manifests:** a Pod Security "restricted" serving namespace with a token-less service account; a
+  ServingRuntime and InferenceService by digest; default-deny network policies with one client allowlist and no egress.
+- **Admission policies (Kyverno):** signed images only in serving (server and model), cluster registry and digests only,
+  and hardening of KServe's injected modelcar containers; tested offline with the Kyverno CLI in CI.
+- **Cluster in CI:** kind with a zot registry, cert-manager, KServe v0.21 and Kyverno v1.19; train, sign, publish, deploy
+  and call the model, then drill an unsigned image, a tag reference and an outside client, on every push.
+- `docs/serving.md`; governance statuses: deploy admission (G6), tampering (T7) and pickle loading (T8) built.
+
+### Fixed
+- Loading a registry model outside training needed a tracking store a serving pod does not have; local models are now
+  read from their MLmodel file.
+- KServe's release manifest defaults to Serverless (Knative) and does not create its namespace; the install sets
+  Standard mode and creates it, and the InferenceService pins Standard mode.
+- Pods created before Kyverno registered its Pod webhook missed the hardening and were retried for minutes; the install
+  now waits for the webhook.
+
+[0.2.0]: https://github.com/sunilmehta-si/kubernetes-secure-mlops-pipeline/releases/tag/v0.2.0
+
 ## [0.1.0] - 2026-10-18
 
 The first release: the training pipeline and the governance and security controls around it, all runnable on a
