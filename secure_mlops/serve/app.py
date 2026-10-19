@@ -9,8 +9,15 @@ model version and the digest of the signed files that produced it.
 """
 from __future__ import annotations
 
+import json
+import logging
+import re
+import time
+import uuid
+from collections import Counter
+
 import pandas as pd
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -21,6 +28,9 @@ from .bundle import ServedModel
 MAX_INSTANCES = 64
 MAX_TEXT = 2000
 MAX_BODY_BYTES = 256 * 1024
+# One JSON line per prediction: which model answered, for whom, how fast. Never the ticket text.
+AUDIT = logging.getLogger("smlops.audit")
+REQUEST_ID = re.compile(r"^[A-Za-z0-9._-]{1,64}$")
 
 
 class Instance(BaseModel):
@@ -63,11 +73,20 @@ def create_app(served: ServedModel) -> FastAPI:
         return {**identity(), "ready": True}
 
     @app.post("/v1/models/{name}:predict")
-    def predict(name: str, request: PredictRequest) -> dict:
+    def predict(name: str, request: PredictRequest, raw: Request, response: Response) -> dict:
         known(name)
+        started = time.perf_counter()
+        supplied = raw.headers.get("x-request-id", "")
+        request_id = supplied if REQUEST_ID.match(supplied) else uuid.uuid4().hex
         frame = pd.DataFrame({"text": [i.text for i in request.instances]})
         teams = served.predict(frame)
         confidence = served.predict_proba(frame).max(axis=1)
+        response.headers["X-Request-ID"] = request_id
+        response.headers["X-Model-Digest"] = served.digest
+        AUDIT.info(json.dumps({"event": "predict", "request_id": request_id, "model": served.name,
+                               "version": served.version, "digest": served.digest, "tickets": len(frame),
+                               "teams": dict(sorted(Counter(map(str, teams)).items())),
+                               "latency_ms": round((time.perf_counter() - started) * 1000, 2)}, sort_keys=True))
         return {"predictions": [{"team": str(t), "confidence": round(float(c), 4)} for t, c in zip(teams, confidence)],
                 "model": identity()}
 

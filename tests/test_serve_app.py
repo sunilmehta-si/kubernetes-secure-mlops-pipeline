@@ -72,3 +72,36 @@ class InputLimitTests(unittest.TestCase):
         r = self.client.post("/v1/models/ticket-router:predict", content=b"{}",
                              headers={"content-type": "application/json", "content-length": "abc"})
         self.assertEqual(r.status_code, 413)
+
+
+class AuditLogTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.dir = tempfile.TemporaryDirectory()
+        _, public = make_bundle(Path(cls.dir.name, "b"), Path(cls.dir.name, "keys"))
+        cls.served = load_verified(Path(cls.dir.name, "b"), public)
+        cls.client = TestClient(create_app(cls.served))
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.dir.cleanup()
+
+    def test_one_line_per_request_with_identity_and_never_the_text(self):
+        import json
+        secret = "my card ending 4242 was charged twice"
+        with self.assertLogs("smlops.audit", level="INFO") as logs:
+            r = self.client.post("/v1/models/ticket-router:predict", headers={"X-Request-ID": "req-123"},
+                                 json={"instances": [{"text": secret}, {"text": "parcel never arrived"}]})
+        self.assertEqual((r.headers["x-request-id"], r.headers["x-model-digest"]), ("req-123", self.served.digest))
+        self.assertEqual(len(logs.records), 1)
+        line = json.loads(logs.records[0].getMessage())
+        self.assertEqual((line["request_id"], line["version"], line["tickets"]), ("req-123", "4", 2))
+        self.assertEqual(sum(line["teams"].values()), 2)
+        self.assertNotIn("4242", logs.output[0])
+        self.assertNotIn("charged", logs.output[0])
+
+    def test_unsafe_request_ids_are_replaced(self):
+        with self.assertLogs("smlops.audit", level="INFO"):
+            r = self.client.post("/v1/models/ticket-router:predict", headers={"X-Request-ID": "bad id\nINJECT"},
+                                 json={"instances": [{"text": "parcel never arrived"}]})
+        self.assertRegex(r.headers["x-request-id"], r"^[0-9a-f]{32}$")
