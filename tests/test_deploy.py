@@ -65,3 +65,17 @@ class ServingRuntimeTests(unittest.TestCase):
                          (True, False, True))
         self.assertEqual((sc["capabilities"]["drop"], sc["seccompProfile"]["type"]), (["ALL"], "RuntimeDefault"))
         self.assertIn("limits", rt["spec"]["containers"][0]["resources"])
+
+
+
+class InferenceServiceTests(unittest.TestCase):
+    def test_model_by_digest_on_the_bundle_runtime_without_a_token(self):
+        (isvc,) = render("deploy/serving/inferenceservice.yaml", MODEL_IMAGE=DIGEST)
+        pred = isvc["spec"]["predictor"]
+        self.assertEqual(pred["model"]["storageUri"], f"oci://{DIGEST}")
+        self.assertRegex(pred["model"]["storageUri"], r"@sha256:[0-9a-f]{64}$")
+        (rt,) = render("deploy/serving/servingruntime.yaml", SERVER_IMAGE=DIGEST)
+        self.assertEqual(pred["model"]["runtime"], rt["metadata"]["name"])
+        self.assertEqual(pred["model"]["modelFormat"]["name"], rt["spec"]["supportedModelFormats"][0]["name"])
+        (_, sa) = docs("deploy/serving/namespace.yaml")
+        self.assertEqual(pred["serviceAccountName"], sa["metadata"]["name"])
