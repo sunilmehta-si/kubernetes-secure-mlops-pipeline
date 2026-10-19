@@ -59,17 +59,18 @@ STAGES = [
         ("Model card", "from the run's records", "built"),
     ], ("MSE · RMSE", "for regression models")),
     ("Deploy", ("Serve it on", "Kubernetes, safely"), [
-        ("Model registry", "MLflow champion alias", "built"),
-        ("Signed OCI model", "verified at admission", "planned"),
-        ("Canary on KServe", "Argo CD, auto rollback", "planned"),
+        ("Signed OCI model", "verified at admission", "built"),
+        ("KServe endpoint", "by digest, restricted pods", "built"),
+        ("GitOps + canary", "Argo CD, auto rollback", "planned"),
     ], ("Seldon · BentoML", "SageMaker")),
     ("Monitor", ("Watch data and", "predictions in production"), [
-        ("Prometheus + Grafana", "latency, errors, traffic", "planned"),
-        ("Evidently", "data and prediction drift", "planned"),
-    ], ("whylogs", "Arize")),
+        ("Metrics + audit log", "/metrics, no ticket text", "built"),
+        ("Drift check", "PSI, new words, accuracy", "built"),
+        ("Grafana + alerts", "dashboards, live drift", "planned"),
+    ], ("whylogs", "Evidently")),
 ]
-CI = ["Tests on Python 3.12 + 3.13", "2 full Kubeflow runs", "Image pinned by digest", "Non-root container",
-      "Trivy CVE gate", "PR code review", "Dependabot"]
+CI = ["Tests on 3.12 + 3.13", "Kubeflow runs", "Trivy CVE gate", "Governance drills", "Kyverno policy tests",
+      "kind cluster drills", "PR code review"]
 
 
 def _t(x, y, text, size, fill, weight=400, anchor="start", spacing=None, style=None):

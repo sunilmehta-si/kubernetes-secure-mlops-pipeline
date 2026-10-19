@@ -14,11 +14,11 @@ model it replaces, signed, verified at deploy time, rolled out gradually and rol
   <img src="docs/images/architecture-light.svg" alt="The ML system in six stages, ingest, prepare, train, evaluate, deploy and monitor, with what this repo uses at each stage, other common tools, automatic retraining, and CI on every change">
 </picture>
 
-**Status: under construction.** Stages 1 to 4 and the model registry are built and tested (solid green above), and
-so are the governance controls around them: a risk register, a PII scan, signed models verified before every load,
-an ML-BOM per model, and drift checks. Deployment to Kubernetes, admission control and live monitoring are next
-(dashed). This README describes only what works. Each stage also lists other tools commonly used for the same job,
-so the diagram doubles as a map of MLOps.
+**Status: under construction.** Training, evaluation, the registry and serving are built and tested (solid green
+above), with the governance controls around them: a risk register, a PII scan, signed models verified before every
+load, an ML-BOM per model, drift checks, and admission control on a real cluster. GitOps delivery with canary
+rollouts and live dashboards are next (dashed). This README describes only what works. Each stage also lists other
+tools commonly used for the same job, so the diagram doubles as a map of MLOps.
 
 ## The gate in action
 
@@ -91,6 +91,20 @@ smlops drift --reference data/train.csv --current batch.csv   # PSI, new words, 
 Each task is a thin wrapper around the same function `smlops train` calls, so the command line, the local runner
 and a Kubeflow cluster all run the same code. Every run records the fingerprints of its data, the hash of its
 parameters, every metric (overall, per team and per slice), the gate decision and a model card.
+
+## Serving, verified twice
+
+The champion is packaged as a signed OCI image and served by KServe on a kind cluster, in CI on every push
+([details](docs/serving.md)). Two independent checks stand between a model and traffic: Kyverno admits only images
+signed by the pipeline and pinned by digest, and the server verifies the model's own signature before it opens a port.
+The latest run:
+
+```text
+ticket-router answered: ["billing","shipping"], model 1
+PASS: an unsigned image rejected by verify-model-signatures
+PASS: an image referenced by tag rejected by require-registry-and-digest
+PASS: a client outside the allowed namespaces could not reach the model
+```
 
 ## Governance and security
 

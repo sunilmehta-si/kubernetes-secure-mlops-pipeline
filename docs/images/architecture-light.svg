@@ -108,13 +108,14 @@
 <text x="869.4" y="196" font-size="9.5" font-weight="700" fill="#1a7f37" text-anchor="start" letter-spacing="0.8">IN THIS REPO</text>
 <rect x="867.4" y="204" width="158" height="48" rx="8" fill="#ffffff" stroke="#c8e4d1"/>
 <rect x="867.4" y="213" width="4" height="30" rx="2" fill="#1a7f37"/>
-<text x="881.4" y="224" font-size="12.5" font-weight="600" fill="#0b0b0b" text-anchor="start">Model registry</text>
-<text x="881.4" y="240" font-size="10.5" font-weight="400" fill="#57564f" text-anchor="start">MLflow champion alias</text>
-<rect x="867.4" y="260" width="158" height="48" rx="8" fill="#fbfbfa" stroke="#c4c2bb" stroke-dasharray="5 4"/>
-<text x="879.4" y="280" font-size="12.5" font-weight="600" fill="#57564f" text-anchor="start">Signed OCI model</text>
-<text x="879.4" y="296" font-size="10.5" font-weight="400" fill="#8a887f" text-anchor="start">verified at admission</text>
+<text x="881.4" y="224" font-size="12.5" font-weight="600" fill="#0b0b0b" text-anchor="start">Signed OCI model</text>
+<text x="881.4" y="240" font-size="10.5" font-weight="400" fill="#57564f" text-anchor="start">verified at admission</text>
+<rect x="867.4" y="260" width="158" height="48" rx="8" fill="#ffffff" stroke="#c8e4d1"/>
+<rect x="867.4" y="269" width="4" height="30" rx="2" fill="#1a7f37"/>
+<text x="881.4" y="280" font-size="12.5" font-weight="600" fill="#0b0b0b" text-anchor="start">KServe endpoint</text>
+<text x="881.4" y="296" font-size="10.5" font-weight="400" fill="#57564f" text-anchor="start">by digest, restricted pods</text>
 <rect x="867.4" y="316" width="158" height="48" rx="8" fill="#fbfbfa" stroke="#c4c2bb" stroke-dasharray="5 4"/>
-<text x="879.4" y="336" font-size="12.5" font-weight="600" fill="#57564f" text-anchor="start">Canary on KServe</text>
+<text x="879.4" y="336" font-size="12.5" font-weight="600" fill="#57564f" text-anchor="start">GitOps + canary</text>
 <text x="879.4" y="352" font-size="10.5" font-weight="400" fill="#8a887f" text-anchor="start">Argo CD, auto rollback</text>
 <line x1="869.4" y1="392" x2="1023.4" y2="392" stroke="#dcdad3"/>
 <text x="869.4" y="408" font-size="9.5" font-weight="700" fill="#8a887f" text-anchor="start" letter-spacing="0.8">ALSO COMMON</text>
@@ -127,16 +128,21 @@
 <text x="1075" y="156" font-size="11.5" font-weight="400" fill="#57564f" text-anchor="start">Watch data and</text>
 <text x="1075" y="171" font-size="11.5" font-weight="400" fill="#57564f" text-anchor="start">predictions in production</text>
 <text x="1075" y="196" font-size="9.5" font-weight="700" fill="#1a7f37" text-anchor="start" letter-spacing="0.8">IN THIS REPO</text>
-<rect x="1073.0" y="204" width="158" height="48" rx="8" fill="#fbfbfa" stroke="#c4c2bb" stroke-dasharray="5 4"/>
-<text x="1085" y="224" font-size="12.5" font-weight="600" fill="#57564f" text-anchor="start">Prometheus + Grafana</text>
-<text x="1085" y="240" font-size="10.5" font-weight="400" fill="#8a887f" text-anchor="start">latency, errors, traffic</text>
-<rect x="1073.0" y="260" width="158" height="48" rx="8" fill="#fbfbfa" stroke="#c4c2bb" stroke-dasharray="5 4"/>
-<text x="1085" y="280" font-size="12.5" font-weight="600" fill="#57564f" text-anchor="start">Evidently</text>
-<text x="1085" y="296" font-size="10.5" font-weight="400" fill="#8a887f" text-anchor="start">data and prediction drift</text>
+<rect x="1073.0" y="204" width="158" height="48" rx="8" fill="#ffffff" stroke="#c8e4d1"/>
+<rect x="1073.0" y="213" width="4" height="30" rx="2" fill="#1a7f37"/>
+<text x="1087" y="224" font-size="12.5" font-weight="600" fill="#0b0b0b" text-anchor="start">Metrics + audit log</text>
+<text x="1087" y="240" font-size="10.5" font-weight="400" fill="#57564f" text-anchor="start">/metrics, no ticket text</text>
+<rect x="1073.0" y="260" width="158" height="48" rx="8" fill="#ffffff" stroke="#c8e4d1"/>
+<rect x="1073.0" y="269" width="4" height="30" rx="2" fill="#1a7f37"/>
+<text x="1087" y="280" font-size="12.5" font-weight="600" fill="#0b0b0b" text-anchor="start">Drift check</text>
+<text x="1087" y="296" font-size="10.5" font-weight="400" fill="#57564f" text-anchor="start">PSI, new words, accuracy</text>
+<rect x="1073.0" y="316" width="158" height="48" rx="8" fill="#fbfbfa" stroke="#c4c2bb" stroke-dasharray="5 4"/>
+<text x="1085" y="336" font-size="12.5" font-weight="600" fill="#57564f" text-anchor="start">Grafana + alerts</text>
+<text x="1085" y="352" font-size="10.5" font-weight="400" fill="#8a887f" text-anchor="start">dashboards, live drift</text>
 <line x1="1075" y1="392" x2="1229" y2="392" stroke="#dcdad3"/>
 <text x="1075" y="408" font-size="9.5" font-weight="700" fill="#8a887f" text-anchor="start" letter-spacing="0.8">ALSO COMMON</text>
 <text x="1075" y="426" font-size="11.5" font-weight="500" fill="#8a887f" text-anchor="start" font-style="italic">whylogs</text>
-<text x="1075" y="441" font-size="11.5" font-weight="500" fill="#8a887f" text-anchor="start" font-style="italic">Arize</text>
+<text x="1075" y="441" font-size="11.5" font-weight="500" fill="#8a887f" text-anchor="start" font-style="italic">Evidently</text>
 <line x1="218" y1="125" x2="235.6" y2="125" stroke="#8a887f" stroke-width="2" marker-end="url(#arrow)"/>
 <line x1="423.6" y1="125" x2="441.2" y2="125" stroke="#8a887f" stroke-width="2" marker-end="url(#arrow)"/>
 <line x1="629.2" y1="125" x2="646.8" y2="125" stroke="#8a887f" stroke-width="2" marker-end="url(#arrow)"/>
@@ -149,25 +155,25 @@
 <rect x="33" y="546" width="1214" height="50" rx="12" fill="#f0f8f2" stroke="#b9dcc4"/>
 <text x="51" y="567" font-size="13" font-weight="700" fill="#0b0b0b" text-anchor="start">On every change</text>
 <text x="51" y="583" font-size="11" font-weight="400" fill="#57564f" text-anchor="start">GitHub Actions</text>
-<rect x="183" y="558" width="199" height="26" rx="13" fill="#ffffff" stroke="#c8e4d1"/>
+<rect x="183" y="558" width="153" height="26" rx="13" fill="#ffffff" stroke="#c8e4d1"/>
 <circle cx="196" cy="571" r="3.5" fill="#1a7f37"/>
-<text x="205" y="575.5" font-size="11.5" font-weight="500" fill="#0b0b0b" text-anchor="start">Tests on Python 3.12 + 3.13</text>
-<rect x="390" y="558" width="153" height="26" rx="13" fill="#ffffff" stroke="#c8e4d1"/>
-<circle cx="403" cy="571" r="3.5" fill="#1a7f37"/>
-<text x="412" y="575.5" font-size="11.5" font-weight="500" fill="#0b0b0b" text-anchor="start">2 full Kubeflow runs</text>
-<rect x="551" y="558" width="166" height="26" rx="13" fill="#ffffff" stroke="#c8e4d1"/>
-<circle cx="564" cy="571" r="3.5" fill="#1a7f37"/>
-<text x="573" y="575.5" font-size="11.5" font-weight="500" fill="#0b0b0b" text-anchor="start">Image pinned by digest</text>
-<rect x="725" y="558" width="140" height="26" rx="13" fill="#ffffff" stroke="#c8e4d1"/>
-<circle cx="738" cy="571" r="3.5" fill="#1a7f37"/>
-<text x="747" y="575.5" font-size="11.5" font-weight="500" fill="#0b0b0b" text-anchor="start">Non-root container</text>
-<rect x="873" y="558" width="114" height="26" rx="13" fill="#ffffff" stroke="#c8e4d1"/>
-<circle cx="886" cy="571" r="3.5" fill="#1a7f37"/>
-<text x="895" y="575.5" font-size="11.5" font-weight="500" fill="#0b0b0b" text-anchor="start">Trivy CVE gate</text>
-<rect x="995" y="558" width="114" height="26" rx="13" fill="#ffffff" stroke="#c8e4d1"/>
-<circle cx="1008" cy="571" r="3.5" fill="#1a7f37"/>
-<text x="1017" y="575.5" font-size="11.5" font-weight="500" fill="#0b0b0b" text-anchor="start">PR code review</text>
-<rect x="1116" y="558" width="88" height="26" rx="13" fill="#ffffff" stroke="#c8e4d1"/>
-<circle cx="1129" cy="571" r="3.5" fill="#1a7f37"/>
-<text x="1138" y="575.5" font-size="11.5" font-weight="500" fill="#0b0b0b" text-anchor="start">Dependabot</text>
+<text x="205" y="575.5" font-size="11.5" font-weight="500" fill="#0b0b0b" text-anchor="start">Tests on 3.12 + 3.13</text>
+<rect x="344" y="558" width="107" height="26" rx="13" fill="#ffffff" stroke="#c8e4d1"/>
+<circle cx="357" cy="571" r="3.5" fill="#1a7f37"/>
+<text x="366" y="575.5" font-size="11.5" font-weight="500" fill="#0b0b0b" text-anchor="start">Kubeflow runs</text>
+<rect x="459" y="558" width="114" height="26" rx="13" fill="#ffffff" stroke="#c8e4d1"/>
+<circle cx="472" cy="571" r="3.5" fill="#1a7f37"/>
+<text x="481" y="575.5" font-size="11.5" font-weight="500" fill="#0b0b0b" text-anchor="start">Trivy CVE gate</text>
+<rect x="581" y="558" width="133" height="26" rx="13" fill="#ffffff" stroke="#c8e4d1"/>
+<circle cx="594" cy="571" r="3.5" fill="#1a7f37"/>
+<text x="603" y="575.5" font-size="11.5" font-weight="500" fill="#0b0b0b" text-anchor="start">Governance drills</text>
+<rect x="722" y="558" width="153" height="26" rx="13" fill="#ffffff" stroke="#c8e4d1"/>
+<circle cx="735" cy="571" r="3.5" fill="#1a7f37"/>
+<text x="744" y="575.5" font-size="11.5" font-weight="500" fill="#0b0b0b" text-anchor="start">Kyverno policy tests</text>
+<rect x="883" y="558" width="146" height="26" rx="13" fill="#ffffff" stroke="#c8e4d1"/>
+<circle cx="896" cy="571" r="3.5" fill="#1a7f37"/>
+<text x="905" y="575.5" font-size="11.5" font-weight="500" fill="#0b0b0b" text-anchor="start">kind cluster drills</text>
+<rect x="1038" y="558" width="114" height="26" rx="13" fill="#ffffff" stroke="#c8e4d1"/>
+<circle cx="1051" cy="571" r="3.5" fill="#1a7f37"/>
+<text x="1060" y="575.5" font-size="11.5" font-weight="500" fill="#0b0b0b" text-anchor="start">PR code review</text>
 </svg>
