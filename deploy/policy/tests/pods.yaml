@@ -4,7 +4,7 @@ metadata: {name: pinned-from-local-registry, namespace: serving}
 spec:
   containers:
     - name: server
-      image: localhost:5001/smlops-server@sha256:1111111111111111111111111111111111111111111111111111111111111111
+      image: kind-registry:5000/smlops-server@sha256:1111111111111111111111111111111111111111111111111111111111111111
 ---
 apiVersion: v1
 kind: Pod
@@ -12,7 +12,7 @@ metadata: {name: uses-a-tag, namespace: serving}
 spec:
   containers:
     - name: server
-      image: localhost:5001/smlops-server:latest
+      image: kind-registry:5000/smlops-server:latest
 ---
 apiVersion: v1
 kind: Pod
@@ -28,7 +28,7 @@ metadata: {name: init-container-by-tag, namespace: serving}
 spec:
   initContainers:
     - name: modelcar-init
-      image: localhost:5001/ticket-router:v1
+      image: kind-registry:5000/ticket-router:v1
   containers:
     - name: server
-      image: localhost:5001/smlops-server@sha256:1111111111111111111111111111111111111111111111111111111111111111
+      image: kind-registry:5000/smlops-server@sha256:1111111111111111111111111111111111111111111111111111111111111111

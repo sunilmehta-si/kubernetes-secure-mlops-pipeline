@@ -21,7 +21,10 @@ class VersionTests(unittest.TestCase):
     def test_every_component_is_pinned_to_an_exact_release(self):
         v = versions()
         self.assertEqual(set(v), {"KIND_VERSION", "KIND_NODE_IMAGE", "CERT_MANAGER_VERSION", "KSERVE_VERSION",
-                                  "KYVERNO_VERSION", "ZOT_VERSION", "COSIGN_VERSION"})
+                                  "KYVERNO_VERSION", "ZOT_VERSION", "COSIGN_VERSION", "REGISTRY"})
+        self.assertEqual(v.pop("REGISTRY"), "kind-registry:5000")
+        policy = (ROOT / "deploy/policy/require-digests.yaml").read_text()
+        self.assertIn('"kind-registry:5000/*@sha256:*"', policy)                     # policy and scripts agree
         for key, value in v.items():
             with self.subTest(key=key):
                 self.assertRegex(value.split(":")[-1], r"^v\d+\.\d+\.\d+$")
@@ -118,6 +121,6 @@ class DigestPolicyTests(unittest.TestCase):
         spec = rule["validate"]["pattern"]["spec"]
         for key in ("containers", "=(initContainers)"):
             pattern = spec[key][0]["image"]
-            self.assertTrue(fnmatch.fnmatch("localhost:5001/ticket-router@sha256:" + "a" * 64, pattern))
-            for bad in ("localhost:5001/ticket-router:latest", "docker.io/library/busybox@sha256:" + "a" * 64):
+            self.assertTrue(fnmatch.fnmatch("kind-registry:5000/ticket-router@sha256:" + "a" * 64, pattern))
+            for bad in ("kind-registry:5000/ticket-router:latest", "docker.io/library/busybox@sha256:" + "a" * 64):
                 self.assertFalse(fnmatch.fnmatch(bad, pattern), bad)
