@@ -51,7 +51,7 @@ pod drill-by-tag "${MODEL_IMAGE%@*}:v1" | expect_denied "an image referenced by 
 # 3. network: a namespace without smlops.io/model-clients=true
 kubectl create namespace outsider --dry-run=client -o yaml | kubectl apply -f - >/dev/null
 url="http://ticket-router-predictor.serving.svc.cluster.local/v1/models/ticket-router"
-if kubectl -n outsider run "probe-$(date +%s)" --rm -i --restart=Never --image "$CURL_IMAGE" -- \
+if kubectl -n outsider run "probe-$(date +%s)" --rm -i --quiet --restart=Never --image "$CURL_IMAGE" -- \
      -sS --max-time 8 "$url" >/dev/null 2>&1; then
   echo "FAIL: a client outside the allowed namespaces reached the model"; failed=1
 else

@@ -19,7 +19,8 @@ kubectl create namespace support --dry-run=client -o yaml | kubectl apply -f -
 kubectl label namespace support smlops.io/model-clients=true --overwrite
 url="http://ticket-router-predictor.serving.svc.cluster.local/v1/models/ticket-router:predict"
 body='{"instances": [{"text": "please refund the $40 charge from last week"}, {"text": "my parcel never arrived"}]}'
-kubectl -n support run "smoke-$(date +%s)" --rm -i --restart=Never --image "$CURL_IMAGE" -- \
+# --quiet: otherwise kubectl appends 'pod "smoke-..." deleted' to the captured response
+kubectl -n support run "smoke-$(date +%s)" --rm -i --quiet --restart=Never --image "$CURL_IMAGE" -- \
   -sS --fail-with-body --max-time 20 -X POST -H "content-type: application/json" -d "$body" "$url" | tee "$work/smoke.json"
 echo
 jq -e '.predictions | length == 2' "$work/smoke.json" >/dev/null
