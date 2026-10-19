@@ -106,3 +106,18 @@ class SignaturePolicyTests(unittest.TestCase):
                          (["*"], "Enforce", True, True))
         key = check["attestors"][0]["entries"][0]["keys"]
         self.assertEqual(key["secret"], {"name": "smlops-signing-key", "namespace": "kyverno"})
+
+
+
+class DigestPolicyTests(unittest.TestCase):
+    def test_containers_and_init_containers_need_the_registry_and_a_digest(self):
+        import fnmatch
+        (policy,) = docs("deploy/policy/require-digests.yaml")
+        (rule,) = policy["spec"]["rules"]
+        self.assertEqual(rule["validate"]["failureAction"], "Enforce")
+        spec = rule["validate"]["pattern"]["spec"]
+        for key in ("containers", "=(initContainers)"):
+            pattern = spec[key][0]["image"]
+            self.assertTrue(fnmatch.fnmatch("localhost:5001/ticket-router@sha256:" + "a" * 64, pattern))
+            for bad in ("localhost:5001/ticket-router:latest", "docker.io/library/busybox@sha256:" + "a" * 64):
+                self.assertFalse(fnmatch.fnmatch(bad, pattern), bad)

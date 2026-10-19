@@ -1,0 +1,29 @@
+# In the serving namespace, every image (containers and init containers) must come from the cluster's registry,
+# localhost:5001, and be pinned by digest. A tag can be moved to different content later; a digest cannot, so the
+# image that was signed and approved is the image that runs.
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: require-registry-and-digest
+  annotations:
+    policies.kyverno.io/title: Approved registry and digests only in serving
+    policies.kyverno.io/severity: high
+spec:
+  background: false
+  failurePolicy: Fail
+  rules:
+    - name: registry-and-digest
+      match:
+        any:
+          - resources:
+              kinds: ["Pod"]
+              namespaces: ["serving"]
+      validate:
+        failureAction: Enforce
+        message: "serving images must come from localhost:5001 and be pinned by digest (image@sha256:...)"
+        pattern:
+          spec:
+            =(initContainers):
+              - image: "localhost:5001/*@sha256:*"
+            containers:
+              - image: "localhost:5001/*@sha256:*"
