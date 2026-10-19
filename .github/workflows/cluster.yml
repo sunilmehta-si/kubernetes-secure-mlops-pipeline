@@ -65,4 +65,6 @@ jobs:
           kubectl -n kyverno logs deployment/kyverno-admission-controller --tail=300 | grep -i -E "mutat|harden|modelcar" | tail -40 || true
           kubectl -n kyverno logs deployment/kyverno-admission-controller --tail=100 || true
           kubectl -n kserve logs deployment/kserve-controller-manager --tail=100 || true
+          kubectl -n serving get deployment,replicaset,pods -o wide || true
+          kubectl -n serving get events --sort-by=.lastTimestamp || true
           kubectl get events -A --sort-by=.lastTimestamp | tail -60 || true

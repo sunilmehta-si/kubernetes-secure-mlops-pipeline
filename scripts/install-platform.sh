@@ -42,6 +42,14 @@ kubectl -n kyverno create secret generic smlops-signing-key --from-file=cosign.p
 retry kubectl apply -f deploy/policy/verify-signatures.yaml -f deploy/policy/require-digests.yaml \
   -f deploy/policy/harden-serving-pods.yaml
 kubectl wait --for=condition=Ready clusterpolicy --all --timeout=120s
+# A policy can be Ready before Kyverno has registered its webhook for Pods. Pods created in that window miss the
+# hardening mutation, fail Pod Security, and the ReplicaSet then backs off for minutes. Wait until Pods are covered.
+for i in $(seq 1 36); do
+  if kubectl get mutatingwebhookconfiguration kyverno-resource-mutating-webhook-cfg \
+       -o jsonpath='{.webhooks[*].rules[*].resources}' 2>/dev/null | grep -q pods; then break; fi
+  [ "$i" = 36 ] && { echo "Kyverno never registered its Pod mutation webhook" >&2; exit 1; }
+  sleep 5
+done
 
 kubectl apply -f deploy/serving/namespace.yaml -f deploy/serving/networkpolicy.yaml
 kubectl -n serving create configmap smlops-verify-key --from-file=signing-key.pub.pem="$keys/signing-key.pub.pem" \
