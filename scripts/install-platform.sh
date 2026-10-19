@@ -17,6 +17,8 @@ kubectl apply -f "https://github.com/cert-manager/cert-manager/releases/download
 kubectl -n cert-manager wait --for=condition=Available deployment --all --timeout=300s
 
 base="https://github.com/kserve/kserve/releases/download/${KSERVE_VERSION}"
+# kserve.yaml places its 28 objects in the kserve namespace without creating it
+kubectl create namespace kserve --dry-run=client -o yaml | kubectl apply -f -
 kubectl apply --server-side -f "$base/kserve-crds.yaml"
 retry kubectl apply --server-side -f "$base/kserve.yaml"
 kubectl -n kserve wait --for=condition=Available deployment/kserve-controller-manager --timeout=300s
