@@ -3,6 +3,8 @@ import re
 import unittest
 from pathlib import Path
 
+import yaml
+
 ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -23,3 +25,14 @@ class VersionTests(unittest.TestCase):
         for key, value in v.items():
             with self.subTest(key=key):
                 self.assertRegex(value.split(":")[-1], r"^v\d+\.\d+\.\d+$")
+
+
+def docs(path: str) -> list[dict]:
+    return [d for d in yaml.safe_load_all((ROOT / path).read_text()) if d]
+
+
+class ServingNamespaceTests(unittest.TestCase):
+    def test_restricted_pod_security_and_no_api_token(self):
+        ns, sa = docs("deploy/serving/namespace.yaml")
+        self.assertEqual(ns["metadata"]["labels"]["pod-security.kubernetes.io/enforce"], "restricted")
+        self.assertEqual((sa["kind"], sa["automountServiceAccountToken"]), ("ServiceAccount", False))
