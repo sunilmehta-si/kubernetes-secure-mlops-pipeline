@@ -1,0 +1,40 @@
+# Gate G6, threat T7: in the serving namespace, every image must carry a cosign signature from the pipeline's key.
+# That covers the server image and the model image (KServe runs the model as a "modelcar" container), so a model
+# that was not built and signed by the pipeline never starts. The public key is read from the Secret
+# kyverno/smlops-signing-key (key cosign.pub), created by scripts/install-platform.sh; the transparency log is not
+# used for this local key, so no public record is written. Admission fails closed: if Kyverno cannot verify, the
+# pod is rejected.
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: verify-model-signatures
+  annotations:
+    policies.kyverno.io/title: Signed images only in serving
+    policies.kyverno.io/severity: high
+spec:
+  background: false
+  webhookTimeoutSeconds: 30
+  failurePolicy: Fail
+  rules:
+    - name: signed-by-the-pipeline
+      match:
+        any:
+          - resources:
+              kinds: ["Pod"]
+              namespaces: ["serving"]
+      verifyImages:
+        - imageReferences: ["*"]
+          failureAction: Enforce
+          required: true
+          verifyDigest: true
+          mutateDigest: false
+          attestors:
+            - entries:
+                - keys:
+                    secret:
+                      name: smlops-signing-key
+                      namespace: kyverno
+                    rekor:
+                      ignoreTlog: true
+                    ctlog:
+                      ignoreSCT: true

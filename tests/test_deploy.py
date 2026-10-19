@@ -92,3 +92,17 @@ class NetworkPolicyTests(unittest.TestCase):
         (rule,) = allow["spec"]["ingress"]
         self.assertEqual(rule["ports"], [{"protocol": "TCP", "port": 8080}])
         self.assertEqual(rule["from"][0]["namespaceSelector"]["matchLabels"], {"smlops.io/model-clients": "true"})
+
+
+
+class SignaturePolicyTests(unittest.TestCase):
+    def test_every_serving_image_needs_the_pipeline_signature_and_failures_block(self):
+        (policy,) = docs("deploy/policy/verify-signatures.yaml")
+        self.assertEqual((policy["spec"]["failurePolicy"], policy["spec"]["background"]), ("Fail", False))
+        (rule,) = policy["spec"]["rules"]
+        self.assertEqual(rule["match"]["any"][0]["resources"]["namespaces"], ["serving"])
+        (check,) = rule["verifyImages"]
+        self.assertEqual((check["imageReferences"], check["failureAction"], check["required"], check["verifyDigest"]),
+                         (["*"], "Enforce", True, True))
+        key = check["attestors"][0]["entries"][0]["keys"]
+        self.assertEqual(key["secret"], {"name": "smlops-signing-key", "namespace": "kyverno"})
