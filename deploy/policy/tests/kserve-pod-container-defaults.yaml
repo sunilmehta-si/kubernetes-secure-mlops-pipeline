@@ -1,0 +1,31 @@
+# Expected output of harden-serving-pods rule restricted-container-defaults: the CLI compares each rule's patch on its own.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: ticket-router-predictor
+  namespace: serving
+spec:
+  initContainers:
+  - name: modelcar-init
+    image: kind-registry:5000/ticket-router@sha256:1111111111111111111111111111111111111111111111111111111111111111
+    securityContext:
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop:
+        - ALL
+  containers:
+  - name: kserve-container
+    image: kind-registry:5000/smlops-server@sha256:2222222222222222222222222222222222222222222222222222222222222222
+    securityContext:
+      allowPrivilegeEscalation: false
+      readOnlyRootFilesystem: true
+      capabilities:
+        drop:
+        - ALL
+  - name: modelcar
+    image: kind-registry:5000/ticket-router@sha256:1111111111111111111111111111111111111111111111111111111111111111
+    securityContext:
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop:
+        - ALL

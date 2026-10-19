@@ -25,11 +25,11 @@ results:
     rule: restricted-pod-defaults
     resources: ["serving/ticket-router-predictor"]
     kind: Pod
-    patchedResources: kserve-pod-hardened.yaml
+    patchedResources: kserve-pod-pod-defaults.yaml
     result: pass
   - policy: harden-serving-pods
     rule: restricted-container-defaults
     resources: ["serving/ticket-router-predictor"]
     kind: Pod
-    patchedResources: kserve-pod-hardened.yaml
+    patchedResources: kserve-pod-container-defaults.yaml
     result: pass
