@@ -105,3 +105,19 @@ class AuditLogTests(unittest.TestCase):
             r = self.client.post("/v1/models/ticket-router:predict", headers={"X-Request-ID": "bad id\nINJECT"},
                                  json={"instances": [{"text": "parcel never arrived"}]})
         self.assertRegex(r.headers["x-request-id"], r"^[0-9a-f]{32}$")
+
+
+class MetricsTests(unittest.TestCase):
+    def test_requests_latency_teams_and_model_identity_are_exported(self):
+        with tempfile.TemporaryDirectory() as d:
+            _, public = make_bundle(Path(d, "b"), Path(d, "keys"))
+            served = load_verified(Path(d, "b"), public)
+            client = TestClient(create_app(served))
+            client.post("/v1/models/ticket-router:predict", json={"instances": [{"text": "parcel never arrived"}]})
+            client.post("/v1/models/ticket-router:predict", json={"instances": []})
+            text = client.get("/metrics").text
+        self.assertIn('smlops_predict_requests_total{status="200"} 1.0', text)
+        self.assertIn('smlops_predict_requests_total{status="422"} 1.0', text)
+        self.assertIn("smlops_predict_latency_seconds_count 2.0", text)
+        self.assertRegex(text, r'smlops_tickets_routed_total\{team="\w+"\} 1\.0')
+        self.assertIn(f'smlops_model_info{{digest="{served.digest}",name="ticket-router",version="4"}} 1.0', text)

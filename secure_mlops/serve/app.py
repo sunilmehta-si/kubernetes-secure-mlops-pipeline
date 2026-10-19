@@ -18,7 +18,8 @@ from collections import Counter
 
 import pandas as pd
 from fastapi import FastAPI, HTTPException, Request, Response
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, PlainTextResponse
+from prometheus_client import CONTENT_TYPE_LATEST, CollectorRegistry, Counter as Metric, Gauge, Histogram, generate_latest
 from pydantic import BaseModel, ConfigDict, Field
 
 from .bundle import ServedModel
@@ -45,6 +46,13 @@ class PredictRequest(BaseModel):
 
 def create_app(served: ServedModel) -> FastAPI:
     app = FastAPI(title=f"{served.name} v{served.version}", docs_url=None, redoc_url=None, openapi_url=None)
+    metrics = CollectorRegistry()           # per app: what Prometheus scrapes from /metrics
+    requests = Metric("smlops_predict_requests", "Prediction requests by HTTP status", ["status"], registry=metrics)
+    tickets = Metric("smlops_tickets_routed", "Tickets routed, by predicted team", ["team"], registry=metrics)
+    latency = Histogram("smlops_predict_latency_seconds", "Time to answer a prediction request", registry=metrics,
+                        buckets=(0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5))
+    Gauge("smlops_model_info", "The model being served (always 1)", ["name", "version", "digest"],
+          registry=metrics).labels(served.name, served.version, served.digest).set(1)
 
     @app.middleware("http")
     async def limit_body(request: Request, call_next):
@@ -53,8 +61,14 @@ def create_app(served: ServedModel) -> FastAPI:
         if declared is not None and (not declared.isdigit() or int(declared) > MAX_BODY_BYTES):
             return JSONResponse({"detail": f"request body over {MAX_BODY_BYTES} bytes"}, status_code=413)
         if request.method == "POST" and len(await request.body()) > MAX_BODY_BYTES:
+            requests.labels("413").inc()
             return JSONResponse({"detail": f"request body over {MAX_BODY_BYTES} bytes"}, status_code=413)
-        return await call_next(request)
+        started = time.perf_counter()
+        response = await call_next(request)
+        if request.url.path.endswith(":predict"):
+            requests.labels(str(response.status_code)).inc()
+            latency.observe(time.perf_counter() - started)
+        return response
 
     def identity() -> dict:
         return {"name": served.name, "version": served.version, "digest": served.digest}
@@ -62,6 +76,10 @@ def create_app(served: ServedModel) -> FastAPI:
     def known(name: str) -> None:
         if name != served.name:
             raise HTTPException(status_code=404, detail=f"no model named {name}; this server serves {served.name}")
+
+    @app.get("/metrics")
+    def scrape() -> PlainTextResponse:
+        return PlainTextResponse(generate_latest(metrics).decode(), media_type=CONTENT_TYPE_LATEST)
 
     @app.get("/healthz")
     def healthz() -> dict:
@@ -81,6 +99,8 @@ def create_app(served: ServedModel) -> FastAPI:
         frame = pd.DataFrame({"text": [i.text for i in request.instances]})
         teams = served.predict(frame)
         confidence = served.predict_proba(frame).max(axis=1)
+        for team, n in Counter(map(str, teams)).items():
+            tickets.labels(team).inc(n)
         response.headers["X-Request-ID"] = request_id
         response.headers["X-Model-Digest"] = served.digest
         AUDIT.info(json.dumps({"event": "predict", "request_id": request_id, "model": served.name,
