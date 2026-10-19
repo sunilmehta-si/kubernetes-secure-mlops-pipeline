@@ -36,4 +36,39 @@ class AppTests(unittest.TestCase):
         self.assertEqual([p["team"] for p in body["predictions"]], ["billing", "technical"])
         self.assertTrue(all(0 < p["confidence"] <= 1 for p in body["predictions"]))
         self.assertEqual(body["model"]["digest"], self.served.digest)
-        self.assertEqual(self.client.post("/v1/models/other:predict", json={"instances": []}).status_code, 404)
+        valid = {"instances": [{"text": "my parcel never arrived"}]}
+        self.assertEqual(self.client.post("/v1/models/other:predict", json=valid).status_code, 404)
+
+
+class InputLimitTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.dir = tempfile.TemporaryDirectory()
+        _, public = make_bundle(Path(cls.dir.name, "b"), Path(cls.dir.name, "keys"))
+        cls.client = TestClient(create_app(load_verified(Path(cls.dir.name, "b"), public)))
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.dir.cleanup()
+
+    def post(self, body):
+        return self.client.post("/v1/models/ticket-router:predict", json=body)
+
+    def test_schema_limits(self):
+        from secure_mlops.serve.app import MAX_INSTANCES, MAX_TEXT
+        ok = {"text": "my parcel never arrived"}
+        for body in ({"instances": []}, {"instances": [ok] * (MAX_INSTANCES + 1)}, {"instances": [{"text": ""}]},
+                     {"instances": [{"text": "x" * (MAX_TEXT + 1)}]}, {"instances": [{**ok, "label": "billing"}]},
+                     {"instances": [ok], "debug": True}, {"inputs": [ok]}):
+            with self.subTest(body=str(body)[:60]):
+                self.assertEqual(self.post(body).status_code, 422)
+        self.assertEqual(self.post({"instances": [ok] * MAX_INSTANCES}).status_code, 200)
+
+    def test_oversized_bodies_are_refused_before_parsing(self):
+        from secure_mlops.serve.app import MAX_BODY_BYTES
+        big = b'{"instances": [' + b'{"text": "x"},' * (MAX_BODY_BYTES // 14) + b'{"text": "x"}]}'
+        r = self.client.post("/v1/models/ticket-router:predict", content=big, headers={"content-type": "application/json"})
+        self.assertEqual(r.status_code, 413)
+        r = self.client.post("/v1/models/ticket-router:predict", content=b"{}",
+                             headers={"content-type": "application/json", "content-length": "abc"})
+        self.assertEqual(r.status_code, 413)

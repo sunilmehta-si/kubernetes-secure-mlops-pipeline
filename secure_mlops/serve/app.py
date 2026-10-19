@@ -10,22 +10,41 @@ model version and the digest of the signed files that produced it.
 from __future__ import annotations
 
 import pandas as pd
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import JSONResponse
+from pydantic import BaseModel, ConfigDict, Field
 
 from .bundle import ServedModel
 
 
+# Limits on what a caller can send (threat T9): bounded work per request, nothing the model was not built for.
+MAX_INSTANCES = 64
+MAX_TEXT = 2000
+MAX_BODY_BYTES = 256 * 1024
+
+
 class Instance(BaseModel):
-    text: str
+    model_config = ConfigDict(extra="forbid")
+    text: str = Field(min_length=1, max_length=MAX_TEXT)
 
 
 class PredictRequest(BaseModel):
-    instances: list[Instance]
+    model_config = ConfigDict(extra="forbid")
+    instances: list[Instance] = Field(min_length=1, max_length=MAX_INSTANCES)
 
 
 def create_app(served: ServedModel) -> FastAPI:
     app = FastAPI(title=f"{served.name} v{served.version}", docs_url=None, redoc_url=None, openapi_url=None)
+
+    @app.middleware("http")
+    async def limit_body(request: Request, call_next):
+        """Refuse oversized bodies before parsing them; a missing or false Content-Length is checked on the body."""
+        declared = request.headers.get("content-length")
+        if declared is not None and (not declared.isdigit() or int(declared) > MAX_BODY_BYTES):
+            return JSONResponse({"detail": f"request body over {MAX_BODY_BYTES} bytes"}, status_code=413)
+        if request.method == "POST" and len(await request.body()) > MAX_BODY_BYTES:
+            return JSONResponse({"detail": f"request body over {MAX_BODY_BYTES} bytes"}, status_code=413)
+        return await call_next(request)
 
     def identity() -> dict:
         return {"name": served.name, "version": served.version, "digest": served.digest}
