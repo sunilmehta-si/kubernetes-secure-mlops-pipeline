@@ -139,6 +139,23 @@ class StepsTests(unittest.TestCase):
         with self.assertRaisesRegex(StepError, "v1 is unsigned"):
             train_and_gate(self.root / "data", TrainConfig(), GatePolicy(), "router", self.root / "out", None, public)
 
+    def test_package_exports_a_bundle_that_serves_and_refuses_unsigned_champions(self):
+        from secure_mlops.serve.bundle import load_verified
+        from secure_mlops.serve.package import MODELCAR_BASE, PackageError, package
+        from secure_mlops.signing import SignatureError, generate_keys
+        private, public = generate_keys(self.root / "keys")
+        train_and_gate(self.root / "data", TrainConfig(), GatePolicy(), "router", self.root / "out", private, public)
+        bundle = package("router", public, self.root / "bundle")
+        served = load_verified(bundle, public)
+        self.assertEqual((served.name, served.version), ("router", "1"))
+        self.assertIn(f"FROM {MODELCAR_BASE}", (bundle / "Dockerfile").read_text())
+        self.assertIn('"bomFormat": "CycloneDX"', (bundle / "mlbom.cdx.json").read_text())
+        with self.assertRaisesRegex(PackageError, "not empty"):
+            package("router", public, bundle)
+        self.run_once()                                              # an unsigned v2 becomes champion
+        with self.assertRaisesRegex(SignatureError, "v2 is unsigned"):
+            package("router", public, self.root / "bundle2")
+
     def test_bad_data_stops_before_training(self):
         test = self.root / "data/test.csv"
         test.write_text(test.read_text().replace(",email,", ",fax,", 1))

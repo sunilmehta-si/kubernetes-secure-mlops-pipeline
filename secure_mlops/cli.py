@@ -56,6 +56,12 @@ def _parser() -> argparse.ArgumentParser:
     sv.add_argument("--public-key", help="Key the model must be signed with (default: $SMLOPS_VERIFY_KEY). Required.")
     sv.add_argument("--host", default="0.0.0.0", help="Address to listen on (default: 0.0.0.0).")
     sv.add_argument("--port", type=int, default=8080, help="Port (default: 8080, KServe's default).")
+    pk = sub.add_parser("package", help="Export the verified champion as a model bundle and modelcar Dockerfile.")
+    pk.add_argument("--model-name", default="ticket-router", help="Registered model name (default: ticket-router).")
+    pk.add_argument("--alias", default="champion", help="Alias to package (default: champion).")
+    pk.add_argument("--public-key", required=True, help="Key the model must be signed with.")
+    pk.add_argument("--tracking-uri", default="sqlite:///mlflow.db", help="MLflow URI (default: sqlite:///mlflow.db).")
+    pk.add_argument("--output", "-o", default="bundle", help="Empty directory to write (default: bundle).")
     pr = sub.add_parser("promotion-request", help="Write the pull request body for promoting a run's model (gate G4).")
     pr.add_argument("--run-dir", default="runs/latest", help="Output directory of smlops train (default: runs/latest).")
     pr.add_argument("--output", "-o", help="Write Markdown here instead of stdout.")
@@ -256,6 +262,23 @@ def _cmd_serve(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_package(args: argparse.Namespace) -> int:
+    import mlflow
+
+    from .safeload import UnsafeModelError
+    from .serve.package import PackageError, package
+    from .signing import SignatureError
+    mlflow.set_tracking_uri(args.tracking_uri)
+    try:
+        out = package(args.model_name, args.public_key, args.output, args.alias)
+    except (PackageError, SignatureError, UnsafeModelError, OSError) as exc:
+        print(f"smlops: {exc}", file=sys.stderr)
+        return 1
+    print(f"smlops: wrote bundle and Dockerfile to {out}; build it with: docker build -t <registry>/<model>:<version> {out}",
+          file=sys.stderr)
+    return 0
+
+
 def _cmd_keys(args: argparse.Namespace) -> int:
     from .signing import SignatureError, generate_keys
     try:
@@ -299,5 +322,7 @@ def main(argv: list[str] | None = None) -> int:
         return _cmd_drift(args)
     if args.command == "serve":
         return _cmd_serve(args)
+    if args.command == "package":
+        return _cmd_package(args)
     _parser().print_help()
     return 0
