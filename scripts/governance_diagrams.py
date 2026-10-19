@@ -43,7 +43,7 @@ GATES = [
     ("G5", "Supply chain", "Is the artifact what we built?", "signed, provenance, CVEs", "signature, ML-BOM",
      "platform security", "model signing; Trivy", "partial", "secure_mlops/signing.py"),
     ("G6", "Deploy admission", "Will the cluster run only that?", "only signed digests run", "admission decisions",
-     "platform", "Kyverno verifyImages", "planned", ""),
+     "platform", "Kyverno; drilled in CI", "built", "deploy/policy/verify-signatures.yaml"),
     ("G7", "Operate & retire", "Still working? Can we undo it?", "drift, accuracy, rollback", "drift report, rollback",
      "model owner, on-call", "smlops drift; alias", "partial", "secure_mlops/drift.py"),
 ]
@@ -62,12 +62,12 @@ THREATS = [
      "-", "partial", ".github/CODEOWNERS"),
     ("T6", "Leakage or regression hides a worse model", "pipelines", "train/test overlap measure, evaluation gate",
      "ML08", "built", "secure_mlops/gate.py"),
-    ("T7", "Model swapped or tampered after approval", "registry", "signed files verified before load; admission next",
-     "ML10", "partial", "secure_mlops/signing.py"),
-    ("T8", "Model file runs code when loaded (pickle)", "serving", "skops only, pickles refused; signed-only next",
-     "ML06", "partial", "secure_mlops/safeload.py"),
-    ("T9", "Endpoint abuse: evasion, theft, flooding", "serving", "input schema, auth and rate limits at the gateway",
-     "ML01, ML05", "planned", ""),
+    ("T7", "Model swapped or tampered after approval", "registry", "signed files and images, checked at admission and load",
+     "ML10", "built", "deploy/policy/verify-signatures.yaml"),
+    ("T8", "Model file runs code when loaded (pickle)", "serving", "skops only; server loads only signed bundles",
+     "ML06", "built", "secure_mlops/serve/bundle.py"),
+    ("T9", "Endpoint abuse: evasion, theft, flooding", "serving", "input limits, client allowlist; auth, rate limits next",
+     "ML01, ML05", "partial", "secure_mlops/serve/app.py"),
     ("T10", "Silent drift degrades decisions", "monitoring", "drift check (PSI, new words, accuracy); rollback",
      "-", "partial", "secure_mlops/drift.py"),
 ]
@@ -78,9 +78,9 @@ TRAIL = [
     ("Data splits", "content fingerprint", "sha256:e3bf3b58…", "built", "secure_mlops/dataset.py"),
     ("Training run", "params hash, run id", "run 9cd31c76…", "built", "secure_mlops/tracking.py"),
     ("Model version", "gate decision, card", "ticket-router v1", "built", "secure_mlops/registry.py"),
-    ("Signed artifact", "signature, ML-BOM", "model.sig.json", "partial", "secure_mlops/signing.py"),
-    ("Deployment", "digest in Git, admission", "PR #… → Argo CD", "planned", ""),
-    ("Prediction", "model digest per request", "logged with response", "planned", ""),
+    ("Signed artifact", "OCI digest, signatures", "@sha256:… + cosign", "built", "secure_mlops/serve/package.py"),
+    ("Deployment", "digest, admission", "applied by digest", "partial", "scripts/deploy-model.sh"),
+    ("Prediction", "model digest per request", "audit log line", "built", "secure_mlops/serve/app.py"),
 ]
 
 STATUS_LABEL = {"built": "BUILT", "partial": "PARTIAL", "planned": "PLANNED"}
@@ -162,8 +162,8 @@ def governance_gates(theme: str) -> str:
     x = 33
     for label, status in (("gate limits", "built"), ("data contract + PII", "built"),
                           ("risk register", "built"), ("train config", "built"), ("CODEOWNERS", "built"),
-                          ("drift thresholds", "built"), ("branch protection", "planned"),
-                          ("Kyverno model policy", "planned")):
+                          ("drift thresholds", "built"), ("Kyverno policies", "built"),
+                          ("branch protection", "planned")):
         w = 34 + sum(8.2 if ch.isupper() else 6.4 for ch in label)    # capitals are wider
         fill, line, dash = _card_style(status, c)
         dot = c["built"] if status == "built" else c["planned"]
@@ -200,7 +200,7 @@ ZONES = [  # (x, y, w, h, label, planned)
 FLOWS = [  # (from, to, label, dashed): labels only where the gap between nodes is wide enough
     ("laptop", "repo", "push", False), ("repo", "ci", "", False), ("ci", "ghcr", "", False),
     ("ghcr", "pipelines", "pull image", False), ("pipelines", "registry", "", False),
-    ("registry", "policy", "", True), ("argocd", "serving", "", True), ("policy", "serving", "verify", True),
+    ("registry", "policy", "", False), ("argocd", "serving", "", True), ("policy", "serving", "verify", False),
     ("clients", "serving", "", True), ("serving", "monitoring", "", True), ("monitoring", "pipelines", "retrain", True),
 ]
 
@@ -253,7 +253,7 @@ def threat_model(theme: str) -> str:
             w = len(label) * 6 + 10
             labels += [f'<rect x="{mx - w / 2:.1f}" y="{my - 9:.1f}" width="{w:.0f}" height="16" rx="8" '
                        f'fill="{c["zone"]}"/>', _t(round(mx), round(my + 3.5), label, 10, c["faint"], 600, "middle")]
-    built_nodes = {"laptop", "repo", "ci", "ghcr", "pipelines", "registry"}
+    built_nodes = {"laptop", "repo", "ci", "ghcr", "pipelines", "registry", "policy", "serving"}
     for key, (x, y, title, sub) in NODES.items():
         built = key in built_nodes
         fill, line, dash = (c["built_item"], c["built_item_line"], "") if built else \
@@ -324,9 +324,9 @@ def audit_trail(theme: str) -> str:
                          f'stroke="{c["arrow"]}" stroke-width="2" marker-end="url(#arrow)"/>')
     qy = y0 + 160
     parts += [f'<rect x="{x0}" y="{qy}" width="{AW2 - 2 * x0}" height="40" rx="12" fill="{c["col"]}" stroke="{c["col_line"]}"/>',
-              _t(x0 + 18, qy + 25, "Records are made left to right; an audit reads right to left. Today the chain "
-                                   "is unbroken from tickets to the registered model; signing and deployment records "
-                                   "extend it to production.", 12, c["muted"], 500)]
+              _t(x0 + 18, qy + 25, "Records are made left to right; an audit reads right to left. The chain is "
+                                   "unbroken from tickets to each prediction; deployments are applied by digest today and "
+                                   "will be recorded in Git next.", 12, c["muted"], 500)]
     return "\n".join(parts + ["</svg>"]) + "\n"
 
 

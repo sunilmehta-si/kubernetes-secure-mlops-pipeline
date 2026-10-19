@@ -50,36 +50,36 @@
 <rect x="662" y="216" width="47" height="18" rx="9" fill="#0f1f16" stroke="#23472f"/>
 <text x="686" y="228.5" font-size="9.5" font-weight="700" fill="#3fb950" text-anchor="middle" letter-spacing="0.5">BUILT</text>
 <line x1="546.0" y1="174" x2="558.0" y2="174" stroke="#6e7681" stroke-width="2" marker-end="url(#arrow)"/>
-<rect x="737.0" y="108" width="158.0" height="132" rx="12" fill="#0d1117" stroke="#5a4116"/>
-<circle cx="757.0" cy="130" r="11" fill="#8b949e"/>
+<rect x="737.0" y="108" width="158.0" height="132" rx="12" fill="#0f1f16" stroke="#23472f"/>
+<circle cx="757.0" cy="130" r="11" fill="#3fb950"/>
 <text x="757" y="134" font-size="11" font-weight="700" fill="#0f141a" text-anchor="middle">5</text>
-<text x="775" y="135" font-size="13" font-weight="700" fill="#a3adb8" text-anchor="start">Signed artifact</text>
+<text x="775" y="135" font-size="13" font-weight="700" fill="#e6edf3" text-anchor="start">Signed artifact</text>
 <text x="751" y="164" font-size="9" font-weight="700" fill="#7d8590" text-anchor="start" letter-spacing="0.6">RECORDS</text>
-<text x="751" y="180" font-size="11" font-weight="500" fill="#a3adb8" text-anchor="start">signature, ML-BOM</text>
-<text x="751" y="208" font-size="10.5" font-family="SFMono-Regular, Menlo, Consolas, monospace" fill="#a3adb8">model.sig.json</text>
-<rect x="825" y="216" width="60" height="18" rx="9" fill="#1f1608" stroke="#5a4116"/>
-<text x="855" y="228.5" font-size="9.5" font-weight="700" fill="#e3a33a" text-anchor="middle" letter-spacing="0.5">PARTIAL</text>
+<text x="751" y="180" font-size="11" font-weight="500" fill="#e6edf3" text-anchor="start">OCI digest, signatures</text>
+<text x="751" y="208" font-size="10.5" font-family="SFMono-Regular, Menlo, Consolas, monospace" fill="#a3adb8">@sha256:… + cosign</text>
+<rect x="838" y="216" width="47" height="18" rx="9" fill="#0f1f16" stroke="#23472f"/>
+<text x="862" y="228.5" font-size="9.5" font-weight="700" fill="#3fb950" text-anchor="middle" letter-spacing="0.5">BUILT</text>
 <line x1="722.0" y1="174" x2="734.0" y2="174" stroke="#6e7681" stroke-width="2" marker-end="url(#arrow)"/>
-<rect x="913.0" y="108" width="158.0" height="132" rx="12" fill="#131820" stroke="#3b434e" stroke-dasharray="6 5"/>
+<rect x="913.0" y="108" width="158.0" height="132" rx="12" fill="#0d1117" stroke="#5a4116"/>
 <circle cx="933.0" cy="130" r="11" fill="#8b949e"/>
 <text x="933" y="134" font-size="11" font-weight="700" fill="#0f141a" text-anchor="middle">6</text>
 <text x="951" y="135" font-size="13" font-weight="700" fill="#a3adb8" text-anchor="start">Deployment</text>
 <text x="927" y="164" font-size="9" font-weight="700" fill="#7d8590" text-anchor="start" letter-spacing="0.6">RECORDS</text>
-<text x="927" y="180" font-size="11" font-weight="500" fill="#a3adb8" text-anchor="start">digest in Git, admission</text>
-<text x="927" y="208" font-size="10.5" font-family="SFMono-Regular, Menlo, Consolas, monospace" fill="#a3adb8">PR #… → Argo CD</text>
-<rect x="1001" y="216" width="60" height="18" rx="9" fill="#0f141a" stroke="#3b434e" stroke-dasharray="3 2"/>
-<text x="1031" y="228.5" font-size="9.5" font-weight="700" fill="#8b949e" text-anchor="middle" letter-spacing="0.5">PLANNED</text>
+<text x="927" y="180" font-size="11" font-weight="500" fill="#a3adb8" text-anchor="start">digest, admission</text>
+<text x="927" y="208" font-size="10.5" font-family="SFMono-Regular, Menlo, Consolas, monospace" fill="#a3adb8">applied by digest</text>
+<rect x="1001" y="216" width="60" height="18" rx="9" fill="#1f1608" stroke="#5a4116"/>
+<text x="1031" y="228.5" font-size="9.5" font-weight="700" fill="#e3a33a" text-anchor="middle" letter-spacing="0.5">PARTIAL</text>
 <line x1="898.0" y1="174" x2="910.0" y2="174" stroke="#6e7681" stroke-width="2" marker-end="url(#arrow)"/>
-<rect x="1089.0" y="108" width="158.0" height="132" rx="12" fill="#131820" stroke="#3b434e" stroke-dasharray="6 5"/>
-<circle cx="1109.0" cy="130" r="11" fill="#8b949e"/>
+<rect x="1089.0" y="108" width="158.0" height="132" rx="12" fill="#0f1f16" stroke="#23472f"/>
+<circle cx="1109.0" cy="130" r="11" fill="#3fb950"/>
 <text x="1109" y="134" font-size="11" font-weight="700" fill="#0f141a" text-anchor="middle">7</text>
-<text x="1127" y="135" font-size="13" font-weight="700" fill="#a3adb8" text-anchor="start">Prediction</text>
+<text x="1127" y="135" font-size="13" font-weight="700" fill="#e6edf3" text-anchor="start">Prediction</text>
 <text x="1103" y="164" font-size="9" font-weight="700" fill="#7d8590" text-anchor="start" letter-spacing="0.6">RECORDS</text>
-<text x="1103" y="180" font-size="11" font-weight="500" fill="#a3adb8" text-anchor="start">model digest per request</text>
-<text x="1103" y="208" font-size="10.5" font-family="SFMono-Regular, Menlo, Consolas, monospace" fill="#a3adb8">logged with response</text>
-<rect x="1177" y="216" width="60" height="18" rx="9" fill="#0f141a" stroke="#3b434e" stroke-dasharray="3 2"/>
-<text x="1207" y="228.5" font-size="9.5" font-weight="700" fill="#8b949e" text-anchor="middle" letter-spacing="0.5">PLANNED</text>
+<text x="1103" y="180" font-size="11" font-weight="500" fill="#e6edf3" text-anchor="start">model digest per request</text>
+<text x="1103" y="208" font-size="10.5" font-family="SFMono-Regular, Menlo, Consolas, monospace" fill="#a3adb8">audit log line</text>
+<rect x="1190" y="216" width="47" height="18" rx="9" fill="#0f1f16" stroke="#23472f"/>
+<text x="1214" y="228.5" font-size="9.5" font-weight="700" fill="#3fb950" text-anchor="middle" letter-spacing="0.5">BUILT</text>
 <line x1="1074.0" y1="174" x2="1086.0" y2="174" stroke="#6e7681" stroke-width="2" marker-end="url(#arrow)"/>
 <rect x="33" y="268" width="1214" height="40" rx="12" fill="#131820" stroke="#2c333d"/>
-<text x="51" y="293" font-size="12" font-weight="500" fill="#a3adb8" text-anchor="start">Records are made left to right; an audit reads right to left. Today the chain is unbroken from tickets to the registered model; signing and deployment records extend it to production.</text>
+<text x="51" y="293" font-size="12" font-weight="500" fill="#a3adb8" text-anchor="start">Records are made left to right; an audit reads right to left. The chain is unbroken from tickets to each prediction; deployments are applied by digest today and will be recorded in Git next.</text>
 </svg>

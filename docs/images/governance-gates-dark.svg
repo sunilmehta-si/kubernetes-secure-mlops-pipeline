@@ -107,22 +107,22 @@
 <text x="429.5" y="462" font-size="12" font-weight="500" fill="#e6edf3" text-anchor="start">platform security</text>
 <text x="355.5" y="484" font-size="9.5" font-weight="700" fill="#7d8590" text-anchor="start" letter-spacing="0.6">ENFORCED</text>
 <text x="429.5" y="484" font-size="12" font-weight="500" fill="#e6edf3" text-anchor="start">model signing; Trivy</text>
-<rect x="650" y="328" width="284.5" height="176" rx="12" fill="#131820" stroke="#3b434e" stroke-dasharray="6 5"/>
-<rect x="664" y="342" width="34" height="22" rx="6" fill="#8b949e"/>
+<rect x="650" y="328" width="284.5" height="176" rx="12" fill="#0f1f16" stroke="#23472f"/>
+<rect x="664" y="342" width="34" height="22" rx="6" fill="#3fb950"/>
 <text x="681" y="357.5" font-size="12" font-weight="700" fill="#0f141a" text-anchor="middle">G6</text>
 <text x="706" y="358" font-size="14.5" font-weight="700" fill="#e6edf3" text-anchor="start">Deploy admission</text>
-<rect x="862" y="344" width="60" height="18" rx="9" fill="#0f141a" stroke="#3b434e" stroke-dasharray="3 2"/>
-<text x="892" y="356.5" font-size="9.5" font-weight="700" fill="#8b949e" text-anchor="middle" letter-spacing="0.5">PLANNED</text>
+<rect x="876" y="344" width="47" height="18" rx="9" fill="#0f1f16" stroke="#23472f"/>
+<text x="899" y="356.5" font-size="9.5" font-weight="700" fill="#3fb950" text-anchor="middle" letter-spacing="0.5">BUILT</text>
 <text x="664" y="384" font-size="12" font-weight="500" fill="#a3adb8" text-anchor="start" font-style="italic">Will the cluster run only that?</text>
 <line x1="664" y1="396" x2="920.5" y2="396" stroke="#2c333d"/>
 <text x="664" y="418" font-size="9.5" font-weight="700" fill="#7d8590" text-anchor="start" letter-spacing="0.6">CHECKS</text>
-<text x="738" y="418" font-size="12" font-weight="500" fill="#a3adb8" text-anchor="start">only signed digests run</text>
+<text x="738" y="418" font-size="12" font-weight="500" fill="#e6edf3" text-anchor="start">only signed digests run</text>
 <text x="664" y="440" font-size="9.5" font-weight="700" fill="#7d8590" text-anchor="start" letter-spacing="0.6">EVIDENCE</text>
-<text x="738" y="440" font-size="12" font-weight="500" fill="#a3adb8" text-anchor="start">admission decisions</text>
+<text x="738" y="440" font-size="12" font-weight="500" fill="#e6edf3" text-anchor="start">admission decisions</text>
 <text x="664" y="462" font-size="9.5" font-weight="700" fill="#7d8590" text-anchor="start" letter-spacing="0.6">OWNER</text>
-<text x="738" y="462" font-size="12" font-weight="500" fill="#a3adb8" text-anchor="start">platform</text>
+<text x="738" y="462" font-size="12" font-weight="500" fill="#e6edf3" text-anchor="start">platform</text>
 <text x="664" y="484" font-size="9.5" font-weight="700" fill="#7d8590" text-anchor="start" letter-spacing="0.6">ENFORCED</text>
-<text x="738" y="484" font-size="12" font-weight="500" fill="#a3adb8" text-anchor="start">Kyverno verifyImages</text>
+<text x="738" y="484" font-size="12" font-weight="500" fill="#e6edf3" text-anchor="start">Kyverno; drilled in CI</text>
 <rect x="958.5" y="328" width="284.5" height="176" rx="12" fill="#0d1117" stroke="#5a4116"/>
 <rect x="972.5" y="342" width="34" height="22" rx="6" fill="#e3a33a"/>
 <text x="989.5" y="357.5" font-size="12" font-weight="700" fill="#0f141a" text-anchor="middle">G7</text>
@@ -165,10 +165,10 @@
 <rect x="692" y="534" width="136" height="26" rx="13" fill="#0f1f16" stroke="#23472f"/>
 <circle cx="706" cy="547" r="4" fill="#3fb950"/>
 <text x="716" y="551.5" font-size="11.5" font-weight="500" fill="#e6edf3" text-anchor="start">drift thresholds</text>
-<rect x="839" y="534" width="143" height="26" rx="13" fill="#131820" stroke="#3b434e" stroke-dasharray="6 5"/>
-<circle cx="853" cy="547" r="4" fill="#8b949e"/>
-<text x="863" y="551.5" font-size="11.5" font-weight="500" fill="#a3adb8" text-anchor="start">branch protection</text>
-<rect x="992" y="534" width="164" height="26" rx="13" fill="#131820" stroke="#3b434e" stroke-dasharray="6 5"/>
-<circle cx="1006" cy="547" r="4" fill="#8b949e"/>
-<text x="1016" y="551.5" font-size="11.5" font-weight="500" fill="#a3adb8" text-anchor="start">Kyverno model policy</text>
+<rect x="839" y="534" width="138" height="26" rx="13" fill="#0f1f16" stroke="#23472f"/>
+<circle cx="853" cy="547" r="4" fill="#3fb950"/>
+<text x="863" y="551.5" font-size="11.5" font-weight="500" fill="#e6edf3" text-anchor="start">Kyverno policies</text>
+<rect x="987" y="534" width="143" height="26" rx="13" fill="#131820" stroke="#3b434e" stroke-dasharray="6 5"/>
+<circle cx="1001" cy="547" r="4" fill="#8b949e"/>
+<text x="1011" y="551.5" font-size="11.5" font-weight="500" fill="#a3adb8" text-anchor="start">branch protection</text>
 </svg>

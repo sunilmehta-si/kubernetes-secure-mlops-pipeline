@@ -29,7 +29,7 @@ the code does.
 | G3 Evaluation gate | Is it better than what runs now? | **Built**: absolute floors, then no regression against the champion overall, per team and per slice; blocks with exit 1 | [`gate.py`](../secure_mlops/gate.py) | Fairness review when real user groups exist |
 | G4 Release approval | Did someone other than the author approve it? | Partial: CODEOWNERS names the owner of every file that decides releases; `smlops promotion-request` writes the PR body with an approver checklist | [`.github/CODEOWNERS`](../.github/CODEOWNERS), [`promotion.py`](../secure_mlops/promotion.py) | Branch protection on `main` requiring code-owner review, so the author cannot approve their own release |
 | G5 Supply chain | Is the artifact what we built? | Partial: every model file signed with OpenSSF model signing and verified before any load; a CycloneDX 1.6 ML-BOM per version (file hashes, datasets, packages, release facts); dependencies and base image pinned, Trivy blocks fixable HIGH/CRITICAL CVEs, Dependabot | [`signing.py`](../secure_mlops/signing.py), [`mlbom.py`](../secure_mlops/mlbom.py), [`ci.yml`](../.github/workflows/ci.yml) | Keyless signing by CI's identity; the model as an OCI artifact with provenance |
-| G6 Deploy admission | Will the cluster run only that artifact? | Planned | | Kyverno `verifyImages` admits only model images signed by the trusted CI identity, pinned by digest |
+| G6 Deploy admission | Will the cluster run only that artifact? | **Built**: in `serving`, Kyverno admits only images signed by the pipeline's key (server and model image alike), from the cluster registry, pinned by digest; KServe's injected containers are hardened so the namespace stays Pod Security "restricted". The cluster workflow drills an unsigned image and a tag reference on every push | [`verify-signatures.yaml`](../deploy/policy/verify-signatures.yaml), [`require-digests.yaml`](../deploy/policy/require-digests.yaml), [`harden-serving-pods.yaml`](../deploy/policy/harden-serving-pods.yaml) | Keyless signatures from CI's identity instead of a key |
 | G7 Operate & retire | Is it still working, and can we undo it? | Partial: `smlops drift` checks production batches (PSI of channel, tier and predictions, new-word rate, accuracy against the champion's own test score) and exits 1 on an alert; one-step rollback of the `champion` alias | [`drift.py`](../secure_mlops/drift.py), [`registry.py`](../secure_mlops/registry.py) | Scheduled drift checks on live traffic that start retraining; a retirement step |
 
 A model is promoted only when G3 passes today; when G4 to G6 exist, it will be promoted only when all of them pass.
@@ -62,7 +62,7 @@ Decisions are made by versioned files, reviewed like code, rather than by settin
 | Who approves releases | [`.github/CODEOWNERS`](../.github/CODEOWNERS) | Built |
 | Code-owner review required on `main` | Branch protection | Planned |
 | Drift thresholds | [`configs/drift.yaml`](../configs/drift.yaml) | Built |
-| Which model images may run | Kyverno policy in `deploy/` | Planned |
+| Which images may run in serving | [`deploy/policy/`](../deploy/policy/) Kyverno policies, tested offline and drilled on a cluster | Built |
 
 ## 4. Threat model
 
@@ -79,9 +79,9 @@ Decisions are made by versioned files, reviewed like code, rather than by settin
 | T4 | Compromised CI or leaked secret | GitHub Actions | Actions pinned by commit SHA, read-only token, no stored secrets. Keyless signing next | ML06 | Partial |
 | T5 | Unreviewed change to code or gate | Repository | Automated review of every pull request; CODEOWNERS for release-deciding files. Branch protection next | - | Partial |
 | T6 | Leakage or regression hides a worse model | Pipeline | Train/test overlap measured on every dataset; evaluation gate against the champion | ML08 | Built |
-| T7 | Model swapped or tampered after approval | Registry | Every model file is signed; with a verification key, any load (including the champion the gate compares against) checks the signature first, and unsigned or changed models are refused. A drill changes one byte and the run stops. Next: the same check at admission | ML10 | Partial |
-| T8 | Model file runs code when loaded (pickle) | Serving | Models are stored as skops, which loads only trusted types; any model stored as pickle is refused from its metadata before it is opened ([`safeload.py`](../secure_mlops/safeload.py)). Next: load only signed models | ML06 | Partial |
-| T9 | Endpoint abuse: evasion, theft, flooding | Serving | Input schema, authentication and rate limits at the gateway, monitoring for unusual query patterns | ML01, ML05 | Planned |
+| T7 | Model swapped or tampered after approval | Registry | Every model file is signed and checked before any load, including by the server at startup; model and server images are signed by digest and checked at admission. Drills: one changed byte stops a run; an unsigned image is rejected on the cluster | ML10 | Built |
+| T8 | Model file runs code when loaded (pickle) | Serving | Models are stored as skops, which loads only trusted types; pickles are refused from their metadata before they are opened ([`safeload.py`](../secure_mlops/safeload.py)), and the server loads only bundles whose signature verifies ([`serve/bundle.py`](../secure_mlops/serve/bundle.py)) | ML06 | Built |
+| T9 | Endpoint abuse: evasion, theft, flooding | Serving | 1-64 tickets of 1-2000 characters, no extra fields, 256 KB bodies; only labelled namespaces reach the endpoint and the server has no egress (drilled). Next: authentication, rate limits, alerts on unusual query patterns | ML01, ML05 | Partial |
 | T10 | Silent drift degrades decisions | Monitoring | `smlops drift` with calibrated thresholds; one-step rollback. Drift is a reason to look, not proof of harm: a fully shifted batch alerts while accuracy falls only about two points | - | Partial |
 
 **What T6 has already caught.** While the README was being written, the overlap measure showed that 37% of test
@@ -106,7 +106,7 @@ The questions an auditor or incident review asks, and where the answer comes fro
 | What is it for, and what are its limits? | `model_card.md` on the run, written from the records above |
 | Is this the model that was approved? | `smlops verify`: every file against its signature (`model.sig.json` on the run) |
 | What exactly is in it? | `mlbom.cdx.json` on the run: file hashes, datasets by fingerprint, every package |
-| Which model answered a given request? | Planned: the serving digest logged with every prediction |
+| Which model answered a given request? | The audit log line for the request id: model version and signature digest, never the ticket text |
 
 ## 6. Mapping to frameworks
 
@@ -137,8 +137,8 @@ advice: classify each real use case with your legal team.
 
 1. **Release approval (G4):** ~~CODEOWNERS~~ and ~~a promotion request~~ done; branch protection on `main` next.
 2. ~~**Safe model format (T8):** save models with skops instead of cloudpickle.~~ Done: pickles are refused.
-3. **Signing and admission (G5, G6, T7):** ~~model signing, verification before load, ML-BOM~~ done; next an OCI
-   model artifact, keyless signing by CI's identity, and a Kyverno policy that admits only those.
+3. **Signing and admission (G5, G6, T7):** ~~model signing, verification before load, ML-BOM, OCI model image,
+   admission policy~~ done; next keyless signing by CI's identity.
 4. **Reproducibility (G2):** ~~record the git commit~~ done, with the environment; the pipeline image digest comes
    with cluster runs.
 5. **Monitoring (G7, T9, T10):** ~~drift check~~ done; scheduled checks on live traffic, gateway with authentication
