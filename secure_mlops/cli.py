@@ -51,6 +51,11 @@ def _parser() -> argparse.ArgumentParser:
     dr.add_argument("--policy", default="configs/drift.yaml", help="Drift thresholds (default: configs/drift.yaml).")
     dr.add_argument("--public-key", help="Verify the champion's signature first (default: $SMLOPS_VERIFY_KEY).")
     dr.add_argument("--tracking-uri", default="sqlite:///mlflow.db", help="MLflow URI (default: sqlite:///mlflow.db).")
+    sv = sub.add_parser("serve", help="Serve a signed model bundle over KServe's v1 protocol; refuses unverified models.")
+    sv.add_argument("--bundle", default="/mnt/models", help="Model bundle directory (default: /mnt/models, KServe's mount).")
+    sv.add_argument("--public-key", help="Key the model must be signed with (default: $SMLOPS_VERIFY_KEY). Required.")
+    sv.add_argument("--host", default="0.0.0.0", help="Address to listen on (default: 0.0.0.0).")
+    sv.add_argument("--port", type=int, default=8080, help="Port (default: 8080, KServe's default).")
     pr = sub.add_parser("promotion-request", help="Write the pull request body for promoting a run's model (gate G4).")
     pr.add_argument("--run-dir", default="runs/latest", help="Output directory of smlops train (default: runs/latest).")
     pr.add_argument("--output", "-o", help="Write Markdown here instead of stdout.")
@@ -227,6 +232,30 @@ def _cmd_drift(args: argparse.Namespace) -> int:
     return 1 if report["level"] == "alert" else 0
 
 
+def _cmd_serve(args: argparse.Namespace) -> int:
+    import logging
+    import os
+
+    from .serve.bundle import BundleError, load_verified
+    key = args.public_key or os.environ.get("SMLOPS_VERIFY_KEY")
+    if not key:
+        print("smlops: a public key is required to serve (--public-key or SMLOPS_VERIFY_KEY); "
+              "unverified models are never served", file=sys.stderr)
+        return 2
+    try:
+        served = load_verified(args.bundle, key)
+    except (BundleError, OSError) as exc:
+        print(f"smlops: {exc}", file=sys.stderr)
+        return 2
+    import uvicorn
+
+    from .serve.app import create_app
+    logging.basicConfig(level=logging.INFO, format="%(message)s")
+    print(f"smlops: serving {served.name} v{served.version} ({served.digest}) on {args.host}:{args.port}", file=sys.stderr)
+    uvicorn.run(create_app(served), host=args.host, port=args.port, log_level="warning", server_header=False)
+    return 0
+
+
 def _cmd_keys(args: argparse.Namespace) -> int:
     from .signing import SignatureError, generate_keys
     try:
@@ -268,5 +297,7 @@ def main(argv: list[str] | None = None) -> int:
         return _cmd_verify(args)
     if args.command == "drift":
         return _cmd_drift(args)
+    if args.command == "serve":
+        return _cmd_serve(args)
     _parser().print_help()
     return 0

@@ -136,3 +136,28 @@ class DriftCliTests(unittest.TestCase):
                 self.assertIn("| accuracy drop |", out.getvalue())
             finally:
                 mlflow.set_tracking_uri("")
+
+
+class ServeCliTests(unittest.TestCase):
+    def test_serves_only_a_verified_bundle(self):
+        import os
+        import tempfile
+        from contextlib import redirect_stderr
+        from pathlib import Path
+        from unittest import mock
+
+        from tests.test_serve_bundle import make_bundle
+        with tempfile.TemporaryDirectory() as d, redirect_stderr(io.StringIO()) as err:
+            _, public = make_bundle(Path(d, "b"), Path(d, "keys"))
+            with mock.patch.dict(os.environ, {}, clear=False):
+                os.environ.pop("SMLOPS_VERIFY_KEY", None)
+                self.assertEqual(main(["serve", "--bundle", f"{d}/b"]), 2)        # no key, no serving
+            self.assertIn("unverified models are never served", err.getvalue())
+            with mock.patch("uvicorn.run") as run:
+                self.assertEqual(main(["serve", "--bundle", f"{d}/b", "--public-key", str(public), "--port", "9000"]), 0)
+            self.assertEqual(run.call_args.kwargs["port"], 9000)
+            (Path(d, "b", "model", "model.skops")).write_bytes(b"swapped")
+            with mock.patch("uvicorn.run") as run:
+                self.assertEqual(main(["serve", "--bundle", f"{d}/b", "--public-key", str(public)]), 2)
+            run.assert_not_called()                                              # never opened a port
+            self.assertIn("refusing to serve", err.getvalue())
