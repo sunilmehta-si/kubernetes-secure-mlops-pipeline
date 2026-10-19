@@ -1,0 +1,46 @@
+# KServe injects two containers into a predictor pod to mount the model image: "modelcar-init" and "modelcar". They
+# come without the settings Pod Security "restricted" requires, so the namespace rejected every predictor pod. Rather
+# than weaken the namespace to "baseline", this mutation adds the missing settings to any container in serving that
+# does not declare them; settings a container already has are never changed ("+()" adds only when absent). Mutating
+# admission runs before Pod Security is checked, so the hardened pod is what gets validated.
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: harden-serving-pods
+  annotations:
+    policies.kyverno.io/title: Restricted security settings for every container in serving
+spec:
+  background: false
+  rules:
+    - name: restricted-defaults
+      match:
+        any:
+          - resources:
+              kinds: ["Pod"]
+              namespaces: ["serving"]
+      mutate:
+        patchStrategicMerge:
+          spec:
+            securityContext:
+              +(runAsNonRoot): true
+              +(seccompProfile):
+                type: RuntimeDefault
+        foreach:
+          - list: "request.object.spec.containers"
+            patchStrategicMerge:
+              spec:
+                containers:
+                  - name: "{{ element.name }}"
+                    securityContext:
+                      +(allowPrivilegeEscalation): false
+                      +(capabilities):
+                        drop: ["ALL"]
+          - list: "request.object.spec.initContainers || `[]`"
+            patchStrategicMerge:
+              spec:
+                initContainers:
+                  - name: "{{ element.name }}"
+                    securityContext:
+                      +(allowPrivilegeEscalation): false
+                      +(capabilities):
+                        drop: ["ALL"]

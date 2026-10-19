@@ -6,8 +6,10 @@ metadata:
   name: serving-image-policies
 policies:
   - ../require-digests.yaml
+  - ../harden-serving-pods.yaml
 resources:
   - pods.yaml
+  - kserve-pod.yaml
 results:
   - policy: require-registry-and-digest
     rule: registry-and-digest
@@ -19,3 +21,9 @@ results:
     resources: ["serving/uses-a-tag", "serving/other-registry", "serving/init-container-by-tag"]
     kind: Pod
     result: fail
+  - policy: harden-serving-pods
+    rule: restricted-defaults
+    resources: ["serving/ticket-router-predictor"]
+    kind: Pod
+    patchedResources: kserve-pod-hardened.yaml
+    result: pass

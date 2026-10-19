@@ -39,7 +39,8 @@ kubectl -n kyverno patch deployment kyverno-admission-controller --type json \
 kubectl -n kyverno rollout status deployment/kyverno-admission-controller --timeout=300s
 kubectl -n kyverno create secret generic smlops-signing-key --from-file=cosign.pub="$keys/cosign.pub" \
   --dry-run=client -o yaml | kubectl apply -f -
-retry kubectl apply -f deploy/policy/verify-signatures.yaml -f deploy/policy/require-digests.yaml
+retry kubectl apply -f deploy/policy/verify-signatures.yaml -f deploy/policy/require-digests.yaml \
+  -f deploy/policy/harden-serving-pods.yaml
 kubectl wait --for=condition=Ready clusterpolicy --all --timeout=120s
 
 kubectl apply -f deploy/serving/namespace.yaml -f deploy/serving/networkpolicy.yaml
