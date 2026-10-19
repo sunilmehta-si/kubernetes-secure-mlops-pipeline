@@ -124,3 +124,11 @@ class DigestPolicyTests(unittest.TestCase):
             self.assertTrue(fnmatch.fnmatch("kind-registry:5000/ticket-router@sha256:" + "a" * 64, pattern))
             for bad in ("kind-registry:5000/ticket-router:latest", "docker.io/library/busybox@sha256:" + "a" * 64):
                 self.assertFalse(fnmatch.fnmatch(bad, pattern), bad)
+
+
+
+class KindTests(unittest.TestCase):
+    def test_containerd_reads_per_registry_hosts(self):
+        (cluster,) = docs("deploy/kind.yaml")
+        self.assertEqual((cluster["kind"], cluster["name"]), ("Cluster", "smlops"))
+        self.assertIn('config_path = "/etc/containerd/certs.d"', cluster["containerdConfigPatches"][0])
