@@ -75,6 +75,7 @@ class InferenceServiceTests(unittest.TestCase):
     def test_model_by_digest_on_the_bundle_runtime_without_a_token(self):
         (isvc,) = render("deploy/serving/inferenceservice.yaml", MODEL_IMAGE=DIGEST)
         pred = isvc["spec"]["predictor"]
+        self.assertEqual(isvc["metadata"]["annotations"]["serving.kserve.io/deploymentMode"], "Standard")
         self.assertEqual(pred["model"]["storageUri"], f"oci://{DIGEST}")
         self.assertRegex(pred["model"]["storageUri"], r"@sha256:[0-9a-f]{64}$")
         (rt,) = render("deploy/serving/servingruntime.yaml", SERVER_IMAGE=DIGEST)

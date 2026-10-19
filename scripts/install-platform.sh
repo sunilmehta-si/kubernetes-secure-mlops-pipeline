@@ -22,11 +22,15 @@ kubectl create namespace kserve --dry-run=client -o yaml | kubectl apply -f -
 kubectl apply --server-side -f "$base/kserve-crds.yaml"
 retry kubectl apply --server-side -f "$base/kserve.yaml"
 kubectl -n kserve wait --for=condition=Available deployment/kserve-controller-manager --timeout=300s
+# The release manifest defaults to Serverless (Knative), which this cluster does not run: switch to Standard.
 # Models arrive as OCI images (modelcar); KServe creates no Ingress, clients reach the service inside the cluster.
-kubectl -n kserve get configmap inferenceservice -o json \
-  | jq '.data.storageInitializer |= (fromjson | .enableModelcar = true | .enableOciModelSupport = true | tojson)
+kubectl -n kserve get configmap inferenceservice-config -o json \
+  | jq '.data.deploy |= (fromjson | .defaultDeploymentMode = "Standard" | tojson)
+        | .data.storageInitializer |= (fromjson | .enableModelcar = true | .enableOciModelSupport = true | tojson)
         | .data.ingress |= (fromjson | .disableIngressCreation = true | tojson)' \
   | kubectl apply -f -
+kubectl -n kserve rollout restart deployment/kserve-controller-manager
+kubectl -n kserve rollout status deployment/kserve-controller-manager --timeout=300s
 
 kubectl apply --server-side -f "https://github.com/kyverno/kyverno/releases/download/${KYVERNO_VERSION}/install.yaml"
 # The local registry speaks plain HTTP; Kyverno documents this flag as for testing only, which a kind cluster is.

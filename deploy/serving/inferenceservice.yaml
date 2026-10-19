@@ -1,11 +1,13 @@
 # The ticket-router endpoint. The model arrives as an OCI image (modelcar) pinned by digest, so what runs is exactly
 # what was signed; ${MODEL_IMAGE} is filled in by scripts/deploy-model.sh as registry/repository@sha256:...
-# Standard deployment mode (KServe's default since v0.21): a plain Deployment, no Knative or Istio.
+# Standard deployment mode: a plain Deployment, no Knative or Istio.
 apiVersion: serving.kserve.io/v1beta1
 kind: InferenceService
 metadata:
   name: ticket-router
   namespace: serving
+  annotations:
+    serving.kserve.io/deploymentMode: Standard     # explicit: KServe's release manifest defaults to Serverless
 spec:
   predictor:
     serviceAccountName: model-server
