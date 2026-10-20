@@ -75,6 +75,9 @@ def _parser() -> argparse.ArgumentParser:
     aka = aksub.add_parser("add", help="Create a key for a client; only its hash is written, the key is printed once.")
     aka.add_argument("--client", required=True, help="Client id, e.g. support-tool (lowercase, digits, dashes).")
     aka.add_argument("--file", default="keys/api-keys.txt", help="Key file to append to (default: keys/api-keys.txt).")
+    rc = sub.add_parser("retrain-check", help="Decide from an Alertmanager webhook payload whether to retrain; prints "
+                                              "retrain=true|false for a CI step output.")
+    rc.add_argument("payload", help="JSON file with the webhook payload ('-' for stdin).")
     pr = sub.add_parser("promotion-request", help="Write the pull request body for promoting a run's model (gate G4).")
     pr.add_argument("--run-dir", default="runs/latest", help="Output directory of smlops train (default: runs/latest).")
     pr.add_argument("--output", "-o", help="Write Markdown here instead of stdout.")
@@ -358,6 +361,25 @@ def _cmd_promotion_request(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_retrain_check(args: argparse.Namespace) -> int:
+    from .retrain import retrain_reasons
+    try:
+        text = sys.stdin.read() if args.payload == "-" else Path(args.payload).read_text()
+        payload = json.loads(text)
+        if not isinstance(payload, dict):
+            raise ValueError("the payload must be a JSON object")
+        reasons = retrain_reasons(payload)
+    except (OSError, ValueError, AttributeError) as exc:
+        print(f"smlops: not an Alertmanager payload: {exc}", file=sys.stderr)
+        return 2
+    for reason in reasons:
+        print(f"smlops: retrain: {reason}", file=sys.stderr)
+    if not reasons:
+        print("smlops: no firing alert asks for retraining", file=sys.stderr)
+    print(f"retrain={'true' if reasons else 'false'}")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     args = _parser().parse_args(argv)
     if args.command == "data":
@@ -368,6 +390,8 @@ def main(argv: list[str] | None = None) -> int:
         return _cmd_pipeline(args)
     if args.command == "promotion-request":
         return _cmd_promotion_request(args)
+    if args.command == "retrain-check":
+        return _cmd_retrain_check(args)
     if args.command == "keys":
         return _cmd_keys(args)
     if args.command == "api-keys":

@@ -204,3 +204,28 @@ class ApiKeysCliTests(unittest.TestCase):
             self.assertEqual(authenticate(load(f"{d}/k/api-keys.txt"), key), "support-tool")
             with redirect_stdout(io.StringIO()):
                 self.assertEqual(main(["api-keys", "add", "--client", "support-tool", "--file", f"{d}/k/api-keys.txt"]), 1)
+
+
+class RetrainCheckCliTests(unittest.TestCase):
+    def run_check(self, payload: str):
+        import tempfile
+        from contextlib import redirect_stderr
+        from pathlib import Path
+        with tempfile.TemporaryDirectory() as d, redirect_stdout(io.StringIO()) as out, \
+                redirect_stderr(io.StringIO()) as err:
+            Path(d, "p.json").write_text(payload)
+            code = main(["retrain-check", str(Path(d, "p.json"))])
+        return code, out.getvalue(), err.getvalue()
+
+    def test_a_firing_retrain_alert_says_true_and_why(self):
+        code, out, err = self.run_check('{"alerts": [{"status": "firing", "labels": {"alertname": '
+                                        '"TicketRouterNewVocabulary", "action": "retrain"}, '
+                                        '"annotations": {"summary": "1.45x unknown words"}}]}')
+        self.assertEqual((code, out), (0, "retrain=true\n"))
+        self.assertIn("TicketRouterNewVocabulary: 1.45x unknown words", err)
+
+    def test_nothing_to_do_and_garbage_are_told_apart(self):
+        self.assertEqual(self.run_check('{"alerts": []}')[:2], (0, "retrain=false\n"))
+        self.assertEqual(self.run_check("not json")[0], 2)
+        self.assertEqual(self.run_check('["alerts"]')[0], 2)
+        self.assertEqual(self.run_check('{"alerts": ["x"]}')[0], 2)
