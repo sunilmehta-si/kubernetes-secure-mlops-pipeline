@@ -21,7 +21,9 @@ class CodeownersTests(unittest.TestCase):
     def test_release_decisions_and_the_build_have_owners(self):
         for path in ("configs/gate.yaml", "configs/train.yaml", "secure_mlops/gate.py", "secure_mlops/validate.py",
                      "secure_mlops/registry.py", "secure_mlops/safeload.py", ".github/workflows/ci.yml",
-                     "Dockerfile", "pyproject.toml", "secure_mlops/data.py"):
+                     "Dockerfile", "pyproject.toml", "secure_mlops/data.py",
+                     "deploy/gitops/production/inferenceservice.yaml", "deploy/policy/verify-signatures.yaml",
+                     "deploy/monitoring/alerts.yaml", "secure_mlops/gitops.py", "secure_mlops/serve/auth.py"):
             with self.subTest(path=path):
                 self.assertTrue(owners(path), f"{path} has no code owner")
 
