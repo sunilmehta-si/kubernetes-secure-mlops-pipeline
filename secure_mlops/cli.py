@@ -55,6 +55,9 @@ def _parser() -> argparse.ArgumentParser:
     sv.add_argument("--bundle", default="/mnt/models", help="Model bundle directory (default: /mnt/models, KServe's mount).")
     sv.add_argument("--public-key", help="Key the model must be signed with (default: $SMLOPS_VERIFY_KEY). Required.")
     sv.add_argument("--api-keys", help="File of client-id:sha256 lines (default: $SMLOPS_API_KEYS). Required.")
+    sv.add_argument("--tickets-per-minute", type=float, default=600.0,
+                    help="Tickets each client may send per minute (default: 600).")
+    sv.add_argument("--burst", type=float, default=120.0, help="Tickets a client may send at once (default: 120).")
     sv.add_argument("--host", default="0.0.0.0", help="Address to listen on (default: 0.0.0.0).")
     sv.add_argument("--port", type=int, default=8080, help="Port (default: 8080, KServe's default).")
     pk = sub.add_parser("package", help="Export the verified champion as a model bundle and modelcar Dockerfile.")
@@ -271,7 +274,13 @@ def _cmd_serve(args: argparse.Namespace) -> int:
     from .serve.app import create_app
     logging.basicConfig(level=logging.INFO, format="%(message)s")
     print(f"smlops: serving {served.name} v{served.version} ({served.digest}) on {args.host}:{args.port}", file=sys.stderr)
-    uvicorn.run(create_app(served, api_keys), host=args.host, port=args.port, log_level="warning", server_header=False)
+    from .serve.ratelimit import TicketLimiter
+    try:
+        limiter = TicketLimiter(per_minute=args.tickets_per_minute, burst=args.burst)
+    except ValueError as exc:
+        print(f"smlops: {exc}", file=sys.stderr)
+        return 2
+    uvicorn.run(create_app(served, api_keys, limiter), host=args.host, port=args.port, log_level="warning", server_header=False)
     return 0
 
 

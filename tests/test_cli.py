@@ -161,6 +161,10 @@ class ServeCliTests(unittest.TestCase):
                 self.assertEqual(main(["serve", "--bundle", f"{d}/b", "--public-key", str(public), "--port", "9000",
                                        "--api-keys", f"{d}/api-keys.txt"]), 0)
             self.assertEqual(run.call_args.kwargs["port"], 9000)
+            with mock.patch("uvicorn.run") as run:
+                self.assertEqual(main(["serve", "--bundle", f"{d}/b", "--public-key", str(public), "--burst", "0",
+                                       "--api-keys", f"{d}/api-keys.txt"]), 2)
+            run.assert_not_called()
             (Path(d, "b", "model", "model.skops")).write_bytes(b"swapped")
             with mock.patch("uvicorn.run") as run:
                 self.assertEqual(main(["serve", "--bundle", f"{d}/b", "--public-key", str(public),
