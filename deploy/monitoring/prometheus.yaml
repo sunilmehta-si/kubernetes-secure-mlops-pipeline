@@ -1,0 +1,130 @@
+# Prometheus for the cluster: scrapes the ticket router's /metrics and evaluates deploy/monitoring/alerts.yaml.
+# Least privilege throughout: it may list pods in the serving namespace only (a Role, not a ClusterRole), runs
+# under Pod Security "restricted" with a read-only root filesystem, and accepts no inbound connections; it is
+# queried with kubectl exec. Its namespace carries smlops.io/model-clients=true, which is what lets it through the
+# serving namespace's network policy, on port 8080 only. The alert rules arrive as the ConfigMap prometheus-rules,
+# created from alerts.yaml by scripts/install-monitoring.sh, so the cluster runs exactly the rules CI tested.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: monitoring
+  labels:
+    smlops.io/model-clients: "true"
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/enforce-version: latest
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: prometheus
+  namespace: monitoring
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: prometheus-discovery
+  namespace: serving
+rules:
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: prometheus-discovery
+  namespace: serving
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: prometheus-discovery
+subjects:
+  - kind: ServiceAccount
+    name: prometheus
+    namespace: monitoring
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-config
+  namespace: monitoring
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 15s
+      evaluation_interval: 15s
+    rule_files:
+      - /etc/prometheus/rules/*.yaml
+    scrape_configs:
+      - job_name: ticket-router
+        kubernetes_sd_configs:
+          - role: pod
+            namespaces: {names: [serving]}
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_label_serving_kserve_io_inferenceservice]
+            regex: ticket-router
+            action: keep
+          - source_labels: [__meta_kubernetes_pod_container_port_number]
+            regex: "8080"
+            action: keep
+          - source_labels: [__meta_kubernetes_pod_name]
+            target_label: pod
+          - source_labels: [__meta_kubernetes_namespace]
+            target_label: namespace
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prometheus
+  namespace: monitoring
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: prometheus}
+  template:
+    metadata:
+      labels: {app: prometheus}
+    spec:
+      serviceAccountName: prometheus
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65534
+        runAsGroup: 65534
+        fsGroup: 65534
+        seccompProfile: {type: RuntimeDefault}
+      containers:
+        - name: prometheus
+          image: prom/prometheus:v3.15.0@sha256:efd719c99d83b060d9daefdcf00360461adf279f45ef5391f8d111892118753e
+          args: ["--config.file=/etc/prometheus/prometheus.yml", "--storage.tsdb.path=/prometheus",
+                 "--storage.tsdb.retention.time=2d", "--web.listen-address=127.0.0.1:9090"]
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: {drop: ["ALL"]}
+          resources:
+            requests: {cpu: 100m, memory: 256Mi}
+            limits: {memory: 512Mi}
+          readinessProbe:
+            exec: {command: ["wget", "-qO-", "http://127.0.0.1:9090/-/ready"]}
+            periodSeconds: 5
+          volumeMounts:
+            - {name: config, mountPath: /etc/prometheus, readOnly: true}
+            - {name: rules, mountPath: /etc/prometheus/rules, readOnly: true}
+            - {name: data, mountPath: /prometheus}
+      volumes:
+        - name: config
+          configMap: {name: prometheus-config}
+        - name: rules
+          configMap: {name: prometheus-rules}
+        - name: data
+          emptyDir: {sizeLimit: 2Gi}
+---
+# Nothing may connect to Prometheus; it listens on localhost only as well.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-ingress
+  namespace: monitoring
+spec:
+  podSelector: {}
+  policyTypes: ["Ingress"]
