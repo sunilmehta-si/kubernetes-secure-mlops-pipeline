@@ -1,0 +1,83 @@
+name: retrain
+
+# Retraining (gate G7 to gate G3). Starts every Monday, by hand, or when live drift alerts: Alertmanager posts to a
+# relay that sends a repository_dispatch of type drift-alert with the webhook payload as client_payload, and
+# `smlops retrain-check` starts work only for firing alerts labelled action=retrain. The job trains on existing plus
+# recent tickets, judges the challenger against the champion on recent traffic, and writes the promotion request a
+# person approves (gate G4). It never deploys anything.
+#
+# The registry here is rebuilt each run, so the champion is trained first from the base data. A real deployment
+# points --tracking-uri at the shared MLflow server and takes recent tickets from the support tool, labelled by agents.
+on:
+  schedule:
+    - cron: "17 3 * * 1"
+  workflow_dispatch:
+    inputs:
+      drift:
+        description: "How far recent tickets have shifted, 0-1 (stands in for real labelled traffic)"
+        default: "0.6"
+  repository_dispatch:
+    types: [drift-alert]
+
+# `shell: bash` runs steps with -eo pipefail; the default (-e only) lets `script | tee` pass when the script fails.
+defaults:
+  run:
+    shell: bash
+
+permissions:
+  contents: read
+
+concurrency:
+  group: retrain
+  cancel-in-progress: false
+
+jobs:
+  retrain:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      MLFLOW_DISABLE_AGENT_HINT: "1"
+      DRIFT: ${{ github.event.inputs.drift || '0.6' }}
+      EVENT: ${{ github.event_name }}
+      PAYLOAD: ${{ toJSON(github.event.client_payload) }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+      - run: pip install -e .
+      - name: Decide
+        id: decide
+        run: |
+          if [ "$EVENT" = "repository_dispatch" ]; then
+            printf '%s' "$PAYLOAD" | smlops retrain-check - | tee -a "$GITHUB_OUTPUT"
+          else
+            echo "retrain=true" | tee -a "$GITHUB_OUTPUT"
+          fi
+      - name: Champion (rebuilt; a real run reads it from the registry)
+        if: steps.decide.outputs.retrain == 'true'
+        run: |
+          smlops keys generate -o "$RUNNER_TEMP/keys"
+          smlops data generate -o data/base
+          smlops train --data data/base --signing-key "$RUNNER_TEMP/keys/signing-key.pem" -o runs/champion > /dev/null
+      - name: Retrain on existing plus recent tickets
+        if: steps.decide.outputs.retrain == 'true'
+        run: |
+          smlops data generate --seed "$((1000 + GITHUB_RUN_NUMBER % 9000))" --drift "$DRIFT" -o data/recent
+          smlops data combine --base data/base --recent data/recent -o data/retrain
+          status=0
+          smlops train --data data/retrain --signing-key "$RUNNER_TEMP/keys/signing-key.pem" \
+            --public-key "$RUNNER_TEMP/keys/signing-key.pub.pem" -o runs/retrain > gate.md || status=$?
+          [ "$status" -le 1 ] || exit "$status"            # 2 is an error; 1 is a challenger the gate blocked
+          {
+            echo "## Retraining ($EVENT, recent drift $DRIFT)"
+            cat gate.md
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [ "$status" = 1 ]; then
+            echo "::warning::the retrained model did not pass the evaluation gate; the champion stays"
+          else
+            smlops promotion-request --run-dir runs/retrain -o promotion.md
+            cat promotion.md >> "$GITHUB_STEP_SUMMARY"
+          fi
