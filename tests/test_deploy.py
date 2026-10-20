@@ -57,6 +57,11 @@ class ServingRuntimeTests(unittest.TestCase):
         c = rt["spec"]["containers"][0]
         self.assertEqual(c["image"], DIGEST)
         self.assertEqual(c["args"][:3], ["serve", "--bundle", "/mnt/models"])
+        keys_file = c["args"][c["args"].index("--api-keys") + 1]
+        api = next(m for m in c["volumeMounts"] if m["name"] == "api-keys")
+        self.assertTrue(keys_file.startswith(api["mountPath"]) and api["readOnly"])
+        self.assertEqual(next(v for v in rt["spec"]["volumes"] if v["name"] == "api-keys")["secret"]["secretName"],
+                         "smlops-api-keys")
         key = c["args"][c["args"].index("--public-key") + 1]
         mount = next(m for m in c["volumeMounts"] if m["name"] == "verify-key")
         self.assertTrue(key.startswith(mount["mountPath"]) and mount["readOnly"])

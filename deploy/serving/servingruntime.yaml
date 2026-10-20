@@ -15,7 +15,8 @@ spec:
   containers:
     - name: kserve-container
       image: ${SERVER_IMAGE}
-      args: ["serve", "--bundle", "/mnt/models", "--public-key", "/etc/smlops/keys/signing-key.pub.pem", "--port", "8080"]
+      args: ["serve", "--bundle", "/mnt/models", "--public-key", "/etc/smlops/keys/signing-key.pub.pem",
+             "--api-keys", "/etc/smlops/api/api-keys.txt", "--port", "8080"]
       env:
         - name: MLFLOW_DISABLE_AGENT_HINT
           value: "1"
@@ -42,10 +43,14 @@ spec:
         seccompProfile: {type: RuntimeDefault}
       volumeMounts:
         - {name: verify-key, mountPath: /etc/smlops/keys, readOnly: true}
+        - {name: api-keys, mountPath: /etc/smlops/api, readOnly: true}
         - {name: tmp, mountPath: /tmp}
   volumes:
     - name: verify-key
       configMap:
         name: smlops-verify-key
+    - name: api-keys
+      secret:
+        secretName: smlops-api-keys        # client-id:sha256 lines; no raw keys ever reach the cluster
     - name: tmp
       emptyDir: {sizeLimit: 256Mi}
