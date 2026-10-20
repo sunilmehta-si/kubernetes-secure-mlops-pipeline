@@ -16,6 +16,7 @@ from mlflow.models import infer_signature
 
 from . import __version__
 from .config import TrainConfig
+from .profile import KEY as PROFILE_KEY, reference_profile
 from .provenance import environment_info, frozen_requirements, git_info
 from .report import gate_markdown
 from .safeload import SAFE_FORMAT  # models are stored with skops, never pickle
@@ -62,5 +63,6 @@ def log_run(model, config: TrainConfig, train_frame: pd.DataFrame, test_frame: p
         mlflow.log_text(gate_markdown(decision), "gate.md")
         example = features(test_frame).head(3)
         info = mlflow.sklearn.log_model(model, name="model", signature=infer_signature(example, model.predict(example)),
-                                        input_example=example, serialization_format=SAFE_FORMAT)
+                                        input_example=example, serialization_format=SAFE_FORMAT,
+                                        metadata={PROFILE_KEY: reference_profile(train_frame)})
     return LoggedRun(run.info.run_id, info.model_uri)

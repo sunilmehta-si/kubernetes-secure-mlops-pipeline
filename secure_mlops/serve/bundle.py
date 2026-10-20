@@ -15,6 +15,7 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 
+from ..profile import read_profile
 from ..safeload import load as safe_load
 from ..signing import SignatureError, verify
 
@@ -32,6 +33,7 @@ class ServedModel:
     run_id: str
     digest: str                 # sha256 of the signature: names exactly the signed set of files being served
     model: object
+    reference: dict | None = None   # the training profile, from the signed MLmodel file
 
     def predict(self, frame):
         return self.model.predict(frame)
@@ -52,4 +54,4 @@ def load_verified(root: str | Path, public_key: str | Path) -> ServedModel:
     release = json.loads((root / RELEASE).read_text())
     digest = "sha256:" + hashlib.sha256((root / SIGNATURE).read_bytes()).hexdigest()
     return ServedModel(release["name"], str(release["version"]), release.get("run_id", ""), digest,
-                       safe_load(str(root / MODEL)))
+                       safe_load(str(root / MODEL)), read_profile(root / MODEL))
