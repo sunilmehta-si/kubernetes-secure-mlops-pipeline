@@ -30,7 +30,7 @@ the code does.
 | G4 Release approval | Did someone other than the author approve it? | Partial: CODEOWNERS names the owner of every file that decides releases; `smlops promotion-request` writes the PR body with an approver checklist | [`.github/CODEOWNERS`](../.github/CODEOWNERS), [`promotion.py`](../secure_mlops/promotion.py) | Branch protection on `main` requiring code-owner review, so the author cannot approve their own release |
 | G5 Supply chain | Is the artifact what we built? | Partial: every model file signed with OpenSSF model signing and verified before any load; a CycloneDX 1.6 ML-BOM per version (file hashes, datasets, packages, release facts); dependencies and base image pinned, Trivy blocks fixable HIGH/CRITICAL CVEs, Dependabot | [`signing.py`](../secure_mlops/signing.py), [`mlbom.py`](../secure_mlops/mlbom.py), [`ci.yml`](../.github/workflows/ci.yml) | Keyless signing by CI's identity; the model as an OCI artifact with provenance |
 | G6 Deploy admission | Will the cluster run only that artifact? | **Built**: in `serving`, Kyverno admits only images signed by the pipeline's key (server and model image alike), from the cluster registry, pinned by digest; KServe's injected containers are hardened so the namespace stays Pod Security "restricted". The cluster workflow drills an unsigned image and a tag reference on every push | [`verify-signatures.yaml`](../deploy/policy/verify-signatures.yaml), [`require-digests.yaml`](../deploy/policy/require-digests.yaml), [`harden-serving-pods.yaml`](../deploy/policy/harden-serving-pods.yaml) | Keyless signatures from CI's identity instead of a key |
-| G7 Operate & retire | Is it still working, and can we undo it? | Partial: `smlops drift` checks production batches (PSI of channel, tier and predictions, new-word rate, accuracy against the champion's own test score) and exits 1 on an alert; one-step rollback of the `champion` alias | [`drift.py`](../secure_mlops/drift.py), [`registry.py`](../secure_mlops/registry.py) | Scheduled drift checks on live traffic that start retraining; a retirement step |
+| G7 Operate & retire | Is it still working, and can we undo it? | Partial: live drift on the serving path (team mix PSI, unknown words against the model's own baseline) with Prometheus alerts and a dashboard; firing retrain alerts, or the weekly schedule, start a retraining run that the gate judges; `smlops drift` for labelled batches; one-step rollback of the `champion` alias | [`serve/live_drift.py`](../secure_mlops/serve/live_drift.py), [`alerts.yaml`](../deploy/monitoring/alerts.yaml), [`retrain.yml`](../.github/workflows/retrain.yml), [`registry.py`](../secure_mlops/registry.py) | Alertmanager wired to the retraining trigger; a retirement step |
 
 A model is promoted only when G3 passes today; when G4 to G6 exist, it will be promoted only when all of them pass.
 
@@ -82,7 +82,7 @@ Decisions are made by versioned files, reviewed like code, rather than by settin
 | T7 | Model swapped or tampered after approval | Registry | Every model file is signed and checked before any load, including by the server at startup; model and server images are signed by digest and checked at admission. Drills: one changed byte stops a run; an unsigned image is rejected on the cluster | ML10 | Built |
 | T8 | Model file runs code when loaded (pickle) | Serving | Models are stored as skops, which loads only trusted types; pickles are refused from their metadata before they are opened ([`safeload.py`](../secure_mlops/safeload.py)), and the server loads only bundles whose signature verifies ([`serve/bundle.py`](../secure_mlops/serve/bundle.py)) | ML06 | Built |
 | T9 | Endpoint abuse: evasion, theft, flooding | Serving | 1-64 tickets of 1-2000 characters, no extra fields, 256 KB bodies; only labelled namespaces reach the endpoint and the server has no egress; every prediction needs an API key, stored on the cluster only as a hash ([`serve/auth.py`](../secure_mlops/serve/auth.py)); per-client ticket budgets answer 429 ([`serve/ratelimit.py`](../secure_mlops/serve/ratelimit.py)); alerts on rejected keys and exhausted budgets. Drilled on the cluster: an outside namespace cannot connect, a request without a key gets 401 | ML01, ML05 | Built |
-| T10 | Silent drift degrades decisions | Monitoring | `smlops drift` with calibrated thresholds; one-step rollback. Drift is a reason to look, not proof of harm: a fully shifted batch alerts while accuracy falls only about two points | - | Partial |
+| T10 | Silent drift degrades decisions | Monitoring | Live: the server measures its recent traffic against the training profile signed into the model ([`serve/live_drift.py`](../secure_mlops/serve/live_drift.py)), Prometheus alerts with the same thresholds as `smlops drift`, unit-tested with promtool and loaded on the CI cluster; a critical drift alert starts retraining, which still has to pass the gate. Batch: `smlops drift`; one-step rollback. Drift is a reason to look, not proof of harm: a fully shifted batch alerts while accuracy falls only about two points | - | Built |
 
 **What T6 has already caught.** While the README was being written, the overlap measure showed that 37% of test
 tickets were exact copies of training tickets, which had inflated accuracy to 0.958. The generator was fixed; the
@@ -92,7 +92,7 @@ honest score was 0.909, and tuning on the validation split brought it to 0.938 w
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="images/audit-trail-dark.svg">
-  <img src="images/audit-trail-light.svg" alt="Seven linked records from tickets to prediction: four built (tickets, data splits, training run, model version) and three planned (signed artifact, deployment, prediction)">
+  <img src="images/audit-trail-light.svg" alt="Seven linked records from tickets to prediction: six built (tickets, data splits, training run, model version, signed artifact, prediction) and one partial (deployment)">
 </picture>
 
 The questions an auditor or incident review asks, and where the answer comes from today:
@@ -106,7 +106,8 @@ The questions an auditor or incident review asks, and where the answer comes fro
 | What is it for, and what are its limits? | `model_card.md` on the run, written from the records above |
 | Is this the model that was approved? | `smlops verify`: every file against its signature (`model.sig.json` on the run) |
 | What exactly is in it? | `mlbom.cdx.json` on the run: file hashes, datasets by fingerprint, every package |
-| Which model answered a given request? | The audit log line for the request id: model version and signature digest, never the ticket text |
+| Which model answered a given request? | The audit log line for the request id: model version, signature digest and the calling client, never the ticket text |
+| What was deployed, and who approved it? | The commit that changed `deploy/gitops/production/`: both images by digest, merged through a reviewed pull request |
 
 ## 6. Mapping to frameworks
 

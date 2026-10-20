@@ -132,13 +132,13 @@
 <text x="972.5" y="384" font-size="12" font-weight="500" fill="#a3adb8" text-anchor="start" font-style="italic">Still working? Can we undo it?</text>
 <line x1="972.5" y1="396" x2="1229" y2="396" stroke="#2c333d"/>
 <text x="972.5" y="418" font-size="9.5" font-weight="700" fill="#7d8590" text-anchor="start" letter-spacing="0.6">CHECKS</text>
-<text x="1046.5" y="418" font-size="12" font-weight="500" fill="#e6edf3" text-anchor="start">drift, accuracy, rollback</text>
+<text x="1046.5" y="418" font-size="12" font-weight="500" fill="#e6edf3" text-anchor="start">live drift, alerts, retrain</text>
 <text x="972.5" y="440" font-size="9.5" font-weight="700" fill="#7d8590" text-anchor="start" letter-spacing="0.6">EVIDENCE</text>
-<text x="1046.5" y="440" font-size="12" font-weight="500" fill="#e6edf3" text-anchor="start">drift report, rollback</text>
+<text x="1046.5" y="440" font-size="12" font-weight="500" fill="#e6edf3" text-anchor="start">alerts, gate reports</text>
 <text x="972.5" y="462" font-size="9.5" font-weight="700" fill="#7d8590" text-anchor="start" letter-spacing="0.6">OWNER</text>
 <text x="1046.5" y="462" font-size="12" font-weight="500" fill="#e6edf3" text-anchor="start">model owner, on-call</text>
 <text x="972.5" y="484" font-size="9.5" font-weight="700" fill="#7d8590" text-anchor="start" letter-spacing="0.6">ENFORCED</text>
-<text x="1046.5" y="484" font-size="12" font-weight="500" fill="#e6edf3" text-anchor="start">smlops drift; alias</text>
+<text x="1046.5" y="484" font-size="12" font-weight="500" fill="#e6edf3" text-anchor="start">Prometheus; retrain job</text>
 <line x1="320.5" y1="192.0" x2="338.5" y2="192.0" stroke="#6e7681" stroke-width="2" marker-end="url(#arrow)"/>
 <line x1="629" y1="192.0" x2="647" y2="192.0" stroke="#6e7681" stroke-width="2" marker-end="url(#arrow)"/>
 <line x1="937.5" y1="192.0" x2="955.5" y2="192.0" stroke="#6e7681" stroke-width="2" marker-end="url(#arrow)"/>

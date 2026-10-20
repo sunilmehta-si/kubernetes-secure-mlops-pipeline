@@ -44,8 +44,8 @@ GATES = [
      "platform security", "model signing; Trivy", "partial", "secure_mlops/signing.py"),
     ("G6", "Deploy admission", "Will the cluster run only that?", "only signed digests run", "admission decisions",
      "platform", "Kyverno; drilled in CI", "built", "deploy/policy/verify-signatures.yaml"),
-    ("G7", "Operate & retire", "Still working? Can we undo it?", "drift, accuracy, rollback", "drift report, rollback",
-     "model owner, on-call", "smlops drift; alias", "partial", "secure_mlops/drift.py"),
+    ("G7", "Operate & retire", "Still working? Can we undo it?", "live drift, alerts, retrain", "alerts, gate reports",
+     "model owner, on-call", "Prometheus; retrain job", "partial", "secure_mlops/serve/live_drift.py"),
 ]
 
 # (id, threat, where (node key), control, OWASP ML Top 10 2023, status, file when built/partial)
@@ -68,8 +68,8 @@ THREATS = [
      "ML06", "built", "secure_mlops/serve/bundle.py"),
     ("T9", "Endpoint abuse: evasion, theft, flooding", "serving", "limits, allowlist, API keys, rate limits, alerts",
      "ML01, ML05", "built", "secure_mlops/serve/auth.py"),
-    ("T10", "Silent drift degrades decisions", "monitoring", "drift check (PSI, new words, accuracy); rollback",
-     "-", "partial", "secure_mlops/drift.py"),
+    ("T10", "Silent drift degrades decisions", "monitoring", "live drift alerts start retraining; rollback",
+     "-", "built", "secure_mlops/serve/live_drift.py"),
 ]
 
 # (stage, identifier recorded, example, status, file when built)
@@ -79,7 +79,7 @@ TRAIL = [
     ("Training run", "params hash, run id", "run 9cd31c76…", "built", "secure_mlops/tracking.py"),
     ("Model version", "gate decision, card", "ticket-router v1", "built", "secure_mlops/registry.py"),
     ("Signed artifact", "OCI digest, signatures", "@sha256:… + cosign", "built", "secure_mlops/serve/package.py"),
-    ("Deployment", "digest, admission", "applied by digest", "partial", "scripts/deploy-model.sh"),
+    ("Deployment", "release commit, admission", "git commit, by digest", "partial", "secure_mlops/gitops.py"),
     ("Prediction", "model digest per request", "audit log line", "built", "secure_mlops/serve/app.py"),
 ]
 
@@ -186,7 +186,7 @@ NODES = {
     "pipelines": (441, 150, "Kubeflow Pipelines", "train, gate, SeaweedFS"),
     "registry": (651, 150, "MLflow + zot", "versions, OCI models"),
     "policy": (861, 150, "Kyverno", "verify model signature"),
-    "monitoring": (441, 314, "Prometheus", "metrics + Evidently drift"),
+    "monitoring": (441, 314, "Prometheus", "live drift, alert rules"),
     "argocd": (651, 314, "Argo CD", "deploys digest from Git"),
     "serving": (861, 314, "KServe", "ticket-router endpoint"),
     "clients": (1077, 314, "Support tool", "sends tickets"),
@@ -201,7 +201,8 @@ FLOWS = [  # (from, to, label, dashed): labels only where the gap between nodes 
     ("laptop", "repo", "push", False), ("repo", "ci", "", False), ("ci", "ghcr", "", False),
     ("ghcr", "pipelines", "pull image", False), ("pipelines", "registry", "", False),
     ("registry", "policy", "", False), ("argocd", "serving", "", True), ("policy", "serving", "verify", False),
-    ("clients", "serving", "", True), ("serving", "monitoring", "", True), ("monitoring", "pipelines", "retrain", True),
+    # retraining runs in GitHub Actions; the Alertmanager relay that starts it from an alert is still planned
+    ("clients", "serving", "", False), ("serving", "monitoring", "", False), ("monitoring", "ci", "retrain", True),
 ]
 
 
@@ -253,7 +254,8 @@ def threat_model(theme: str) -> str:
             w = len(label) * 6 + 10
             labels += [f'<rect x="{mx - w / 2:.1f}" y="{my - 9:.1f}" width="{w:.0f}" height="16" rx="8" '
                        f'fill="{c["zone"]}"/>', _t(round(mx), round(my + 3.5), label, 10, c["faint"], 600, "middle")]
-    built_nodes = {"laptop", "repo", "ci", "ghcr", "pipelines", "registry", "policy", "serving"}
+    built_nodes = {"laptop", "repo", "ci", "ghcr", "pipelines", "registry", "policy", "serving", "monitoring",
+                   "clients"}
     for key, (x, y, title, sub) in NODES.items():
         built = key in built_nodes
         fill, line, dash = (c["built_item"], c["built_item_line"], "") if built else \
