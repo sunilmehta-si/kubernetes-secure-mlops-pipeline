@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Deploy the published model and call it the way a client would.
-#   1. fill the image digests into the ServingRuntime and InferenceService and apply them (admission checks run here)
+#   1. render the release with `smlops render-release`, exactly as a GitOps promotion commits it, and apply it
+#      (admission checks run here)
 #   2. wait until KServe reports the model ready (the server only becomes ready after its signature verifies)
 #   3. from the "support" namespace, which the network policy allows, send two tickets and print the answer
 # Usage: scripts/deploy-model.sh WORK    (reads WORK/images.env from scripts/publish-model.sh)
@@ -24,8 +25,8 @@ fi
 hashes="$work/api-keys.txt"
 kubectl -n serving create secret generic smlops-api-keys --from-file "api-keys.txt=${hashes}" \
   --dry-run=client -o yaml | kubectl apply -f -
-envsubst '${SERVER_IMAGE}' < deploy/serving/servingruntime.yaml | kubectl apply -f -
-envsubst '${MODEL_IMAGE}' < deploy/serving/inferenceservice.yaml | kubectl apply -f -
+smlops render-release --model-image "$MODEL_IMAGE" --server-image "$SERVER_IMAGE" -o "$work/release"
+kubectl apply -k "$work/release"
 kubectl -n serving wait --for=condition=Ready inferenceservice/ticket-router --timeout=600s
 
 kubectl create namespace support --dry-run=client -o yaml | kubectl apply -f -
