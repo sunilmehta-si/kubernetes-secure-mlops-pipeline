@@ -9,7 +9,8 @@ smlops train --signing-key ...     the stored model files are signed (OpenSSF mo
 smlops package --public-key ...    the verified champion is exported as a bundle + modelcar Dockerfile
 docker build / push                the model image and the server image go to the cluster registry
 cosign sign (by digest)            both images are signed; no public transparency-log entry for a local key
-kubectl apply (by digest)          Kyverno checks both signatures and the digests before any pod is created
+smlops render-release              the release: serving manifests with both images by digest (GitOps commits these)
+kubectl apply -k / Argo CD sync    Kyverno checks both signatures and the digests before any pod is created
 smlops serve                       the server verifies the model's own signature again before opening a port
 ```
 
@@ -24,10 +25,11 @@ smlops keys generate
 smlops data generate -o data
 smlops train --data data --signing-key keys/signing-key.pem
 smlops package --public-key keys/signing-key.pub.pem -o bundle
-smlops serve --bundle bundle --public-key keys/signing-key.pub.pem --port 8080
+key="$(smlops api-keys add --client me --file keys/api-keys.txt)"   # printed once; only its hash is stored
+smlops serve --bundle bundle --public-key keys/signing-key.pub.pem --api-keys keys/api-keys.txt --port 8080
 
 curl -s localhost:8080/v1/models/ticket-router
-curl -s -X POST localhost:8080/v1/models/ticket-router:predict \
+curl -s -X POST localhost:8080/v1/models/ticket-router:predict -H "authorization: Bearer $key" \
   -H 'content-type: application/json' -d '{"instances": [{"text": "please refund the $40 charge"}]}'
 ```
 
@@ -47,9 +49,12 @@ The bundle layout is what KServe mounts at `/mnt/models` from the model image:
 | Starts only if the model's signature verifies against the mounted key; no flag to skip it | [`serve/bundle.py`](../secure_mlops/serve/bundle.py), `smlops serve` |
 | Loads only the skops format | [`safeload.py`](../secure_mlops/safeload.py) |
 | 1-64 tickets per request, 1-2000 characters each, no extra fields, bodies up to 256 KB | [`serve/app.py`](../secure_mlops/serve/app.py) |
+| Every prediction needs an API key; keys are stored only as SHA-256 hashes and compared in constant time; 401 otherwise. Health and metrics stay open for the platform | [`serve/auth.py`](../secure_mlops/serve/auth.py) |
+| Per-client ticket budget (600 a minute, bursts of 120 by default): 429 with Retry-After, or 413 for a batch over the burst | [`serve/ratelimit.py`](../secure_mlops/serve/ratelimit.py) |
+| Live drift of its own traffic against the training profile signed into the model ([monitoring](monitoring.md)) | [`serve/live_drift.py`](../secure_mlops/serve/live_drift.py) |
 | Every response and audit line names the model version and the digest of its signature | [`serve/app.py`](../secure_mlops/serve/app.py) |
-| Audit log: one JSON line per request, never the ticket text | `smlops.audit` logger |
-| Prometheus metrics: requests by status, latency, tickets by team, model identity | `/metrics` |
+| Audit log: one JSON line per request with the calling client, never the ticket text | `smlops.audit` logger |
+| Prometheus metrics: requests by status, latency, tickets by team, model identity, live drift | `/metrics` |
 
 ## What the cluster enforces
 
@@ -70,12 +75,41 @@ echo "127.0.0.1 kind-registry" | sudo tee -a /etc/hosts   # push to the registry
 scripts/cluster-up.sh
 scripts/publish-model.sh .work
 scripts/install-platform.sh .work/keys
+scripts/install-monitoring.sh
 scripts/deploy-model.sh .work
 scripts/drill-admission.sh .work
+scripts/check-monitoring.sh .work
 ```
+
+Every script that runs kubectl first checks that the current context is `kind-smlops` and refuses otherwise, so
+they never act on whatever cluster kubectl happens to point at.
 
 On macOS, port 5000 is used by AirPlay Receiver; turn it off (System Settings → General → AirDrop & Handoff) or
 the registry cannot start.
 
-The [`cluster` workflow](../.github/workflows/cluster.yml) runs these five steps on every push. The drill must see
-three rejections: an unsigned image, an image referenced by tag, and a client outside the allowed namespaces.
+The [`cluster` workflow](../.github/workflows/cluster.yml) runs these steps on every push. The drill must see four
+rejections: an unsigned image, an image referenced by tag, a client outside the allowed namespaces (curl's own "no
+connection", never a kubectl error), and a request without an API key (401). Every step runs with `pipefail`: an
+earlier version piped the drill into `tee`, which hid a failing drill behind a green run until the monitoring
+check exposed it.
+
+## Delivery with GitOps
+
+A release is the set of files `smlops render-release` writes: the templates in `deploy/serving/` with both images
+filled in by digest, plus a kustomization that records them. The cluster workflow deploys exactly these files, and
+promotion to production is a pull request that commits them to `deploy/gitops/production/`:
+
+```bash
+smlops render-release --model-image "$MODEL_IMAGE" --server-image "$SERVER_IMAGE"   # writes deploy/gitops/production
+git switch -c promote-ticket-router-v5 && git add deploy/gitops/production
+git commit -m "Promote ticket-router v5" && gh pr create --body-file promotion.md      # from smlops promotion-request
+```
+
+The renderer accepts only images from the cluster registry pinned by digest, the same rule Kyverno enforces. The
+namespace is not part of a release: the platform owns it.
+
+[`deploy/gitops/argocd/ticket-router.yaml`](../deploy/gitops/argocd/ticket-router.yaml) has the Argo CD project and
+application. The application syncs `deploy/gitops/production/` from `main`, prunes what git no longer has and
+reverts hand edits. The project allows one source repository, one destination namespace, nothing cluster-scoped,
+and only the four kinds a release contains; tests check that every rendered kind is allowed and nothing more.
+Argo CD itself does not run on the CI cluster yet.
