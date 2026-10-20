@@ -5,6 +5,9 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 . deploy/versions.env
+# Only ever the local kind cluster: never whatever cluster kubectl happens to point at.
+[ "$(kubectl config current-context 2>/dev/null)" = "$KIND_CONTEXT" ] \
+  || { echo "refusing to run: kubectl context is not $KIND_CONTEXT (scripts/cluster-up.sh creates it)" >&2; exit 1; }
 grep -q "image: prom/prometheus:${PROMETHEUS_VERSION}@sha256:" deploy/monitoring/prometheus.yaml \
   || { echo "deploy/monitoring/prometheus.yaml does not run Prometheus ${PROMETHEUS_VERSION} by digest" >&2; exit 1; }
 

@@ -7,6 +7,9 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 . deploy/versions.env
+# Only ever the local kind cluster: never whatever cluster kubectl happens to point at.
+[ "$(kubectl config current-context 2>/dev/null)" = "$KIND_CONTEXT" ] \
+  || { echo "refusing to run: kubectl context is not $KIND_CONTEXT (scripts/cluster-up.sh creates it)" >&2; exit 1; }
 keys="${1:?usage: install-platform.sh KEYS_DIR}"
 
 retry() {   # webhooks can lag their deployments becoming Available

@@ -29,5 +29,5 @@ fi
 if ! getent hosts "$reg_name" >/dev/null 2>&1 && ! grep -q " ${reg_name}\$" /etc/hosts; then
   echo "add '127.0.0.1 ${reg_name}' to /etc/hosts so this machine can push to ${REGISTRY}" >&2
 fi
-kubectl config use-context kind-smlops >/dev/null
+kubectl config use-context "$KIND_CONTEXT" >/dev/null
 echo "cluster smlops ready; registry ${REGISTRY}"

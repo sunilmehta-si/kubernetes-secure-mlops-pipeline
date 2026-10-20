@@ -7,6 +7,9 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 . deploy/versions.env
+# Only ever the local kind cluster: never whatever cluster kubectl happens to point at.
+[ "$(kubectl config current-context 2>/dev/null)" = "$KIND_CONTEXT" ] \
+  || { echo "refusing to run: kubectl context is not $KIND_CONTEXT (scripts/cluster-up.sh creates it)" >&2; exit 1; }
 work="${1:?usage: deploy-model.sh WORK_DIR}"
 set -a; . "$work/images.env"; set +a
 CURL_IMAGE="curlimages/curl:8.17.0@sha256:935d9100e9ba842cdb060de42472c7ca90cfe9a7c96e4dacb55e79e560b3ff40"
