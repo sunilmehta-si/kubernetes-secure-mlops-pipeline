@@ -14,11 +14,12 @@ model it replaces, signed, verified at deploy time, rolled out gradually and rol
   <img src="docs/images/architecture-light.svg" alt="The ML system in six stages, ingest, prepare, train, evaluate, deploy and monitor, with what this repo uses at each stage, other common tools, automatic retraining, and CI on every change">
 </picture>
 
-**Status: under construction.** Training, evaluation, the registry and serving are built and tested (solid green
-above), with the governance controls around them: a risk register, a PII scan, signed models verified before every
-load, an ML-BOM per model, drift checks, and admission control on a real cluster. GitOps delivery with canary
-rollouts and live dashboards are next (dashed). This README describes only what works. Each stage also lists other
-tools commonly used for the same job, so the diagram doubles as a map of MLOps.
+**Status: under construction.** Training, evaluation, the registry, serving and monitoring are built and tested
+(solid green above), with the governance controls around them: a risk register, a PII scan, signed models verified
+before every load, an ML-BOM per model, admission control on a real cluster, API keys and rate limits, live drift
+with Prometheus alerts, and retraining that the gate still judges. Canary rollouts with Argo CD are next (dashed).
+This README describes only what works. Each stage also lists other tools commonly used for the same job, so the
+diagram doubles as a map of MLOps.
 
 ## The gate in action
 
@@ -71,6 +72,7 @@ smlops train --data data --signing-key keys/signing-key.pem   # model files sign
 smlops verify --public-key keys/signing-key.pub.pem    # exit 1 if the champion is unsigned or any byte changed
 smlops promotion-request -o promotion.md               # PR body with gate result, model card, approver checklist
 smlops drift --reference data/train.csv --current batch.csv   # PSI, new words, accuracy; exit 1 on alert
+smlops api-keys add --client support-tool --file keys/api-keys.txt   # key printed once; only its hash is stored
 ```
 
 - **No pickles:** models are stored with skops, and anything stored as pickle is refused before it is opened.
@@ -104,7 +106,24 @@ ticket-router answered: ["billing","shipping"], model 1
 PASS: an unsigned image rejected by verify-model-signatures
 PASS: an image referenced by tag rejected by require-registry-and-digest
 PASS: a client outside the allowed namespaces could not reach the model
+PASS: a request without an API key was refused (401)
+PASS: Prometheus scrapes the served model, digest sha256:554e091df022...
+PASS: all 10 alert rules loaded
+PASS: live drift is measuring the 2 tickets served so far
+PASS: the keyless drill request is visible to monitoring as a 401
 ```
+
+Releases are rendered manifests with both images by digest (`smlops render-release`): CI deploys exactly those
+files, and promoting a model is a pull request that commits them for Argo CD to sync.
+
+## Watching it in production
+
+The server measures its own traffic against the training profile signed into the model: the mix of predicted teams
+(PSI) and the share of words its vectorizer has never seen, as a multiple of the model's own baseline. Prometheus
+alerts on both with the same thresholds as the batch drift check; ten alert rules are unit-tested with promtool on
+every push, and a Grafana dashboard is generated from code. A critical drift alert, or the weekly schedule, starts
+a retraining run on existing plus recent tickets, and the challenger still has to beat the champion on recent
+traffic before a person approves it. [docs/monitoring.md](docs/monitoring.md) has the details.
 
 ## Governance and security
 
@@ -121,7 +140,7 @@ check that nothing is marked built without the file that implements it.
 
 ## Caught by its own checks
 
-Two problems this project's checks found in itself while it was being built:
+Problems this project's checks found in itself while it was being built:
 
 - **The default dataset broke its own data contract.** Templated tickets repeated word for word 28% of the time, over
   the 25% limit. The pipeline missed it because it checked each split, the command line checked the whole set. Both
@@ -129,11 +148,20 @@ Two problems this project's checks found in itself while it was being built:
 - **Leakage inflated accuracy.** 37% of test tickets were exact copies of training tickets, which made the model look
   like 0.958. After the fix only 9% are, the honest score was 0.909, and tuning on the validation split (word trigrams)
   brought it to 0.938 without touching the test set.
+- **A failing drill passed the cluster run.** Workflow steps piped drills into `tee` under GitHub's default
+  `bash -e`, which ignores a failure on the left of a pipe; a flaky keyless-request drill had failed twice behind
+  green runs. The new monitoring check exposed it. Every workflow now runs with `pipefail`, a test enforces it, and
+  the drills pass only on curl's own result, never on a kubectl error.
+- **Retraining on recent data alone made a worse model.** Trained only on shifted tickets, a challenger lost 6.6
+  points of account recall and the gate blocked it. Retraining now uses existing plus recent tickets, and scored
+  0.964 against the champion's 0.942 on the same recent traffic.
 
 ## More detail
 
 - [docs/architecture.md](docs/architecture.md): the pipeline step by step, the gate's checks and limits, registry
   aliases for promotion and rollback, what every model carries, and CI.
+- [docs/serving.md](docs/serving.md): serving, admission control, the cluster drills and GitOps delivery.
+- [docs/monitoring.md](docs/monitoring.md): live drift, alerts, the dashboard, Prometheus on the cluster, retraining.
 - The diagrams are generated by [`scripts/architecture_diagram.py`](scripts/architecture_diagram.py); tests fail if
   the committed images drift from the code.
 
