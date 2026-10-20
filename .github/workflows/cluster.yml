@@ -2,7 +2,8 @@ name: cluster
 
 # The whole path on a real cluster: kind with a local registry, KServe, Kyverno; train and sign a model, publish
 # signed model and server images, deploy by digest, call the endpoint, then drill the controls (unsigned image,
-# tag reference, outside client). No secrets: keys are made for the run and never leave it.
+# tag reference, outside client, missing API key) and check that Prometheus sees the model and its live drift.
+# No secrets: keys are made for the run and never leave it.
 on:
   push:
     branches: [main]
@@ -45,6 +46,8 @@ jobs:
         run: scripts/publish-model.sh "$WORK"
       - name: Install the platform and policies
         run: scripts/install-platform.sh "$WORK/keys"
+      - name: Install monitoring
+        run: scripts/install-monitoring.sh
       - name: Deploy and call the model
         run: scripts/deploy-model.sh "$WORK"
       - name: Drill the controls
@@ -54,6 +57,10 @@ jobs:
             echo "### Model served on kind"; echo '```json'; jq . "$WORK/smoke.json"; echo '```'
             echo "### Admission and network drills"; echo '```'; cat "$WORK/drill.txt"; echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
+      - name: Check monitoring
+        run: |
+          scripts/check-monitoring.sh "$WORK" | tee "$WORK/monitoring.txt"
+          { echo "### Monitoring"; echo '```'; cat "$WORK/monitoring.txt"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
       - name: Diagnostics
         if: failure()
         run: |
@@ -67,4 +74,5 @@ jobs:
           kubectl -n kserve logs deployment/kserve-controller-manager --tail=100 || true
           kubectl -n serving get deployment,replicaset,pods -o wide || true
           kubectl -n serving get events --sort-by=.lastTimestamp || true
+          kubectl -n monitoring logs deployment/prometheus --tail=60 || true
           kubectl get events -A --sort-by=.lastTimestamp | tail -60 || true
