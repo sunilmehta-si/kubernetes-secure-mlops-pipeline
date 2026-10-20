@@ -43,5 +43,18 @@ class AlertRuleTests(unittest.TestCase):
             self.assertIn("for", rule, f"{name} would fire on a single scrape")
 
 
+class MonitoringDocTests(unittest.TestCase):
+    DOC = (ROOT / "docs/monitoring.md").read_text()
+
+    def test_every_alert_is_documented(self):
+        table = [line for line in self.DOC.splitlines() if line.startswith("| TicketRouter")]
+        documented = {name.strip() for line in table for name in line.split("|")[1].split(",")}
+        self.assertEqual(documented, set(RULES))
+
+    def test_every_relative_link_resolves(self):
+        for target in re.findall(r"\]\((\.\./[^)#]+)\)", self.DOC):
+            self.assertTrue((ROOT / "docs" / target).resolve().exists(), target)
+
+
 if __name__ == "__main__":
     unittest.main()
