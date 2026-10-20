@@ -55,11 +55,17 @@ pod drill-by-tag "${MODEL_IMAGE%@*}:v1" | expect_denied "an image referenced by 
 # 3. network: a namespace without smlops.io/model-clients=true
 kubectl create namespace outsider --dry-run=client -o yaml | kubectl apply -f - >/dev/null
 url="http://ticket-router-predictor.serving.svc.cluster.local/v1/models/ticket-router"
-if kubectl -n outsider run "probe-$(date +%s)" --rm -i --quiet --restart=Never --image "$CURL_IMAGE" -- \
-     -sS --max-time 8 "$url" >/dev/null 2>&1; then
-  echo "FAIL: a client outside the allowed namespaces reached the model"; failed=1
-else
+# Only curl's own "no connection" (status 000) passes: if kubectl itself fails, the drill proves nothing and fails.
+# A header arrives on stdin (-H @-), so curl waits for kubectl to attach and its output is never lost.
+code="$(printf 'X-Drill: outsider\n' \
+  | kubectl -n outsider run "probe-$(date +%s)" --rm -i --quiet --restart=Never --image "$CURL_IMAGE" -- \
+    -s -o /dev/null -w '%{http_code}' --max-time 8 -H @- "$url" || true)"
+if [ "$code" = "000" ]; then
   echo "PASS: a client outside the allowed namespaces could not reach the model"
+elif [ -z "$code" ]; then
+  echo "FAIL: the outside-client probe did not run, so the network policy is unproven"; failed=1
+else
+  echo "FAIL: a client outside the allowed namespaces reached the model (HTTP $code)"; failed=1
 fi
 # 4. right namespace, no key. The body goes in on stdin (-d @-), so curl waits until kubectl has attached: a
 # container that finishes first loses its output, and the drill read an empty status code on some runs.
