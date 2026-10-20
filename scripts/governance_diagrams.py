@@ -66,8 +66,8 @@ THREATS = [
      "ML10", "built", "deploy/policy/verify-signatures.yaml"),
     ("T8", "Model file runs code when loaded (pickle)", "serving", "skops only; server loads only signed bundles",
      "ML06", "built", "secure_mlops/serve/bundle.py"),
-    ("T9", "Endpoint abuse: evasion, theft, flooding", "serving", "input limits, client allowlist; auth, rate limits next",
-     "ML01, ML05", "partial", "secure_mlops/serve/app.py"),
+    ("T9", "Endpoint abuse: evasion, theft, flooding", "serving", "limits, allowlist, API keys, rate limits, alerts",
+     "ML01, ML05", "built", "secure_mlops/serve/auth.py"),
     ("T10", "Silent drift degrades decisions", "monitoring", "drift check (PSI, new words, accuracy); rollback",
      "-", "partial", "secure_mlops/drift.py"),
 ]
