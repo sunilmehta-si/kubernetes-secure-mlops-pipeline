@@ -1,6 +1,6 @@
 # Prometheus alerts for the ticket router, on the metrics its server exports at /metrics.
 # Drift thresholds are the ones in configs/drift.yaml (a test keeps them equal), so batch and live checks agree.
-# Check: promtool check rules deploy/monitoring/alerts.yaml
+# Unit tests: deploy/monitoring/tests/alerts-test.yaml (`promtool test rules`, run in CI).
 groups:
   - name: ticket-router-drift          # gate G7, threat T10: is traffic still like the training data?
     rules:

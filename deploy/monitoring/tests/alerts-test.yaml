@@ -1,0 +1,119 @@
+# promtool test rules deploy/monitoring/tests/alerts-test.yaml
+# Each case feeds synthetic scrapes (one a minute) through deploy/monitoring/alerts.yaml and states which alerts
+# must be firing at a given time, and which must not.
+rule_files:
+  - ../alerts.yaml
+evaluation_interval: 1m
+
+tests:
+  - name: drifted team mix warns after 30 minutes and starts retraining after 15 at a large shift
+    interval: 1m
+    input_series:
+      - series: 'smlops_live_psi_predicted_team{pod="router-a"}'
+        values: '0.05x10 0.18x40 0.40x40'
+    alert_rule_test:
+      - {eval_time: 10m, alertname: TicketRouterTeamMixShifting, exp_alerts: []}
+      - eval_time: 45m
+        alertname: TicketRouterTeamMixShifting
+        exp_alerts:
+          - exp_labels: {severity: warning, gate: G7}
+            exp_annotations:
+              summary: "Predicted team mix has moved from training (PSI 0.18)"
+              runbook: "Run `smlops drift` on a labelled sample; the model may need retraining."
+      - {eval_time: 45m, alertname: TicketRouterTeamMixDrifted, exp_alerts: []}
+      - eval_time: 70m
+        alertname: TicketRouterTeamMixDrifted
+        exp_alerts:
+          - exp_labels: {severity: critical, gate: G7, action: retrain}
+            exp_annotations:
+              summary: "Predicted team mix has drifted from training (PSI 0.40)"
+              runbook: "Retraining starts on this alert; the new model must still pass the evaluation gate."
+
+  - name: a short burst of new words does not alert, a sustained rise does
+    interval: 1m
+    input_series:
+      - series: 'smlops_live_new_word_ratio{pod="router-a"}'
+        values: '1.05x10 1.6x10 1.05x10 1.45x40'
+    alert_rule_test:
+      - {eval_time: 25m, alertname: TicketRouterNewVocabulary, exp_alerts: []}
+      - eval_time: 50m
+        alertname: TicketRouterNewVocabulary
+        exp_alerts:
+          - exp_labels: {severity: critical, gate: G7, action: retrain}
+            exp_annotations:
+              summary: "Tickets use 1.45x the model's usual share of unknown words"
+              runbook: "Retraining starts on this alert; the new model must still pass the evaluation gate."
+
+  - name: the worst replica decides, and one alert covers all replicas
+    interval: 1m
+    input_series:
+      - series: 'smlops_live_new_word_ratio{pod="router-a"}'
+        values: '1.02x40'
+      - series: 'smlops_live_new_word_ratio{pod="router-b"}'
+        values: '1.20x40'
+    alert_rule_test:
+      - eval_time: 35m
+        alertname: TicketRouterNewVocabularyRising
+        exp_alerts:
+          - exp_labels: {severity: warning, gate: G7}
+            exp_annotations:
+              summary: "Tickets use 1.20x the model's usual share of unknown words"
+              runbook: "New products or phrasing; collect labelled tickets for the next training run."
+
+  - name: no server reporting is an outage
+    interval: 1m
+    input_series:
+      - series: 'smlops_model_info{digest="sha256:aa",name="ticket-router",version="4"}'
+        values: '1x5 _x10'
+    alert_rule_test:
+      - {eval_time: 4m, alertname: TicketRouterDown, exp_alerts: []}
+      - eval_time: 15m
+        alertname: TicketRouterDown
+        exp_alerts:
+          - exp_labels: {severity: critical}
+            exp_annotations:
+              summary: "No ticket router is reporting; a server that cannot verify its model does not start"
+              runbook: "kubectl -n serving describe inferenceservice ticket-router; look for signature errors."
+
+  - name: failing requests, rejected keys and exhausted budgets
+    interval: 1m
+    input_series:
+      - series: 'smlops_predict_requests_total{status="200"}'
+        values: '0+600x30'
+      - series: 'smlops_predict_requests_total{status="500"}'
+        values: '0+30x30'
+      - series: 'smlops_predict_requests_total{status="401"}'
+        values: '0+20x30'
+      - series: 'smlops_predict_requests_total{status="429"}'
+        values: '0+5x30'
+    alert_rule_test:
+      - eval_time: 20m
+        alertname: TicketRouterErrors
+        exp_alerts:
+          - exp_labels: {severity: critical}
+            exp_annotations:
+              summary: "4.58% of prediction requests fail"   # 30 of 655 a minute
+      - eval_time: 20m
+        alertname: TicketRouterRejectedKeys
+        exp_alerts:
+          - exp_labels: {severity: warning, threat: T9}
+            exp_annotations:
+              summary: "20 requests a minute present no valid API key"
+              runbook: "A client lost its key or someone is guessing; the audit log names no client for these."
+      - {eval_time: 20m, alertname: TicketRouterRateLimited, exp_alerts: []}   # 5 a minute is within budget noise
+
+  - name: two digests serving for half an hour means a stuck rollout
+    interval: 1m
+    input_series:
+      - series: 'smlops_model_info{digest="sha256:aa",name="ticket-router",version="4"}'
+        values: '1x60'
+      - series: 'smlops_model_info{digest="sha256:bb",name="ticket-router",version="5"}'
+        values: '_x10 1x50'
+    alert_rule_test:
+      - {eval_time: 30m, alertname: TicketRouterMixedVersions, exp_alerts: []}
+      - eval_time: 45m
+        alertname: TicketRouterMixedVersions
+        exp_alerts:
+          - exp_labels: {severity: warning}
+            exp_annotations:
+              summary: "2 model digests have been serving together for 30 minutes; a rollout is stuck"
