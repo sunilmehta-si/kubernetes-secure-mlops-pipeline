@@ -6,6 +6,11 @@ name: code-review
 on:
   pull_request:
 
+# `shell: bash` runs steps with -eo pipefail; the default (-e only) lets `script | tee` pass when the script fails.
+defaults:
+  run:
+    shell: bash
+
 permissions:
   contents: read
 
