@@ -24,6 +24,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from .auth import authenticate
 from .bundle import ServedModel
+from .ratelimit import TicketLimiter
 
 
 # Limits on what a caller can send (threat T9): bounded work per request, nothing the model was not built for.
@@ -50,8 +51,10 @@ def _bearer(request: Request) -> str | None:
     return header[7:].strip() if header[:7].lower() == "bearer " else None
 
 
-def create_app(served: ServedModel, api_keys: dict[str, str]) -> FastAPI:
-    """api_keys: {sha256 of key: client id}; every prediction must present one of the keys."""
+def create_app(served: ServedModel, api_keys: dict[str, str], limiter: TicketLimiter | None = None) -> FastAPI:
+    """api_keys: {sha256 of key: client id}; every prediction must present one of the keys. limiter: tickets per
+    client; defaults to TicketLimiter() (600 per minute, bursts of 120)."""
+    limiter = limiter or TicketLimiter()
     app = FastAPI(title=f"{served.name} v{served.version}", docs_url=None, redoc_url=None, openapi_url=None)
     metrics = CollectorRegistry()           # per app: what Prometheus scrapes from /metrics
     requests = Metric("smlops_predict_requests", "Prediction requests by HTTP status", ["status"], registry=metrics)
@@ -104,6 +107,11 @@ def create_app(served: ServedModel, api_keys: dict[str, str]) -> FastAPI:
             raise HTTPException(status_code=401, detail="a valid API key is required",
                                 headers={"WWW-Authenticate": "Bearer"})
         known(name)
+        allowed, wait = limiter.take(client, len(request.instances))
+        if not allowed:
+            if wait < 0:
+                raise HTTPException(status_code=413, detail=f"more tickets than this client may send at once ({limiter.burst:g})")
+            raise HTTPException(status_code=429, detail="rate limit reached", headers={"Retry-After": str(wait)})
         started = time.perf_counter()
         supplied = raw.headers.get("x-request-id", "")
         request_id = supplied if REQUEST_ID.match(supplied) else uuid.uuid4().hex
