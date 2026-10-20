@@ -1,6 +1,7 @@
 """The HTTP server, speaking KServe's v1 inference protocol, so KServe can run it as a custom predictor.
 
     GET  /healthz                      liveness
+    GET  /metrics                      Prometheus: requests, latency, teams, model identity and live drift
     GET  /v1/models/{name}             readiness and identity of the model being served
     POST /v1/models/{name}:predict     {"instances": [{"text": "..."}]} -> {"predictions": [{"team", "confidence"}]}
 
@@ -20,10 +21,12 @@ import pandas as pd
 from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.responses import JSONResponse, PlainTextResponse
 from prometheus_client import CONTENT_TYPE_LATEST, CollectorRegistry, Counter as Metric, Gauge, Histogram, generate_latest
+from prometheus_client.core import GaugeMetricFamily
 from pydantic import BaseModel, ConfigDict, Field
 
 from .auth import authenticate
 from .bundle import ServedModel
+from .live_drift import LiveDrift, model_vocabulary
 from .ratelimit import TicketLimiter
 
 
@@ -51,10 +54,36 @@ def _bearer(request: Request) -> str | None:
     return header[7:].strip() if header[:7].lower() == "bearer " else None
 
 
-def create_app(served: ServedModel, api_keys: dict[str, str], limiter: TicketLimiter | None = None) -> FastAPI:
+class _DriftGauges:
+    """Exports the live drift window at scrape time; a value not yet known (too few tickets) is left out, not 0."""
+    GAUGES = {"tickets": ("smlops_live_window_tickets", "Tickets in the live drift window"),
+              "psi_predicted_team": ("smlops_live_psi_predicted_team", "PSI of predicted teams against training"),
+              "new_word_rate": ("smlops_live_new_word_rate", "Share of words the model's vectorizer does not know"),
+              "new_word_ratio": ("smlops_live_new_word_ratio", "New-word rate as a multiple of the model's baseline")}
+
+    def __init__(self, drift: LiveDrift):
+        self.drift = drift
+
+    def collect(self):
+        for key, value in self.drift.snapshot().items():
+            if value is not None:
+                name, doc = self.GAUGES[key]
+                yield GaugeMetricFamily(name, doc, value=value)
+
+
+def default_drift(served: ServedModel) -> LiveDrift:
+    reference = served.reference or {}
+    return LiveDrift(reference.get("teams"), model_vocabulary(served.model),
+                     baseline_new_word_rate=reference.get("new_word_rate"))
+
+
+def create_app(served: ServedModel, api_keys: dict[str, str], limiter: TicketLimiter | None = None,
+               drift: LiveDrift | None = None) -> FastAPI:
     """api_keys: {sha256 of key: client id}; every prediction must present one of the keys. limiter: tickets per
-    client; defaults to TicketLimiter() (600 per minute, bursts of 120)."""
+    client; defaults to TicketLimiter() (600 per minute, bursts of 120). drift: the live drift window; defaults to
+    one built from the model's signed reference profile."""
     limiter = limiter or TicketLimiter()
+    drift = drift or default_drift(served)
     app = FastAPI(title=f"{served.name} v{served.version}", docs_url=None, redoc_url=None, openapi_url=None)
     metrics = CollectorRegistry()           # per app: what Prometheus scrapes from /metrics
     requests = Metric("smlops_predict_requests", "Prediction requests by HTTP status", ["status"], registry=metrics)
@@ -63,6 +92,7 @@ def create_app(served: ServedModel, api_keys: dict[str, str], limiter: TicketLim
                         buckets=(0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5))
     Gauge("smlops_model_info", "The model being served (always 1)", ["name", "version", "digest"],
           registry=metrics).labels(served.name, served.version, served.digest).set(1)
+    metrics.register(_DriftGauges(drift))
 
     @app.middleware("http")
     async def limit_body(request: Request, call_next):
@@ -120,6 +150,7 @@ def create_app(served: ServedModel, api_keys: dict[str, str], limiter: TicketLim
         confidence = served.predict_proba(frame).max(axis=1)
         for team, n in Counter(map(str, teams)).items():
             tickets.labels(team).inc(n)
+        drift.observe(frame["text"], teams)
         response.headers["X-Request-ID"] = request_id
         response.headers["X-Model-Digest"] = served.digest
         AUDIT.info(json.dumps({"event": "predict", "request_id": request_id, "client": client, "model": served.name,

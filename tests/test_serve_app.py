@@ -7,6 +7,7 @@ from fastapi.testclient import TestClient
 from secure_mlops.serve.app import create_app
 from secure_mlops.serve.auth import digest
 from secure_mlops.serve.bundle import load_verified
+from secure_mlops.serve.live_drift import LiveDrift
 from tests.test_serve_bundle import make_bundle
 
 KEY = "smk_test-key"
@@ -126,6 +127,23 @@ class MetricsTests(unittest.TestCase):
         self.assertIn("smlops_predict_latency_seconds_count 2.0", text)
         self.assertRegex(text, r'smlops_tickets_routed_total\{team="\w+"\} 1\.0')
         self.assertIn(f'smlops_model_info{{digest="{served.digest}",name="ticket-router",version="4"}} 1.0', text)
+        self.assertIn("smlops_live_window_tickets 1.0", text)
+        self.assertNotIn("smlops_live_psi_predicted_team", text)       # one ticket is not a distribution
+
+    def test_live_drift_is_exported_once_the_window_is_full(self):
+        with tempfile.TemporaryDirectory() as d:
+            _, public = make_bundle(Path(d, "b"), Path(d, "keys"))
+            served = load_verified(Path(d, "b"), public)
+            drift = LiveDrift({"billing": 0.5, "shipping": 0.5}, frozenset({"parcel", "never", "arrived"}), window=4,
+                              min_tickets=2, baseline_new_word_rate=0.25)
+            client = TestClient(create_app(served, KEYS, drift=drift), headers=AUTH)
+            client.post("/v1/models/ticket-router:predict",
+                        json={"instances": [{"text": "parcel never arrived"}, {"text": "quantum flux capacitor"}]})
+            text = client.get("/metrics").text
+        self.assertIn("smlops_live_window_tickets 2.0", text)
+        self.assertIn("smlops_live_new_word_rate 0.5", text)
+        self.assertIn("smlops_live_new_word_ratio 2.0", text)
+        self.assertRegex(text, r"smlops_live_psi_predicted_team \d")
 
 
 class AuthEnforcementTests(unittest.TestCase):
