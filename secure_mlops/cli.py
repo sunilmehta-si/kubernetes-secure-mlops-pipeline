@@ -22,6 +22,10 @@ def _parser() -> argparse.ArgumentParser:
     g.add_argument("--output", "-o", required=True, help="Directory to write.")
     v = dsub.add_parser("validate", help="Check a CSV of tickets against the data contract; exit 1 on problems.")
     v.add_argument("csv", help="Tickets CSV.")
+    cb = dsub.add_parser("combine", help="Data for a retrain: existing plus recent tickets, tested on recent ones.")
+    cb.add_argument("--base", required=True, help="Directory the current champion was trained on.")
+    cb.add_argument("--recent", required=True, help="Directory of recent labelled tickets (same split layout).")
+    cb.add_argument("--output", "-o", required=True, help="Directory to write.")
     t = sub.add_parser("train", help="Validate, train, judge against the champion, track, register; promote on a pass.")
     t.add_argument("--data", required=True, help="Directory from smlops data generate (train/validation/test CSVs).")
     t.add_argument("--config", default="configs/train.yaml", help="Training config (default: configs/train.yaml).")
@@ -96,6 +100,20 @@ def _cmd_data(args: argparse.Namespace) -> int:
     from .data import DataSpec
     from .steps import StepError, prepare
     from .validate import validate
+    if args.data_command == "combine":
+        from .retrain import combine
+        try:
+            manifest = combine(args.base, args.recent, args.output)
+        except (OSError, KeyError) as exc:
+            print(f"smlops: {exc}", file=sys.stderr)
+            return 2
+        except StepError as exc:
+            print(f"smlops: {exc}", file=sys.stderr)
+            return 1
+        rows = manifest["rows"]
+        print(f"smlops: wrote {rows['train']} training and {rows['validation']} validation tickets (existing plus "
+              f"recent) and {rows['test']} recent test tickets to {args.output}", file=sys.stderr)
+        return 0
     if args.data_command == "generate":
         try:
             spec = DataSpec(n=args.n, seed=args.seed, drift=args.drift)

@@ -39,6 +39,20 @@ class DataCliTests(unittest.TestCase):
             self.assertIn("'fax'", err.getvalue())
             self.assertEqual(main(["data", "generate", "--drift", "2", "-o", d]), 2)
 
+    def test_combine_writes_retraining_data_or_refuses_overlapping_sources(self):
+        import tempfile
+        from contextlib import redirect_stderr
+        from pathlib import Path
+        with tempfile.TemporaryDirectory() as d, redirect_stderr(io.StringIO()) as err:
+            base, recent = str(Path(d, "base")), str(Path(d, "recent"))
+            self.assertEqual(main(["data", "generate", "--n", "1000", "-o", base]), 0)
+            self.assertEqual(main(["data", "generate", "--n", "1000", "--seed", "11", "--drift", "0.6",
+                                   "-o", recent]), 0)
+            self.assertEqual(main(["data", "combine", "--base", base, "--recent", recent, "-o", str(Path(d, "c"))]), 0)
+            self.assertRegex(err.getvalue(), r"and 150 recent test tickets")
+            self.assertEqual(main(["data", "combine", "--base", base, "--recent", base, "-o", str(Path(d, "x"))]), 1)
+            self.assertEqual(main(["data", "combine", "--base", d, "--recent", recent, "-o", str(Path(d, "y"))]), 2)
+
     def test_too_small_a_dataset_is_refused(self):
         import tempfile
         from contextlib import redirect_stderr
