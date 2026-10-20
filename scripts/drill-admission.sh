@@ -61,10 +61,12 @@ if kubectl -n outsider run "probe-$(date +%s)" --rm -i --quiet --restart=Never -
 else
   echo "PASS: a client outside the allowed namespaces could not reach the model"
 fi
-# 4. right namespace, no key
-code="$(kubectl -n support run "nokey-$(date +%s)" --rm -i --quiet --restart=Never --image "$CURL_IMAGE" -- \
-  -s -o /dev/null -w '%{http_code}' --max-time 10 -X POST -H "content-type: application/json" \
-  -d '{"instances": [{"text": "my parcel never arrived"}]}' "${url}:predict" || true)"
+# 4. right namespace, no key. The body goes in on stdin (-d @-), so curl waits until kubectl has attached: a
+# container that finishes first loses its output, and the drill read an empty status code on some runs.
+code="$(printf '%s' '{"instances": [{"text": "my parcel never arrived"}]}' \
+  | kubectl -n support run "nokey-$(date +%s)" --rm -i --quiet --restart=Never --image "$CURL_IMAGE" -- \
+    -s -o /dev/null -w '%{http_code}' --max-time 10 -X POST -H "content-type: application/json" -d @- \
+    "${url}:predict" || true)"
 if [ "$code" = "401" ]; then
   echo "PASS: a request without an API key was refused (401)"
 else
