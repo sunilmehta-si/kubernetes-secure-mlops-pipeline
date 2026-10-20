@@ -21,7 +21,7 @@ class VersionTests(unittest.TestCase):
     def test_every_component_is_pinned_to_an_exact_release(self):
         v = versions()
         self.assertEqual(set(v), {"KIND_VERSION", "KIND_NODE_IMAGE", "CERT_MANAGER_VERSION", "KSERVE_VERSION",
-                                  "KYVERNO_VERSION", "ZOT_VERSION", "COSIGN_VERSION", "REGISTRY"})
+                                  "KYVERNO_VERSION", "ZOT_VERSION", "COSIGN_VERSION", "PROMETHEUS_VERSION", "REGISTRY"})
         self.assertEqual(v.pop("REGISTRY"), "kind-registry:5000")
         policy = (ROOT / "deploy/policy/require-digests.yaml").read_text()
         self.assertIn('"kind-registry:5000/*@sha256:*"', policy)                     # policy and scripts agree
