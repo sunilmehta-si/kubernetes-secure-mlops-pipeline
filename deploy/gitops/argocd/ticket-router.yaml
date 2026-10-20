@@ -1,0 +1,51 @@
+# Argo CD delivery for the ticket router (gate G6). Argo CD syncs deploy/gitops/production/ from main: the manifests
+# `smlops render-release` writes, which change only through a reviewed pull request (the promotion, gate G4).
+#
+# The project fences the application in: one source repository, one destination namespace, and only the kinds a
+# release contains. Namespaces, cluster roles, webhooks and admission policies stay with the platform team; a
+# change that tries to add one is refused by Argo CD before anything reaches the cluster. Kyverno still checks
+# signatures and digests at admission, so a merged pull request cannot run an unsigned image either.
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: ml-serving
+  namespace: argocd
+spec:
+  description: Signed models served by KServe
+  sourceRepos:
+    - https://github.com/sunilmehta-si/kubernetes-secure-mlops-pipeline.git
+  destinations:
+    - server: https://kubernetes.default.svc
+      namespace: serving
+  clusterResourceWhitelist: []                 # nothing cluster-scoped, not even the namespace
+  namespaceResourceWhitelist:
+    - {group: serving.kserve.io, kind: InferenceService}
+    - {group: serving.kserve.io, kind: ServingRuntime}
+    - {group: networking.k8s.io, kind: NetworkPolicy}
+    - {group: "", kind: ServiceAccount}
+  orphanedResources:
+    warn: true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: ticket-router
+  namespace: argocd
+spec:
+  project: ml-serving
+  source:
+    repoURL: https://github.com/sunilmehta-si/kubernetes-secure-mlops-pipeline.git
+    targetRevision: main
+    path: deploy/gitops/production
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: serving
+  syncPolicy:
+    automated:
+      prune: true          # a model removed from git is removed from the cluster
+      selfHeal: true       # a hand edit on the cluster is reverted to what git says
+    syncOptions:
+      - ServerSideApply=true
+    retry:
+      limit: 3
+      backoff: {duration: 30s, factor: 2, maxDuration: 5m}
