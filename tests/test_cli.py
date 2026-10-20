@@ -229,3 +229,18 @@ class RetrainCheckCliTests(unittest.TestCase):
         self.assertEqual(self.run_check("not json")[0], 2)
         self.assertEqual(self.run_check('["alerts"]')[0], 2)
         self.assertEqual(self.run_check('{"alerts": ["x"]}')[0], 2)
+
+
+class RenderReleaseCliTests(unittest.TestCase):
+    def test_writes_manifests_or_refuses_a_tag(self):
+        import tempfile
+        from contextlib import redirect_stderr
+        from pathlib import Path
+        model = "kind-registry:5000/smlops/ticket-router-model@sha256:" + "a" * 64
+        server = "kind-registry:5000/smlops/server@sha256:" + "b" * 64
+        with tempfile.TemporaryDirectory() as d, redirect_stderr(io.StringIO()) as err:
+            self.assertEqual(main(["render-release", "--model-image", model, "--server-image", server, "-o", d]), 0)
+            self.assertIn(f"oci://{model}", Path(d, "inferenceservice.yaml").read_text())
+            self.assertEqual(main(["render-release", "--model-image", model.split("@")[0] + ":latest",
+                                   "--server-image", server, "-o", str(Path(d, "x"))]), 2)
+        self.assertIn("pinned by digest", err.getvalue())

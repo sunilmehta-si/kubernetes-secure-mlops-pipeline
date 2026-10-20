@@ -75,6 +75,12 @@ def _parser() -> argparse.ArgumentParser:
     aka = aksub.add_parser("add", help="Create a key for a client; only its hash is written, the key is printed once.")
     aka.add_argument("--client", required=True, help="Client id, e.g. support-tool (lowercase, digits, dashes).")
     aka.add_argument("--file", default="keys/api-keys.txt", help="Key file to append to (default: keys/api-keys.txt).")
+    rr = sub.add_parser("render-release", help="Write the production manifests for GitOps with both images by digest; "
+                                               "the pull request that changes them is the promotion.")
+    rr.add_argument("--model-image", required=True, help="Model image, registry/repository@sha256:...")
+    rr.add_argument("--server-image", required=True, help="Server image, registry/repository@sha256:...")
+    rr.add_argument("--output", "-o", default="deploy/gitops/production",
+                    help="Directory Argo CD syncs (default: deploy/gitops/production).")
     rc = sub.add_parser("retrain-check", help="Decide from an Alertmanager webhook payload whether to retrain; prints "
                                               "retrain=true|false for a CI step output.")
     rc.add_argument("payload", help="JSON file with the webhook payload ('-' for stdin).")
@@ -361,6 +367,18 @@ def _cmd_promotion_request(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_render_release(args: argparse.Namespace) -> int:
+    from .gitops import ReleaseError, render
+    try:
+        files = render(args.model_image, args.server_image, args.output)
+    except (ReleaseError, OSError) as exc:
+        print(f"smlops: {exc}", file=sys.stderr)
+        return 2
+    print(f"smlops: wrote {len(files)} manifests to {args.output}; commit them in a pull request to promote",
+          file=sys.stderr)
+    return 0
+
+
 def _cmd_retrain_check(args: argparse.Namespace) -> int:
     from .retrain import retrain_reasons
     try:
@@ -390,6 +408,8 @@ def main(argv: list[str] | None = None) -> int:
         return _cmd_pipeline(args)
     if args.command == "promotion-request":
         return _cmd_promotion_request(args)
+    if args.command == "render-release":
+        return _cmd_render_release(args)
     if args.command == "retrain-check":
         return _cmd_retrain_check(args)
     if args.command == "keys":
