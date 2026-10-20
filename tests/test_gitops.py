@@ -18,8 +18,8 @@ class RenderTests(unittest.TestCase):
     def test_renders_the_serving_manifests_with_both_images_by_digest(self):
         with tempfile.TemporaryDirectory() as d:
             files = render(MODEL, SERVER, d)
-            self.assertEqual([f.name for f in files], ["inferenceservice.yaml", "namespace.yaml",
-                                                       "networkpolicy.yaml", "servingruntime.yaml",
+            self.assertEqual([f.name for f in files], ["inferenceservice.yaml", "networkpolicy.yaml",
+                                                       "serviceaccount.yaml", "servingruntime.yaml",
                                                        "kustomization.yaml"])
             isvc = docs(Path(d, "inferenceservice.yaml"))[0]
             self.assertEqual(isvc["spec"]["predictor"]["model"]["storageUri"], f"oci://{MODEL}")

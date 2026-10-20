@@ -15,7 +15,7 @@ ROOT = Path(__file__).resolve().parents[1]
 TEMPLATES = ROOT / "deploy" / "serving"
 # template file -> the placeholder it carries; the other files are copied as they are
 FILLED = {"servingruntime.yaml": "SERVER_IMAGE", "inferenceservice.yaml": "MODEL_IMAGE"}
-COPIED = ("namespace.yaml", "networkpolicy.yaml")
+COPIED = ("networkpolicy.yaml", "serviceaccount.yaml")    # not namespace.yaml: the platform owns the namespace
 DIGEST = re.compile(r"^(?P<registry>[a-z0-9.-]+(:[0-9]+)?)(/[a-z0-9._-]+)+@sha256:[0-9a-f]{64}$")
 PLACEHOLDER = re.compile(r"\$\{[A-Z_]+\}")
 

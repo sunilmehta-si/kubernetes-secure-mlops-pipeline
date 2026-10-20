@@ -55,7 +55,7 @@ The bundle layout is what KServe mounts at `/mnt/models` from the model image:
 
 | Control | File |
 |---|---|
-| Pod Security "restricted" in `serving`; service account without an API token | [`deploy/serving/namespace.yaml`](../deploy/serving/namespace.yaml) |
+| Pod Security "restricted" in `serving`; service account without an API token | [`deploy/serving/namespace.yaml`](../deploy/serving/namespace.yaml), [`serviceaccount.yaml`](../deploy/serving/serviceaccount.yaml) |
 | Non-root, read-only root filesystem, no capabilities, seccomp, CPU and memory limits | [`deploy/serving/servingruntime.yaml`](../deploy/serving/servingruntime.yaml) |
 | Every image in `serving` signed by the pipeline's cosign key | [`deploy/policy/verify-signatures.yaml`](../deploy/policy/verify-signatures.yaml) |
 | Every image from the cluster registry and pinned by digest | [`deploy/policy/require-digests.yaml`](../deploy/policy/require-digests.yaml) |

@@ -38,7 +38,7 @@ def docs(path: str) -> list[dict]:
 
 class ServingNamespaceTests(unittest.TestCase):
     def test_restricted_pod_security_and_no_api_token(self):
-        ns, sa = docs("deploy/serving/namespace.yaml")
+        (ns,), (sa,) = docs("deploy/serving/namespace.yaml"), docs("deploy/serving/serviceaccount.yaml")
         self.assertEqual(ns["metadata"]["labels"]["pod-security.kubernetes.io/enforce"], "restricted")
         self.assertEqual((sa["kind"], sa["automountServiceAccountToken"]), ("ServiceAccount", False))
 
@@ -88,7 +88,7 @@ class InferenceServiceTests(unittest.TestCase):
         (rt,) = render("deploy/serving/servingruntime.yaml", SERVER_IMAGE=DIGEST)
         self.assertEqual(pred["model"]["runtime"], rt["metadata"]["name"])
         self.assertEqual(pred["model"]["modelFormat"]["name"], rt["spec"]["supportedModelFormats"][0]["name"])
-        (_, sa) = docs("deploy/serving/namespace.yaml")
+        (sa,) = docs("deploy/serving/serviceaccount.yaml")
         self.assertEqual(pred["serviceAccountName"], sa["metadata"]["name"])
 
 

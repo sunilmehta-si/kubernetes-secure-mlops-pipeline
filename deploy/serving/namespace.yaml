@@ -1,6 +1,6 @@
 # Where models are served. Pod Security "restricted" is enforced: no root, no privilege escalation, no host access,
-# all capabilities dropped, a seccomp profile. The service account mounts no Kubernetes API token: a model server
-# never needs to talk to the cluster, so a compromised one cannot either.
+# all capabilities dropped, a seccomp profile. The namespace belongs to the platform (scripts/install-platform.sh);
+# releases (smlops render-release, Argo CD) only change what runs inside it.
 apiVersion: v1
 kind: Namespace
 metadata:
@@ -10,10 +10,3 @@ metadata:
     pod-security.kubernetes.io/enforce-version: latest
     pod-security.kubernetes.io/warn: restricted
     pod-security.kubernetes.io/audit: restricted
----
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: model-server
-  namespace: serving
-automountServiceAccountToken: false
