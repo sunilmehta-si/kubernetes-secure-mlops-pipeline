@@ -1,0 +1,39 @@
+# The pod after harden-serving-pods: both rules together. Generated with kyverno apply, so it is what the policy
+# actually produces; the CLI test compares each rule's result with this final pod.
+apiVersion: v1
+kind: Pod
+metadata:
+    name: ticket-router-predictor
+    namespace: serving
+spec:
+    containers:
+        - image: kind-registry:5000/smlops-server@sha256:2222222222222222222222222222222222222222222222222222222222222222
+          name: kserve-container
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+                drop:
+                    - ALL
+            readOnlyRootFilesystem: true
+        - image: kind-registry:5000/ticket-router@sha256:1111111111111111111111111111111111111111111111111111111111111111
+          name: modelcar
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+                drop:
+                    - ALL
+    initContainers:
+        - image: kind-registry:5000/ticket-router@sha256:1111111111111111111111111111111111111111111111111111111111111111
+          name: modelcar-init
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+                drop:
+                    - ALL
+    securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+            type: RuntimeDefault
+
+---
+
