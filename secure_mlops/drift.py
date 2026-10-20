@@ -33,6 +33,8 @@ class DriftPolicy:
     new_word_rate_alert: float = 0.03
     max_accuracy_drop: float = 0.03
     min_batch: int = 200
+    live_new_word_ratio_warn: float = 1.15
+    live_new_word_ratio_alert: float = 1.30
 
 
 def load_policy(path: str | Path) -> DriftPolicy:

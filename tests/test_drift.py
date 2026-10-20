@@ -36,6 +36,9 @@ class DriftTests(unittest.TestCase):
         self.assertEqual((levels["psi[channel]"], levels["new word rate"]), ("alert", "alert"))
         self.assertEqual(levels["accuracy drop"], "ok")       # drift is a reason to look, not proof of harm
 
+    def test_committed_policy_matches_the_defaults(self):
+        self.assertEqual(load_policy(ROOT / "configs/drift.yaml"), DriftPolicy())
+
     def test_small_batches_and_unknown_keys_are_refused(self):
         with self.assertRaisesRegex(ValueError, "at least 200"):
             check(MODEL, SPLITS.train, batch(0.0, n=100), DriftPolicy())

@@ -7,3 +7,9 @@ new_word_rate_warn: 0.015
 new_word_rate_alert: 0.03
 max_accuracy_drop: 0.03        # only when the batch has labels (agent-confirmed teams)
 min_batch: 200                 # fewer tickets than this are too noisy to judge
+# Live checks on the server's window of recent tickets (smlops_live_* metrics, deploy/monitoring/alerts.yaml).
+# PSI uses the bands above. New words are judged against the model's own vectorizer, which drops rare words, so even
+# held-out tickets score about 6%; the ratio to that signed baseline is what alerts. On the generator: held-out 1.04,
+# 30% shifted 1.12, 50% shifted 1.21, fully shifted 1.51.
+live_new_word_ratio_warn: 1.15
+live_new_word_ratio_alert: 1.30
