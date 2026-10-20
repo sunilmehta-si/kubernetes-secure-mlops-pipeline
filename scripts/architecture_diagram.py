@@ -61,15 +61,15 @@ STAGES = [
     ("Deploy", ("Serve it on", "Kubernetes, safely"), [
         ("Signed OCI model", "verified at admission", "built"),
         ("KServe endpoint", "by digest, restricted pods", "built"),
-        ("GitOps + canary", "Argo CD, auto rollback", "planned"),
+        ("GitOps + canary", "releases rendered; Argo CD next", "planned"),
     ], ("Seldon · BentoML", "SageMaker")),
     ("Monitor", ("Watch data and", "predictions in production"), [
         ("Metrics + audit log", "/metrics, no ticket text", "built"),
         ("Drift check", "PSI, new words, accuracy", "built"),
-        ("Grafana + alerts", "dashboards, live drift", "planned"),
+        ("Live drift + alerts", "Prometheus, Grafana", "built"),
     ], ("whylogs", "Evidently")),
 ]
-CI = ["Tests on 3.12 + 3.13", "Kubeflow runs", "Trivy CVE gate", "Governance drills", "Kyverno policy tests",
+CI = ["Tests on 3.12 + 3.13", "Kubeflow runs", "Trivy CVE gate", "Governance drills", "Kyverno + promtool",
       "kind cluster drills", "PR code review"]
 
 
@@ -137,8 +137,9 @@ def architecture(theme: str) -> str:
                   "Built: synthetic ticket ingestion with versioned datasets; a pandera data contract, stratified "
                   "splits and TF-IDF features; logistic regression trained in Kubeflow Pipelines and tracked in "
                   "MLflow; metrics, an evaluation gate against the champion and a model card; the MLflow model "
-                  "registry. Planned: signed OCI models, KServe canary deployment with Argo CD, Prometheus, Grafana "
-                  "and Evidently monitoring, and automatic retraining when new data arrives or drift is detected. "
+                  "registry; signed OCI models served by KServe; live drift with Prometheus alerts and a Grafana "
+                  "dashboard; and retraining when drift is detected, judged by the same gate. Planned: canary "
+                  "deployment with Argo CD. "
                   "GitHub Actions runs CI on every change.", c)
     parts += [_t(33, 42, "kubernetes-secure-mlops-pipeline", 22, c["text"], 700),
               _t(33, 64, "An ML system end to end: from collecting data to watching the model in production. "
@@ -161,14 +162,15 @@ def architecture(theme: str) -> str:
     ly = COL_Y + COL_H + 34                        # automatic retraining: monitor back to ingest
     a, b = xs[-1] + COL_W / 2, xs[0] + COL_W / 2
     parts += [f'<path d="M{a:g} {COL_Y + COL_H + 2} V{ly - 10} Q{a:g} {ly} {a - 10:g} {ly} H{b + 10:g} Q{b:g} {ly} '
-              f'{b:g} {ly - 10} V{COL_Y + COL_H + 6}" fill="none" stroke="{c["planned"]}" stroke-width="1.8" '
-              f'stroke-dasharray="6 5" marker-end="url(#arrow)"/>',
+              f'{b:g} {ly - 10} V{COL_Y + COL_H + 6}" fill="none" stroke="{c["built"]}" stroke-width="1.8" '
+              f'marker-end="url(#arrow)"/>',
               f'<rect x="{AW / 2 - 300:g}" y="{ly - 13}" width="600" height="26" rx="13" fill="{c["panel"]}" '
               f'stroke="{c["col_line"]}"/>',
               _t(AW / 2, ly + 4.5, "Automatic retraining: new data or detected drift starts the pipeline again",
                  12, c["text"], 600, "middle")]
-    parts.append(_t(AW / 2, ly + 30, "Triggered by CI/CD: GitHub Actions in this repo (planned) · also Jenkins, "
-                                     "AWS CodePipeline", 11, c["faint"], 500, "middle", style="italic"))
+    parts.append(_t(AW / 2, ly + 30, "GitHub Actions in this repo: weekly, by hand, or on a drift alert; the gate "
+                                     "still decides · also Jenkins, AWS CodePipeline", 11, c["faint"], 500, "middle",
+                    style="italic"))
     cy = ly + 48                                   # CI on every change
     parts += [f'<rect x="{X0}" y="{cy}" width="{AW - 2 * X0}" height="50" rx="12" fill="{c["built_col"]}" '
               f'stroke="{c["built_col_line"]}"/>',

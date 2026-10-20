@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1280" height="612" viewBox="0 0 1280 612" role="img" aria-labelledby="title desc" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">
 <title id="title">kubernetes-secure-mlops-pipeline: ML system from ingestion to monitoring</title>
-<desc id="desc">Six stages from left to right: ingest, prepare, train, evaluate, deploy, monitor. Each lists what this repository uses, marked built or planned, and other tools commonly used for that stage. Built: synthetic ticket ingestion with versioned datasets; a pandera data contract, stratified splits and TF-IDF features; logistic regression trained in Kubeflow Pipelines and tracked in MLflow; metrics, an evaluation gate against the champion and a model card; the MLflow model registry. Planned: signed OCI models, KServe canary deployment with Argo CD, Prometheus, Grafana and Evidently monitoring, and automatic retraining when new data arrives or drift is detected. GitHub Actions runs CI on every change.</desc>
+<desc id="desc">Six stages from left to right: ingest, prepare, train, evaluate, deploy, monitor. Each lists what this repository uses, marked built or planned, and other tools commonly used for that stage. Built: synthetic ticket ingestion with versioned datasets; a pandera data contract, stratified splits and TF-IDF features; logistic regression trained in Kubeflow Pipelines and tracked in MLflow; metrics, an evaluation gate against the champion and a model card; the MLflow model registry; signed OCI models served by KServe; live drift with Prometheus alerts and a Grafana dashboard; and retraining when drift is detected, judged by the same gate. Planned: canary deployment with Argo CD. GitHub Actions runs CI on every change.</desc>
 <defs><marker id="arrow" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#6e7681"/></marker></defs>
 <rect x="1" y="1" width="1278" height="610" rx="18" fill="#0f141a" stroke="#2a313c"/>
 <text x="33" y="42" font-size="22" font-weight="700" fill="#e6edf3" text-anchor="start">kubernetes-secure-mlops-pipeline</text>
@@ -116,13 +116,13 @@
 <text x="881.4" y="296" font-size="10.5" font-weight="400" fill="#a3adb8" text-anchor="start">by digest, restricted pods</text>
 <rect x="867.4" y="316" width="158" height="48" rx="8" fill="#0f141a" stroke="#3b434e" stroke-dasharray="5 4"/>
 <text x="879.4" y="336" font-size="12.5" font-weight="600" fill="#a3adb8" text-anchor="start">GitOps + canary</text>
-<text x="879.4" y="352" font-size="10.5" font-weight="400" fill="#7d8590" text-anchor="start">Argo CD, auto rollback</text>
+<text x="879.4" y="352" font-size="10.5" font-weight="400" fill="#7d8590" text-anchor="start">releases rendered; Argo CD next</text>
 <line x1="869.4" y1="392" x2="1023.4" y2="392" stroke="#2c333d"/>
 <text x="869.4" y="408" font-size="9.5" font-weight="700" fill="#7d8590" text-anchor="start" letter-spacing="0.8">ALSO COMMON</text>
 <text x="869.4" y="426" font-size="11.5" font-weight="500" fill="#7d8590" text-anchor="start" font-style="italic">Seldon · BentoML</text>
 <text x="869.4" y="441" font-size="11.5" font-weight="500" fill="#7d8590" text-anchor="start" font-style="italic">SageMaker</text>
-<rect x="1061" y="100" width="182" height="364" rx="14" fill="#131820" stroke="#2c333d"/>
-<circle cx="1084" cy="125" r="12" fill="#8b949e"/>
+<rect x="1061" y="100" width="182" height="364" rx="14" fill="#0f1f16" stroke="#23472f"/>
+<circle cx="1084" cy="125" r="12" fill="#3fb950"/>
 <text x="1084" y="129.5" font-size="12.5" font-weight="700" fill="#0f141a" text-anchor="middle">6</text>
 <text x="1104" y="130.5" font-size="16" font-weight="700" fill="#e6edf3" text-anchor="start">Monitor</text>
 <text x="1075" y="156" font-size="11.5" font-weight="400" fill="#a3adb8" text-anchor="start">Watch data and</text>
@@ -136,10 +136,11 @@
 <rect x="1073.0" y="269" width="4" height="30" rx="2" fill="#3fb950"/>
 <text x="1087" y="280" font-size="12.5" font-weight="600" fill="#e6edf3" text-anchor="start">Drift check</text>
 <text x="1087" y="296" font-size="10.5" font-weight="400" fill="#a3adb8" text-anchor="start">PSI, new words, accuracy</text>
-<rect x="1073.0" y="316" width="158" height="48" rx="8" fill="#0f141a" stroke="#3b434e" stroke-dasharray="5 4"/>
-<text x="1085" y="336" font-size="12.5" font-weight="600" fill="#a3adb8" text-anchor="start">Grafana + alerts</text>
-<text x="1085" y="352" font-size="10.5" font-weight="400" fill="#7d8590" text-anchor="start">dashboards, live drift</text>
-<line x1="1075" y1="392" x2="1229" y2="392" stroke="#2c333d"/>
+<rect x="1073.0" y="316" width="158" height="48" rx="8" fill="#0d1117" stroke="#2b5a3a"/>
+<rect x="1073.0" y="325" width="4" height="30" rx="2" fill="#3fb950"/>
+<text x="1087" y="336" font-size="12.5" font-weight="600" fill="#e6edf3" text-anchor="start">Live drift + alerts</text>
+<text x="1087" y="352" font-size="10.5" font-weight="400" fill="#a3adb8" text-anchor="start">Prometheus, Grafana</text>
+<line x1="1075" y1="392" x2="1229" y2="392" stroke="#23472f"/>
 <text x="1075" y="408" font-size="9.5" font-weight="700" fill="#7d8590" text-anchor="start" letter-spacing="0.8">ALSO COMMON</text>
 <text x="1075" y="426" font-size="11.5" font-weight="500" fill="#7d8590" text-anchor="start" font-style="italic">whylogs</text>
 <text x="1075" y="441" font-size="11.5" font-weight="500" fill="#7d8590" text-anchor="start" font-style="italic">Evidently</text>
@@ -148,10 +149,10 @@
 <line x1="629.2" y1="125" x2="646.8" y2="125" stroke="#6e7681" stroke-width="2" marker-end="url(#arrow)"/>
 <line x1="834.8" y1="125" x2="852.4" y2="125" stroke="#6e7681" stroke-width="2" marker-end="url(#arrow)"/>
 <line x1="1040.4" y1="125" x2="1058" y2="125" stroke="#6e7681" stroke-width="2" marker-end="url(#arrow)"/>
-<path d="M1152 466 V488 Q1152 498 1142 498 H134 Q124 498 124 488 V470" fill="none" stroke="#8b949e" stroke-width="1.8" stroke-dasharray="6 5" marker-end="url(#arrow)"/>
+<path d="M1152 466 V488 Q1152 498 1142 498 H134 Q124 498 124 488 V470" fill="none" stroke="#3fb950" stroke-width="1.8" marker-end="url(#arrow)"/>
 <rect x="340" y="485" width="600" height="26" rx="13" fill="#0f141a" stroke="#2c333d"/>
 <text x="640" y="502.5" font-size="12" font-weight="600" fill="#e6edf3" text-anchor="middle">Automatic retraining: new data or detected drift starts the pipeline again</text>
-<text x="640" y="528" font-size="11" font-weight="500" fill="#7d8590" text-anchor="middle" font-style="italic">Triggered by CI/CD: GitHub Actions in this repo (planned) · also Jenkins, AWS CodePipeline</text>
+<text x="640" y="528" font-size="11" font-weight="500" fill="#7d8590" text-anchor="middle" font-style="italic">GitHub Actions in this repo: weekly, by hand, or on a drift alert; the gate still decides · also Jenkins, AWS CodePipeline</text>
 <rect x="33" y="546" width="1214" height="50" rx="12" fill="#0f1f16" stroke="#23472f"/>
 <text x="51" y="567" font-size="13" font-weight="700" fill="#e6edf3" text-anchor="start">On every change</text>
 <text x="51" y="583" font-size="11" font-weight="400" fill="#a3adb8" text-anchor="start">GitHub Actions</text>
@@ -167,13 +168,13 @@
 <rect x="581" y="558" width="133" height="26" rx="13" fill="#0d1117" stroke="#2b5a3a"/>
 <circle cx="594" cy="571" r="3.5" fill="#3fb950"/>
 <text x="603" y="575.5" font-size="11.5" font-weight="500" fill="#e6edf3" text-anchor="start">Governance drills</text>
-<rect x="722" y="558" width="153" height="26" rx="13" fill="#0d1117" stroke="#2b5a3a"/>
+<rect x="722" y="558" width="140" height="26" rx="13" fill="#0d1117" stroke="#2b5a3a"/>
 <circle cx="735" cy="571" r="3.5" fill="#3fb950"/>
-<text x="744" y="575.5" font-size="11.5" font-weight="500" fill="#e6edf3" text-anchor="start">Kyverno policy tests</text>
-<rect x="883" y="558" width="146" height="26" rx="13" fill="#0d1117" stroke="#2b5a3a"/>
-<circle cx="896" cy="571" r="3.5" fill="#3fb950"/>
-<text x="905" y="575.5" font-size="11.5" font-weight="500" fill="#e6edf3" text-anchor="start">kind cluster drills</text>
-<rect x="1038" y="558" width="114" height="26" rx="13" fill="#0d1117" stroke="#2b5a3a"/>
-<circle cx="1051" cy="571" r="3.5" fill="#3fb950"/>
-<text x="1060" y="575.5" font-size="11.5" font-weight="500" fill="#e6edf3" text-anchor="start">PR code review</text>
+<text x="744" y="575.5" font-size="11.5" font-weight="500" fill="#e6edf3" text-anchor="start">Kyverno + promtool</text>
+<rect x="870" y="558" width="146" height="26" rx="13" fill="#0d1117" stroke="#2b5a3a"/>
+<circle cx="883" cy="571" r="3.5" fill="#3fb950"/>
+<text x="892" y="575.5" font-size="11.5" font-weight="500" fill="#e6edf3" text-anchor="start">kind cluster drills</text>
+<rect x="1025" y="558" width="114" height="26" rx="13" fill="#0d1117" stroke="#2b5a3a"/>
+<circle cx="1038" cy="571" r="3.5" fill="#3fb950"/>
+<text x="1047" y="575.5" font-size="11.5" font-weight="500" fill="#e6edf3" text-anchor="start">PR code review</text>
 </svg>
