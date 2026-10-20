@@ -38,7 +38,8 @@ class ServeEndToEndTests(unittest.TestCase):
             finally:
                 mlflow.set_tracking_uri("")
             served = load_verified(bundle, public)
-            client = TestClient(create_app(served))
+            from secure_mlops.serve.auth import digest
+            client = TestClient(create_app(served, {digest("smk_e2e"): "e2e"}), headers={"Authorization": "Bearer smk_e2e"})
             r = client.post("/v1/models/ticket-router:predict", json={"instances": [
                 {"text": "please refund the $40 charge from last week"},
                 {"text": "someone logged into my account from another country"}]})

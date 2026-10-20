@@ -22,6 +22,7 @@ from fastapi.responses import JSONResponse, PlainTextResponse
 from prometheus_client import CONTENT_TYPE_LATEST, CollectorRegistry, Counter as Metric, Gauge, Histogram, generate_latest
 from pydantic import BaseModel, ConfigDict, Field
 
+from .auth import authenticate
 from .bundle import ServedModel
 
 
@@ -44,7 +45,13 @@ class PredictRequest(BaseModel):
     instances: list[Instance] = Field(min_length=1, max_length=MAX_INSTANCES)
 
 
-def create_app(served: ServedModel) -> FastAPI:
+def _bearer(request: Request) -> str | None:
+    header = request.headers.get("authorization", "")
+    return header[7:].strip() if header[:7].lower() == "bearer " else None
+
+
+def create_app(served: ServedModel, api_keys: dict[str, str]) -> FastAPI:
+    """api_keys: {sha256 of key: client id}; every prediction must present one of the keys."""
     app = FastAPI(title=f"{served.name} v{served.version}", docs_url=None, redoc_url=None, openapi_url=None)
     metrics = CollectorRegistry()           # per app: what Prometheus scrapes from /metrics
     requests = Metric("smlops_predict_requests", "Prediction requests by HTTP status", ["status"], registry=metrics)
@@ -92,6 +99,10 @@ def create_app(served: ServedModel) -> FastAPI:
 
     @app.post("/v1/models/{name}:predict")
     def predict(name: str, request: PredictRequest, raw: Request, response: Response) -> dict:
+        client = authenticate(api_keys, _bearer(raw))
+        if client is None:
+            raise HTTPException(status_code=401, detail="a valid API key is required",
+                                headers={"WWW-Authenticate": "Bearer"})
         known(name)
         started = time.perf_counter()
         supplied = raw.headers.get("x-request-id", "")
@@ -103,7 +114,7 @@ def create_app(served: ServedModel) -> FastAPI:
             tickets.labels(team).inc(n)
         response.headers["X-Request-ID"] = request_id
         response.headers["X-Model-Digest"] = served.digest
-        AUDIT.info(json.dumps({"event": "predict", "request_id": request_id, "model": served.name,
+        AUDIT.info(json.dumps({"event": "predict", "request_id": request_id, "client": client, "model": served.name,
                                "version": served.version, "digest": served.digest, "tickets": len(frame),
                                "teams": dict(sorted(Counter(map(str, teams)).items())),
                                "latency_ms": round((time.perf_counter() - started) * 1000, 2)}, sort_keys=True))

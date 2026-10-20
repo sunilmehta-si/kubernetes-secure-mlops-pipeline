@@ -5,8 +5,13 @@ from pathlib import Path
 from fastapi.testclient import TestClient
 
 from secure_mlops.serve.app import create_app
+from secure_mlops.serve.auth import digest
 from secure_mlops.serve.bundle import load_verified
 from tests.test_serve_bundle import make_bundle
+
+KEY = "smk_test-key"
+KEYS = {digest(KEY): "tester"}
+AUTH = {"Authorization": f"Bearer {KEY}"}
 
 
 class AppTests(unittest.TestCase):
@@ -15,7 +20,7 @@ class AppTests(unittest.TestCase):
         cls.dir = tempfile.TemporaryDirectory()
         _, public = make_bundle(Path(cls.dir.name, "b"), Path(cls.dir.name, "keys"))
         cls.served = load_verified(Path(cls.dir.name, "b"), public)
-        cls.client = TestClient(create_app(cls.served))
+        cls.client = TestClient(create_app(cls.served, KEYS), headers=AUTH)
 
     @classmethod
     def tearDownClass(cls):
@@ -45,7 +50,7 @@ class InputLimitTests(unittest.TestCase):
     def setUpClass(cls):
         cls.dir = tempfile.TemporaryDirectory()
         _, public = make_bundle(Path(cls.dir.name, "b"), Path(cls.dir.name, "keys"))
-        cls.client = TestClient(create_app(load_verified(Path(cls.dir.name, "b"), public)))
+        cls.client = TestClient(create_app(load_verified(Path(cls.dir.name, "b"), public), KEYS), headers=AUTH)
 
     @classmethod
     def tearDownClass(cls):
@@ -80,7 +85,7 @@ class AuditLogTests(unittest.TestCase):
         cls.dir = tempfile.TemporaryDirectory()
         _, public = make_bundle(Path(cls.dir.name, "b"), Path(cls.dir.name, "keys"))
         cls.served = load_verified(Path(cls.dir.name, "b"), public)
-        cls.client = TestClient(create_app(cls.served))
+        cls.client = TestClient(create_app(cls.served, KEYS), headers=AUTH)
 
     @classmethod
     def tearDownClass(cls):
@@ -112,7 +117,7 @@ class MetricsTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             _, public = make_bundle(Path(d, "b"), Path(d, "keys"))
             served = load_verified(Path(d, "b"), public)
-            client = TestClient(create_app(served))
+            client = TestClient(create_app(served, KEYS), headers=AUTH)
             client.post("/v1/models/ticket-router:predict", json={"instances": [{"text": "parcel never arrived"}]})
             client.post("/v1/models/ticket-router:predict", json={"instances": []})
             text = client.get("/metrics").text
@@ -121,3 +126,34 @@ class MetricsTests(unittest.TestCase):
         self.assertIn("smlops_predict_latency_seconds_count 2.0", text)
         self.assertRegex(text, r'smlops_tickets_routed_total\{team="\w+"\} 1\.0')
         self.assertIn(f'smlops_model_info{{digest="{served.digest}",name="ticket-router",version="4"}} 1.0', text)
+
+
+class AuthEnforcementTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.dir = tempfile.TemporaryDirectory()
+        _, public = make_bundle(Path(cls.dir.name, "b"), Path(cls.dir.name, "keys"))
+        cls.app = create_app(load_verified(Path(cls.dir.name, "b"), public), KEYS)
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.dir.cleanup()
+
+    def test_predictions_need_a_valid_key_and_the_audit_names_the_client(self):
+        import json
+        body = {"instances": [{"text": "parcel never arrived"}]}
+        anonymous = TestClient(self.app)
+        for headers in ({}, {"Authorization": "Bearer smk_wrong"}, {"Authorization": KEY}, {"X-API-Key": KEY}):
+            with self.subTest(headers=headers):
+                r = anonymous.post("/v1/models/ticket-router:predict", json=body, headers=headers)
+                self.assertEqual((r.status_code, r.headers.get("www-authenticate")), (401, "Bearer"))
+        with self.assertLogs("smlops.audit", level="INFO") as logs:
+            r = anonymous.post("/v1/models/ticket-router:predict", json=body, headers=AUTH)
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(json.loads(logs.records[0].getMessage())["client"], "tester")
+        self.assertNotIn(KEY, logs.output[0])
+
+    def test_health_and_metrics_stay_open_for_the_platform(self):
+        anonymous = TestClient(self.app)
+        self.assertEqual(anonymous.get("/healthz").status_code, 200)
+        self.assertEqual(anonymous.get("/metrics").status_code, 200)

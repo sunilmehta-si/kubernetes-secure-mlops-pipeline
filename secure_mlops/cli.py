@@ -54,6 +54,7 @@ def _parser() -> argparse.ArgumentParser:
     sv = sub.add_parser("serve", help="Serve a signed model bundle over KServe's v1 protocol; refuses unverified models.")
     sv.add_argument("--bundle", default="/mnt/models", help="Model bundle directory (default: /mnt/models, KServe's mount).")
     sv.add_argument("--public-key", help="Key the model must be signed with (default: $SMLOPS_VERIFY_KEY). Required.")
+    sv.add_argument("--api-keys", help="File of client-id:sha256 lines (default: $SMLOPS_API_KEYS). Required.")
     sv.add_argument("--host", default="0.0.0.0", help="Address to listen on (default: 0.0.0.0).")
     sv.add_argument("--port", type=int, default=8080, help="Port (default: 8080, KServe's default).")
     pk = sub.add_parser("package", help="Export the verified champion as a model bundle and modelcar Dockerfile.")
@@ -248,9 +249,16 @@ def _cmd_serve(args: argparse.Namespace) -> int:
         print("smlops: a public key is required to serve (--public-key or SMLOPS_VERIFY_KEY); "
               "unverified models are never served", file=sys.stderr)
         return 2
+    keys_file = args.api_keys or os.environ.get("SMLOPS_API_KEYS")
+    if not keys_file:
+        print("smlops: an API key file is required to serve (--api-keys or SMLOPS_API_KEYS); "
+              "an endpoint anyone can call is never started", file=sys.stderr)
+        return 2
+    from .serve.auth import KeyFileError, load as load_keys
     try:
         served = load_verified(args.bundle, key)
-    except (BundleError, OSError) as exc:
+        api_keys = load_keys(keys_file)
+    except (BundleError, KeyFileError, OSError) as exc:
         print(f"smlops: {exc}", file=sys.stderr)
         return 2
     import uvicorn
@@ -258,7 +266,7 @@ def _cmd_serve(args: argparse.Namespace) -> int:
     from .serve.app import create_app
     logging.basicConfig(level=logging.INFO, format="%(message)s")
     print(f"smlops: serving {served.name} v{served.version} ({served.digest}) on {args.host}:{args.port}", file=sys.stderr)
-    uvicorn.run(create_app(served), host=args.host, port=args.port, log_level="warning", server_header=False)
+    uvicorn.run(create_app(served, api_keys), host=args.host, port=args.port, log_level="warning", server_header=False)
     return 0
 
 

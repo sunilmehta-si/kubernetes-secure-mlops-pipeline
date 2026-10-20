@@ -153,11 +153,17 @@ class ServeCliTests(unittest.TestCase):
                 os.environ.pop("SMLOPS_VERIFY_KEY", None)
                 self.assertEqual(main(["serve", "--bundle", f"{d}/b"]), 2)        # no key, no serving
             self.assertIn("unverified models are never served", err.getvalue())
+            self.assertEqual(main(["serve", "--bundle", f"{d}/b", "--public-key", str(public)]), 2)   # no API keys
+            self.assertIn("an endpoint anyone can call is never started", err.getvalue())
+            from secure_mlops.serve.auth import add_client
+            add_client(Path(d, "api-keys.txt"), "support")
             with mock.patch("uvicorn.run") as run:
-                self.assertEqual(main(["serve", "--bundle", f"{d}/b", "--public-key", str(public), "--port", "9000"]), 0)
+                self.assertEqual(main(["serve", "--bundle", f"{d}/b", "--public-key", str(public), "--port", "9000",
+                                       "--api-keys", f"{d}/api-keys.txt"]), 0)
             self.assertEqual(run.call_args.kwargs["port"], 9000)
             (Path(d, "b", "model", "model.skops")).write_bytes(b"swapped")
             with mock.patch("uvicorn.run") as run:
-                self.assertEqual(main(["serve", "--bundle", f"{d}/b", "--public-key", str(public)]), 2)
+                self.assertEqual(main(["serve", "--bundle", f"{d}/b", "--public-key", str(public),
+                                       "--api-keys", f"{d}/api-keys.txt"]), 2)
             run.assert_not_called()                                              # never opened a port
             self.assertIn("refusing to serve", err.getvalue())
