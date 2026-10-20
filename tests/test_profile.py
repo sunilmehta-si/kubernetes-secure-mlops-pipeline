@@ -12,6 +12,7 @@ class ProfileTests(unittest.TestCase):
         frame = pd.DataFrame({"label": ["billing"] * 3 + ["security"]})
         profile = reference_profile(frame)
         self.assertEqual(profile, {"tickets": 4, "teams": {"billing": 0.75, "security": 0.25}})
+        self.assertNotIn("new_word_rate", profile)                       # needs the model and held-out tickets
         with tempfile.TemporaryDirectory() as d:
             self.assertIsNone(read_profile(d))
             Path(d, "MLmodel").write_text("flavors: {}\nmetadata:\n  smlops_reference:\n    tickets: 4\n")

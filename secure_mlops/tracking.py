@@ -64,5 +64,5 @@ def log_run(model, config: TrainConfig, train_frame: pd.DataFrame, test_frame: p
         example = features(test_frame).head(3)
         info = mlflow.sklearn.log_model(model, name="model", signature=infer_signature(example, model.predict(example)),
                                         input_example=example, serialization_format=SAFE_FORMAT,
-                                        metadata={PROFILE_KEY: reference_profile(train_frame)})
+                                        metadata={PROFILE_KEY: reference_profile(train_frame, model, test_frame)})
     return LoggedRun(run.info.run_id, info.model_uri)
