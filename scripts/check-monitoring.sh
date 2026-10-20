@@ -37,8 +37,14 @@ tickets="$(value 'sum(smlops_live_window_tickets)')"
 [ "${tickets:-0}" -ge 2 ] 2>/dev/null || { echo "FAIL: live drift window holds '${tickets}' tickets" >&2; exit 1; }
 echo "PASS: live drift is measuring the $tickets tickets served so far"
 
-refused="$(value 'sum(smlops_predict_requests_total{status="401"})')"
-[ "${refused%.*}" -ge 1 ] 2>/dev/null || { echo "FAIL: the keyless drill request was not counted" >&2; exit 1; }
+# The drill ran moments ago and Prometheus scrapes every 15s: wait for a scrape that includes it.
+refused=""
+for i in $(seq 1 12); do
+  refused="$(value 'sum(smlops_predict_requests_total{status="401"})')"
+  [ "${refused%.*}" -ge 1 ] 2>/dev/null && break
+  [ "$i" = 12 ] && { echo "FAIL: the keyless drill request was not counted within a minute" >&2; exit 1; }
+  sleep 5
+done
 echo "PASS: the keyless drill request is visible to monitoring as a 401"
 
 firing="$(api "alerts" | jq -r '[.data.alerts[] | select(.state == "firing") | .labels.alertname] | join(", ")')"
