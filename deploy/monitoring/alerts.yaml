@@ -1,0 +1,81 @@
+# Prometheus alerts for the ticket router, on the metrics its server exports at /metrics.
+# Drift thresholds are the ones in configs/drift.yaml (a test keeps them equal), so batch and live checks agree.
+# Check: promtool check rules deploy/monitoring/alerts.yaml
+groups:
+  - name: ticket-router-drift          # gate G7, threat T10: is traffic still like the training data?
+    rules:
+      - alert: TicketRouterTeamMixShifting
+        expr: max without (instance, pod) (smlops_live_psi_predicted_team) > 0.10
+        for: 30m
+        labels: {severity: warning, gate: G7}
+        annotations:
+          summary: "Predicted team mix has moved from training (PSI {{ $value | printf \"%.2f\" }})"
+          runbook: "Run `smlops drift` on a labelled sample; the model may need retraining."
+      - alert: TicketRouterTeamMixDrifted
+        expr: max without (instance, pod) (smlops_live_psi_predicted_team) > 0.25
+        for: 15m
+        labels: {severity: critical, gate: G7, action: retrain}
+        annotations:
+          summary: "Predicted team mix has drifted from training (PSI {{ $value | printf \"%.2f\" }})"
+          runbook: "Retraining starts on this alert; the new model must still pass the evaluation gate."
+      - alert: TicketRouterNewVocabularyRising
+        expr: max without (instance, pod) (smlops_live_new_word_ratio) > 1.15
+        for: 30m
+        labels: {severity: warning, gate: G7}
+        annotations:
+          summary: "Tickets use {{ $value | printf \"%.2f\" }}x the model's usual share of unknown words"
+          runbook: "New products or phrasing; collect labelled tickets for the next training run."
+      - alert: TicketRouterNewVocabulary
+        expr: max without (instance, pod) (smlops_live_new_word_ratio) > 1.30
+        for: 15m
+        labels: {severity: critical, gate: G7, action: retrain}
+        annotations:
+          summary: "Tickets use {{ $value | printf \"%.2f\" }}x the model's usual share of unknown words"
+          runbook: "Retraining starts on this alert; the new model must still pass the evaluation gate."
+
+  - name: ticket-router-serving
+    rules:
+      - alert: TicketRouterDown
+        expr: absent(smlops_model_info)
+        for: 5m
+        labels: {severity: critical}
+        annotations:
+          summary: "No ticket router is reporting; a server that cannot verify its model does not start"
+          runbook: "kubectl -n serving describe inferenceservice ticket-router; look for signature errors."
+      - alert: TicketRouterErrors
+        expr: |
+          sum(rate(smlops_predict_requests_total{status=~"5.."}[5m]))
+            / sum(rate(smlops_predict_requests_total[5m])) > 0.02
+        for: 10m
+        labels: {severity: critical}
+        annotations:
+          summary: "{{ $value | humanizePercentage }} of prediction requests fail"
+      - alert: TicketRouterSlow
+        expr: histogram_quantile(0.95, sum by (le) (rate(smlops_predict_latency_seconds_bucket[5m]))) > 0.5
+        for: 10m
+        labels: {severity: warning}
+        annotations:
+          summary: "95th percentile prediction latency is {{ $value | humanizeDuration }}"
+      - alert: TicketRouterMixedVersions
+        expr: count(count by (digest) (smlops_model_info)) > 1
+        for: 30m
+        labels: {severity: warning}
+        annotations:
+          summary: "{{ $value }} model digests have been serving together for 30 minutes; a rollout is stuck"
+
+  - name: ticket-router-security       # threat T9: abuse of the endpoint
+    rules:
+      - alert: TicketRouterRejectedKeys
+        expr: sum(rate(smlops_predict_requests_total{status="401"}[5m])) * 60 > 10
+        for: 5m
+        labels: {severity: warning, threat: T9}
+        annotations:
+          summary: "{{ $value | printf \"%.0f\" }} requests a minute present no valid API key"
+          runbook: "A client lost its key or someone is guessing; the audit log names no client for these."
+      - alert: TicketRouterRateLimited
+        expr: sum(rate(smlops_predict_requests_total{status=~"413|429"}[5m])) * 60 > 30
+        for: 10m
+        labels: {severity: warning, threat: T9}
+        annotations:
+          summary: "{{ $value | printf \"%.0f\" }} requests a minute are over a client's ticket budget"
+          runbook: "The audit log names the client; raise its budget or find the runaway caller."
