@@ -63,6 +63,11 @@ def _parser() -> argparse.ArgumentParser:
     pk.add_argument("--public-key", required=True, help="Key the model must be signed with.")
     pk.add_argument("--tracking-uri", default="sqlite:///mlflow.db", help="MLflow URI (default: sqlite:///mlflow.db).")
     pk.add_argument("--output", "-o", default="bundle", help="Empty directory to write (default: bundle).")
+    ak = sub.add_parser("api-keys", help="Manage the API keys clients use to call the model endpoint.")
+    aksub = ak.add_subparsers(dest="api_keys_command", required=True)
+    aka = aksub.add_parser("add", help="Create a key for a client; only its hash is written, the key is printed once.")
+    aka.add_argument("--client", required=True, help="Client id, e.g. support-tool (lowercase, digits, dashes).")
+    aka.add_argument("--file", default="keys/api-keys.txt", help="Key file to append to (default: keys/api-keys.txt).")
     pr = sub.add_parser("promotion-request", help="Write the pull request body for promoting a run's model (gate G4).")
     pr.add_argument("--run-dir", default="runs/latest", help="Output directory of smlops train (default: runs/latest).")
     pr.add_argument("--output", "-o", help="Write Markdown here instead of stdout.")
@@ -287,6 +292,20 @@ def _cmd_package(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_api_keys(args: argparse.Namespace) -> int:
+    from .serve.auth import KeyFileError, add_client
+    Path(args.file).parent.mkdir(parents=True, exist_ok=True)
+    try:
+        key = add_client(args.file, args.client)
+    except (KeyFileError, OSError) as exc:
+        print(f"smlops: {exc}", file=sys.stderr)
+        return 1
+    print(key)                          # stdout only: the one time the key exists outside the client
+    print(f"smlops: added {args.client} to {args.file}; give the key above to the client, it is not stored",
+          file=sys.stderr)
+    return 0
+
+
 def _cmd_keys(args: argparse.Namespace) -> int:
     from .signing import SignatureError, generate_keys
     try:
@@ -324,6 +343,8 @@ def main(argv: list[str] | None = None) -> int:
         return _cmd_promotion_request(args)
     if args.command == "keys":
         return _cmd_keys(args)
+    if args.command == "api-keys":
+        return _cmd_api_keys(args)
     if args.command == "verify":
         return _cmd_verify(args)
     if args.command == "drift":

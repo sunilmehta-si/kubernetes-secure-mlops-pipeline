@@ -167,3 +167,22 @@ class ServeCliTests(unittest.TestCase):
                                        "--api-keys", f"{d}/api-keys.txt"]), 2)
             run.assert_not_called()                                              # never opened a port
             self.assertIn("refusing to serve", err.getvalue())
+
+
+class ApiKeysCliTests(unittest.TestCase):
+    def test_add_prints_the_key_once_and_stores_its_hash(self):
+        import tempfile
+        from contextlib import redirect_stderr
+        from pathlib import Path
+
+        from secure_mlops.serve.auth import authenticate, load
+        with tempfile.TemporaryDirectory() as d, redirect_stderr(io.StringIO()):
+            out = io.StringIO()
+            with redirect_stdout(out):
+                self.assertEqual(main(["api-keys", "add", "--client", "support-tool", "--file", f"{d}/k/api-keys.txt"]), 0)
+            key = out.getvalue().strip()
+            self.assertTrue(key.startswith("smk_"))
+            self.assertNotIn(key, Path(d, "k/api-keys.txt").read_text())
+            self.assertEqual(authenticate(load(f"{d}/k/api-keys.txt"), key), "support-tool")
+            with redirect_stdout(io.StringIO()):
+                self.assertEqual(main(["api-keys", "add", "--client", "support-tool", "--file", f"{d}/k/api-keys.txt"]), 1)
