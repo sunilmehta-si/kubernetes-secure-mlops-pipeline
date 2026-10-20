@@ -25,6 +25,24 @@ class WorkflowTests(unittest.TestCase):
             with self.subTest(workflow=path.name):
                 self.assertEqual(yaml.safe_load(path.read_text())["permissions"], {"contents": "read"})
 
+    def test_no_script_interpolates_event_data(self):
+        # `${{ github.event.* }}` inside `run:` is pasted into the script before bash parses it: a crafted alert
+        # payload or input could run commands. Event data reaches scripts only through env variables.
+        for path in WORKFLOWS:
+            for name, job in yaml.safe_load(path.read_text())["jobs"].items():
+                for step in job.get("steps", []):
+                    with self.subTest(workflow=path.name, job=name, step=step.get("name", step.get("run", ""))[:40]):
+                        self.assertNotRegex(step.get("run", ""), r"\$\{\{\s*(github\.event|inputs)\.")
+
+    def test_retraining_cannot_deploy_or_promote_on_its_own(self):
+        flow = yaml.safe_load((ROOT / ".github/workflows/retrain.yml").read_text())
+        self.assertEqual(flow["permissions"], {"contents": "read"})
+        self.assertEqual(flow[True]["repository_dispatch"]["types"], ["drift-alert"])     # YAML reads `on` as True
+        scripts = "\n".join(s.get("run", "") for job in flow["jobs"].values() for s in job["steps"])
+        self.assertIn("smlops retrain-check -", scripts)
+        for word in ("kubectl", "cosign sign", "git push", "gh "):
+            self.assertNotIn(word, scripts)
+
 
 if __name__ == "__main__":
     unittest.main()
