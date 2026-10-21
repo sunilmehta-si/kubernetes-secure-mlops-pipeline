@@ -25,13 +25,22 @@ threat model, including ways to:
 - get an image or model past admission control on the cluster (unsigned, by tag, or from another registry);
 - call the model endpoint without a valid API key, recover a key from what the cluster stores, or exceed a client's
   ticket budget;
-- hide drift or abuse from monitoring, or start or skip retraining against the rules in `alerts.yaml`.
+- hide drift or abuse from monitoring, or start or skip retraining against the rules in `alerts.yaml`;
+- call the alert relay without its token, make it forward more than the alert summary, or start retraining from
+  an alert that does not carry `action=retrain`;
+- get Argo CD to apply something outside its project (another namespace, a cluster-scoped object, a kind no
+  release contains), or keep a hand edit on the cluster against the release;
+- install a dependency version other than the one in `requirements-lock.txt`.
 
 ## Keys and credentials in this project
 
 - Model signing and image signing keys are generated per run (CI) or locally (`smlops keys generate`) and never
   committed; `keys/` is git-ignored and private keys are written with mode 0600.
-- API keys are printed once when created; the server and the cluster hold only their SHA-256 hashes.
+- API keys are printed once when created; the server and the cluster hold only their SHA-256 hashes. The alert
+  relay works the same way: Alertmanager holds its token, the relay only the hash.
+- The relay's GitHub token, on a real cluster, is a fine-grained token for this repository with Contents: write
+  only, mounted from a Secret and read at each dispatch; the CI cluster has none and runs the relay as a dry run.
+- Argo CD runs as the core install (no UI or API server), so there is no Argo CD login or admin password at all.
 - Cosign signs with `--tlog-upload=false`: a key made for one CI run is not published to a public transparency log.
 - The cluster scripts act only on the local kind context (`kind-smlops`) and refuse any other.
 
