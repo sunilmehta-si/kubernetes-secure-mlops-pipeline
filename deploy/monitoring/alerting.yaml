@@ -1,0 +1,156 @@
+# Alertmanager and the alert relay, in the monitoring namespace next to Prometheus (prometheus.yaml).
+#   Prometheus --9093--> Alertmanager --9095, bearer token--> alert relay --> GitHub repository dispatch
+# Ingress stays denied except along that path. Both run under Pod Security "restricted" with read-only root
+# filesystems and no Kubernetes API token. scripts/install-monitoring.sh creates their Secrets and ConfigMap:
+#   alertmanager-config       deploy/monitoring/alertmanager.yml
+#   alertmanager-relay-token  the token Alertmanager presents (the only copy of it in the cluster)
+#   alert-relay-keys          its SHA-256 hash, which is all the relay holds
+# ${SERVER_IMAGE} is the pipeline image by digest: the relay is `smlops alert-relay`. On the CI cluster it runs with
+# --dry-run and logs the dispatch; a real cluster passes --repo and a GitHub token file from a Secret instead.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: alertmanager
+  namespace: monitoring
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: alertmanager}
+  template:
+    metadata:
+      labels: {app: alertmanager}
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65534
+        runAsGroup: 65534
+        fsGroup: 65534
+        seccompProfile: {type: RuntimeDefault}
+      containers:
+        - name: alertmanager
+          image: prom/alertmanager:v0.34.1@sha256:e9733bafb1bdef9b00e25a21f8f99dc26a22224bf16641ad754d1649f4c3357a
+          args: ["--config.file=/etc/alertmanager/alertmanager.yml", "--storage.path=/alertmanager",
+                 "--cluster.listen-address=", "--web.listen-address=:9093"]
+          ports:
+            - {containerPort: 9093, protocol: TCP}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: {drop: ["ALL"]}
+          resources:
+            requests: {cpu: 50m, memory: 64Mi}
+            limits: {memory: 128Mi}
+          readinessProbe:
+            httpGet: {path: /-/ready, port: 9093}
+            periodSeconds: 5
+          volumeMounts:
+            - {name: config, mountPath: /etc/alertmanager, readOnly: true}
+            - {name: relay-token, mountPath: /etc/alertmanager/relay, readOnly: true}
+            - {name: data, mountPath: /alertmanager}
+      volumes:
+        - name: config
+          configMap: {name: alertmanager-config}
+        - name: relay-token
+          secret: {secretName: alertmanager-relay-token}
+        - name: data
+          emptyDir: {sizeLimit: 256Mi}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: alertmanager
+  namespace: monitoring
+spec:
+  selector: {app: alertmanager}
+  ports:
+    - {port: 9093, targetPort: 9093, protocol: TCP}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: alert-relay
+  namespace: monitoring
+spec:
+  replicas: 1                      # one replica: the cooldown lives in memory
+  selector:
+    matchLabels: {app: alert-relay}
+  template:
+    metadata:
+      labels: {app: alert-relay}
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile: {type: RuntimeDefault}
+      containers:
+        - name: relay
+          image: ${SERVER_IMAGE}
+          args: ["alert-relay", "--api-keys", "/etc/relay/api-keys.txt", "--dry-run", "--port", "9095"]
+          env:
+            - {name: MLFLOW_DISABLE_AGENT_HINT, value: "1"}
+            - {name: HOME, value: /tmp}
+          ports:
+            - {containerPort: 9095, protocol: TCP}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: {drop: ["ALL"]}
+          resources:
+            requests: {cpu: 50m, memory: 128Mi}
+            limits: {memory: 256Mi}
+          readinessProbe:
+            httpGet: {path: /healthz, port: 9095}
+            periodSeconds: 5
+          volumeMounts:
+            - {name: keys, mountPath: /etc/relay, readOnly: true}
+            - {name: tmp, mountPath: /tmp}
+      volumes:
+        - name: keys
+          secret: {secretName: alert-relay-keys}
+        - name: tmp
+          emptyDir: {sizeLimit: 64Mi}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: alert-relay
+  namespace: monitoring
+spec:
+  selector: {app: alert-relay}
+  ports:
+    - {port: 9095, targetPort: 9095, protocol: TCP}
+---
+# Only Prometheus may send alerts to Alertmanager.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: alertmanager-from-prometheus
+  namespace: monitoring
+spec:
+  podSelector:
+    matchLabels: {app: alertmanager}
+  policyTypes: ["Ingress"]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels: {app: prometheus}
+      ports:
+        - {protocol: TCP, port: 9093}
+---
+# Only Alertmanager may call the relay.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: alert-relay-from-alertmanager
+  namespace: monitoring
+spec:
+  podSelector:
+    matchLabels: {app: alert-relay}
+  policyTypes: ["Ingress"]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels: {app: alertmanager}
+      ports:
+        - {protocol: TCP, port: 9095}
