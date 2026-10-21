@@ -44,8 +44,8 @@ GATES = [
      "platform security", "model signing; Trivy", "partial", "secure_mlops/signing.py"),
     ("G6", "Deploy admission", "Will the cluster run only that?", "only signed digests run", "admission decisions",
      "platform", "Kyverno; drilled in CI", "built", "deploy/policy/verify-signatures.yaml"),
-    ("G7", "Operate & retire", "Still working? Can we undo it?", "live drift, alerts, retrain", "alerts, gate reports",
-     "model owner, on-call", "Prometheus; retrain job", "partial", "secure_mlops/serve/live_drift.py"),
+    ("G7", "Operate & retire", "Still working? Can we undo it?", "live drift, retrain, retire", "alerts, gate reports",
+     "model owner, on-call", "alerts; relay; retire", "built", "secure_mlops/relay.py"),
 ]
 
 # (id, threat, where (node key), control, OWASP ML Top 10 2023, status, file when built/partial)
@@ -187,7 +187,7 @@ NODES = {
     "registry": (651, 150, "MLflow + zot", "versions, OCI models"),
     "policy": (861, 150, "Kyverno", "verify model signature"),
     "monitoring": (441, 314, "Prometheus", "live drift, alert rules"),
-    "argocd": (651, 314, "Argo CD", "deploys digest from Git"),
+    "argocd": (651, 234, "Argo CD", "syncs releases by digest"),   # between the rows: scrapes pass below it
     "serving": (861, 314, "KServe", "ticket-router endpoint"),
     "clients": (1077, 314, "Support tool", "sends tickets"),
 }
@@ -200,9 +200,10 @@ ZONES = [  # (x, y, w, h, label, planned)
 FLOWS = [  # (from, to, label, dashed): labels only where the gap between nodes is wide enough
     ("laptop", "repo", "push", False), ("repo", "ci", "", False), ("ci", "ghcr", "", False),
     ("ghcr", "pipelines", "pull image", False), ("pipelines", "registry", "", False),
-    ("registry", "policy", "", False), ("argocd", "serving", "", True), ("policy", "serving", "verify", False),
-    # retraining runs in GitHub Actions; the Alertmanager relay that starts it from an alert is still planned
-    ("clients", "serving", "", False), ("serving", "monitoring", "", False), ("monitoring", "ci", "retrain", True),
+    ("registry", "policy", "", False), ("registry", "argocd", "", False), ("argocd", "serving", "", False),
+    ("policy", "serving", "verify", False),
+    # retraining runs in GitHub Actions, started from an alert by the relay (Alertmanager -> repository dispatch)
+    ("clients", "serving", "", False), ("serving", "monitoring", "", False), ("monitoring", "ci", "retrain", False),
 ]
 
 
@@ -254,7 +255,7 @@ def threat_model(theme: str) -> str:
             w = len(label) * 6 + 10
             labels += [f'<rect x="{mx - w / 2:.1f}" y="{my - 9:.1f}" width="{w:.0f}" height="16" rx="8" '
                        f'fill="{c["zone"]}"/>', _t(round(mx), round(my + 3.5), label, 10, c["faint"], 600, "middle")]
-    built_nodes = {"laptop", "repo", "ci", "ghcr", "pipelines", "registry", "policy", "serving", "monitoring",
+    built_nodes = {"laptop", "repo", "ci", "ghcr", "pipelines", "registry", "policy", "serving", "monitoring", "argocd",
                    "clients"}
     for key, (x, y, title, sub) in NODES.items():
         built = key in built_nodes

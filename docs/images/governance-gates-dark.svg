@@ -123,22 +123,22 @@
 <text x="738" y="462" font-size="12" font-weight="500" fill="#e6edf3" text-anchor="start">platform</text>
 <text x="664" y="484" font-size="9.5" font-weight="700" fill="#7d8590" text-anchor="start" letter-spacing="0.6">ENFORCED</text>
 <text x="738" y="484" font-size="12" font-weight="500" fill="#e6edf3" text-anchor="start">Kyverno; drilled in CI</text>
-<rect x="958.5" y="328" width="284.5" height="176" rx="12" fill="#0d1117" stroke="#5a4116"/>
-<rect x="972.5" y="342" width="34" height="22" rx="6" fill="#e3a33a"/>
+<rect x="958.5" y="328" width="284.5" height="176" rx="12" fill="#0f1f16" stroke="#23472f"/>
+<rect x="972.5" y="342" width="34" height="22" rx="6" fill="#3fb950"/>
 <text x="989.5" y="357.5" font-size="12" font-weight="700" fill="#0f141a" text-anchor="middle">G7</text>
 <text x="1014.5" y="358" font-size="14.5" font-weight="700" fill="#e6edf3" text-anchor="start">Operate &amp; retire</text>
-<rect x="1171" y="344" width="60" height="18" rx="9" fill="#1f1608" stroke="#5a4116"/>
-<text x="1201" y="356.5" font-size="9.5" font-weight="700" fill="#e3a33a" text-anchor="middle" letter-spacing="0.5">PARTIAL</text>
+<rect x="1184" y="344" width="47" height="18" rx="9" fill="#0f1f16" stroke="#23472f"/>
+<text x="1208" y="356.5" font-size="9.5" font-weight="700" fill="#3fb950" text-anchor="middle" letter-spacing="0.5">BUILT</text>
 <text x="972.5" y="384" font-size="12" font-weight="500" fill="#a3adb8" text-anchor="start" font-style="italic">Still working? Can we undo it?</text>
 <line x1="972.5" y1="396" x2="1229" y2="396" stroke="#2c333d"/>
 <text x="972.5" y="418" font-size="9.5" font-weight="700" fill="#7d8590" text-anchor="start" letter-spacing="0.6">CHECKS</text>
-<text x="1046.5" y="418" font-size="12" font-weight="500" fill="#e6edf3" text-anchor="start">live drift, alerts, retrain</text>
+<text x="1046.5" y="418" font-size="12" font-weight="500" fill="#e6edf3" text-anchor="start">live drift, retrain, retire</text>
 <text x="972.5" y="440" font-size="9.5" font-weight="700" fill="#7d8590" text-anchor="start" letter-spacing="0.6">EVIDENCE</text>
 <text x="1046.5" y="440" font-size="12" font-weight="500" fill="#e6edf3" text-anchor="start">alerts, gate reports</text>
 <text x="972.5" y="462" font-size="9.5" font-weight="700" fill="#7d8590" text-anchor="start" letter-spacing="0.6">OWNER</text>
 <text x="1046.5" y="462" font-size="12" font-weight="500" fill="#e6edf3" text-anchor="start">model owner, on-call</text>
 <text x="972.5" y="484" font-size="9.5" font-weight="700" fill="#7d8590" text-anchor="start" letter-spacing="0.6">ENFORCED</text>
-<text x="1046.5" y="484" font-size="12" font-weight="500" fill="#e6edf3" text-anchor="start">Prometheus; retrain job</text>
+<text x="1046.5" y="484" font-size="12" font-weight="500" fill="#e6edf3" text-anchor="start">alerts; relay; retire</text>
 <line x1="320.5" y1="192.0" x2="338.5" y2="192.0" stroke="#6e7681" stroke-width="2" marker-end="url(#arrow)"/>
 <line x1="629" y1="192.0" x2="647" y2="192.0" stroke="#6e7681" stroke-width="2" marker-end="url(#arrow)"/>
 <line x1="937.5" y1="192.0" x2="955.5" y2="192.0" stroke="#6e7681" stroke-width="2" marker-end="url(#arrow)"/>
