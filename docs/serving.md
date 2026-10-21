@@ -68,7 +68,7 @@ The bundle layout is what KServe mounts at `/mnt/models` from the model image:
 
 ## On a local cluster
 
-Needs Docker, kind, kubectl, jq and cosign. Versions are pinned in [`deploy/versions.env`](../deploy/versions.env).
+Needs Docker, kind, kubectl, jq, cosign and oras. Versions are pinned in [`deploy/versions.env`](../deploy/versions.env).
 
 ```bash
 echo "127.0.0.1 kind-registry" | sudo tee -a /etc/hosts   # push to the registry under the name the cluster uses
@@ -76,9 +76,11 @@ scripts/cluster-up.sh
 scripts/publish-model.sh .work
 scripts/install-platform.sh .work/keys
 scripts/install-monitoring.sh .work
-scripts/deploy-model.sh .work
+scripts/install-argocd.sh
+scripts/deploy-model.sh .work                               # through Argo CD, as described below
 scripts/drill-admission.sh .work
 scripts/check-monitoring.sh .work
+scripts/drill-gitops.sh .work
 ```
 
 Every script that runs kubectl first checks that the current context is `kind-smlops` and refuses otherwise, so
@@ -91,7 +93,25 @@ The [`cluster` workflow](../.github/workflows/cluster.yml) runs these steps on e
 rejections: an unsigned image, an image referenced by tag, a client outside the allowed namespaces (curl's own "no
 connection", never a kubectl error), and a request without an API key (401). Every step runs with `pipefail`: an
 earlier version piped the drill into `tee`, which hid a failing drill behind a green run until the monitoring
-check exposed it.
+check exposed it. The latest run, all fourteen checks:
+
+```text
+Argo CD synced release release-39557059626 into serving
+PASS: an unsigned image rejected by verify-model-signatures
+PASS: an image referenced by tag rejected by require-registry-and-digest
+PASS: a client outside the allowed namespaces could not reach the model
+PASS: a request without an API key was refused (401)
+PASS: Prometheus scrapes the served model, digest sha256:d539d91cfd41...
+PASS: all 11 alert rules loaded
+PASS: live drift is measuring the 2 tickets served so far
+PASS: the keyless drill request is visible to monitoring as a 401
+PASS: Prometheus sends its alerts to Alertmanager
+PASS: a drift alert reached the relay, which would start retraining (dry run, no GitHub token here)
+PASS: an alert without action=retrain did not start retraining
+PASS: Prometheus scrapes the relay, so a failing retraining trigger alerts
+PASS: a hand edit to the endpoint was reverted to the release by Argo CD
+PASS: a release adding a ClusterRole and a Secret was refused by the project; neither was created
+```
 
 ## Delivery with GitOps
 
@@ -112,4 +132,21 @@ namespace is not part of a release: the platform owns it.
 application. The application syncs `deploy/gitops/production/` from `main`, prunes what git no longer has and
 reverts hand edits. The project allows one source repository, one destination namespace, nothing cluster-scoped,
 and only the four kinds a release contains; tests check that every rendered kind is allowed and nothing more.
-Argo CD itself does not run on the CI cluster yet.
+
+### On the CI cluster
+
+There is no pull request to merge on the CI cluster, so the release travels as an OCI artifact instead of a commit,
+and everything else is the same. [`scripts/install-argocd.sh`](../scripts/install-argocd.sh) installs Argo CD's
+core (application controller and repo server; no UI and no API server, so nothing to log in to) from the pinned
+release, after checking the manifest's SHA-256. `scripts/deploy-model.sh` renders the release, pushes it to the
+cluster registry with oras, and applies the project and application from `smlops argocd-ci`, which are the
+committed ones with only the source changed. Argo CD applies the release; no script does.
+
+[`scripts/drill-gitops.sh`](../scripts/drill-gitops.sh) then drills the controls Argo CD adds:
+
+- a hand edit to the live endpoint (more replicas) is reverted to what the release says;
+- a release that adds a ClusterRole with every permission and a Secret is refused as not permitted in the project,
+  and neither object is created.
+
+One CI run failed because a public registry returned an error for Argo CD's Redis image and the node backed off.
+The install now pulls Argo CD's images on the host with retries and loads them into the node.
