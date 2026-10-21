@@ -1,0 +1,25 @@
+# For a real cluster: make the alert relay start retraining on GitHub instead of logging (alerting.yaml runs it with
+# --dry-run, as the CI cluster has no token). Apply as a strategic-merge patch, for example in a kustomization:
+#   patches: [{path: relay-github-patch.yaml}]
+# and create the token Secret first, from a fine-grained token limited to this one repository with Contents: write
+# (what a repository dispatch needs) and nothing else:
+#   kubectl -n monitoring create secret generic alert-relay-github --from-file=token=<file holding the token>
+# The token is read from the mounted file at every dispatch, so rotating the Secret needs no restart.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: alert-relay
+  namespace: monitoring
+spec:
+  template:
+    spec:
+      containers:
+        - name: relay
+          args: ["alert-relay", "--api-keys", "/etc/relay/api-keys.txt",
+                 "--repo", "sunilmehta-si/kubernetes-secure-mlops-pipeline",
+                 "--github-token-file", "/etc/relay/github/token", "--port", "9095"]
+          volumeMounts:
+            - {name: github-token, mountPath: /etc/relay/github, readOnly: true}
+      volumes:
+        - name: github-token
+          secret: {secretName: alert-relay-github}

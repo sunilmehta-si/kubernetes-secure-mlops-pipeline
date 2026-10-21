@@ -43,6 +43,28 @@ class AlertRuleTests(unittest.TestCase):
             self.assertIn("for", rule, f"{name} would fire on a single scrape")
 
 
+class RelayDeploymentTests(unittest.TestCase):
+    def relay(self, path):
+        docs = [d for d in yaml.safe_load_all((ROOT / path).read_text()) if d]
+        return next(d for d in docs if d["kind"] == "Deployment" and d["metadata"]["name"] == "alert-relay")
+
+    def test_ci_runs_a_dry_run_and_production_patch_dispatches_to_this_repo(self):
+        from secure_mlops.cli import _parser
+        ci = self.relay("deploy/monitoring/alerting.yaml")["spec"]["template"]["spec"]
+        patch = self.relay("deploy/monitoring/relay-github-patch.yaml")["spec"]["template"]["spec"]
+        (ci_container,), (prod_container,) = ci["containers"], patch["containers"]
+        self.assertEqual(prod_container["name"], ci_container["name"])            # the patch hits the container
+        ci_args, prod_args = (_parser().parse_args(c["args"]) for c in (ci_container, prod_container))
+        self.assertTrue(ci_args.dry_run)
+        self.assertFalse(prod_args.dry_run)
+        self.assertEqual(prod_args.repo, "sunilmehta-si/kubernetes-secure-mlops-pipeline")
+        self.assertEqual(prod_args.api_keys, ci_args.api_keys)
+        mount = prod_container["volumeMounts"][0]
+        self.assertTrue(prod_args.github_token_file.startswith(mount["mountPath"] + "/"))
+        self.assertTrue(mount["readOnly"])
+        self.assertEqual(patch["volumes"][0]["secret"]["secretName"], "alert-relay-github")
+
+
 class MonitoringDocTests(unittest.TestCase):
     DOC = (ROOT / "docs/monitoring.md").read_text()
 
