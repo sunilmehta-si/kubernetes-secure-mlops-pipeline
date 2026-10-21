@@ -52,7 +52,7 @@ jobs:
       - name: Install the platform and policies
         run: scripts/install-platform.sh "$WORK/keys"
       - name: Install monitoring
-        run: scripts/install-monitoring.sh
+        run: scripts/install-monitoring.sh "$WORK"
       - name: Deploy and call the model
         run: scripts/deploy-model.sh "$WORK"
       - name: Drill the controls

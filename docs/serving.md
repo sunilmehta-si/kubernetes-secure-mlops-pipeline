@@ -75,7 +75,7 @@ echo "127.0.0.1 kind-registry" | sudo tee -a /etc/hosts   # push to the registry
 scripts/cluster-up.sh
 scripts/publish-model.sh .work
 scripts/install-platform.sh .work/keys
-scripts/install-monitoring.sh
+scripts/install-monitoring.sh .work
 scripts/deploy-model.sh .work
 scripts/drill-admission.sh .work
 scripts/check-monitoring.sh .work
