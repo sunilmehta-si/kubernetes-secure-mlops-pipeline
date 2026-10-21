@@ -9,6 +9,8 @@ drift-alert. Everything else is acknowledged and dropped.
 - Only what the workflow needs is forwarded: alert name, labels and summary, never the whole payload.
 - A cooldown (default one hour) stops a long-firing alert, which Alertmanager repeats, from starting a run each time.
 - The dispatcher is injected: GitHub in production, a log line on the CI cluster, where no token exists.
+- /metrics counts what happened to every retrain request (dispatched, suppressed, failed), so a relay that cannot
+  reach GitHub is itself an alert rather than silence.
 """
 from __future__ import annotations
 
@@ -23,6 +25,8 @@ from collections.abc import Callable
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import PlainTextResponse
+from prometheus_client import CONTENT_TYPE_LATEST, CollectorRegistry, Counter, generate_latest
 
 from .retrain import retrain_reasons
 from .serve.auth import authenticate
@@ -88,10 +92,19 @@ def create_relay(dispatch: Dispatch, api_keys: dict[str, str], cooldown_seconds:
     app = FastAPI(title="smlops alert relay", docs_url=None, redoc_url=None, openapi_url=None)
     state = {"last": None}
     lock = threading.Lock()
+    metrics = CollectorRegistry()
+    outcomes = Counter("smlops_relay_retrain_requests", "Retrain requests from Alertmanager, by outcome", ["outcome"],
+                       registry=metrics)
+    for outcome in ("dispatched", "suppressed", "failed"):
+        outcomes.labels(outcome)                     # exported as 0 from the start, so increase() works at once
 
     @app.get("/healthz")
     def healthz() -> dict:
         return {"status": "ok"}
+
+    @app.get("/metrics")
+    def scrape() -> PlainTextResponse:
+        return PlainTextResponse(generate_latest(metrics).decode(), media_type=CONTENT_TYPE_LATEST)
 
     @app.post("/alerts")
     async def alerts(request: Request) -> dict:
@@ -114,6 +127,7 @@ def create_relay(dispatch: Dispatch, api_keys: dict[str, str], cooldown_seconds:
             now = clock()
             if state["last"] is not None and now - state["last"] < cooldown_seconds:
                 LOG.info(json.dumps({"event": "retrain-suppressed", "reasons": reasons}))
+                outcomes.labels("suppressed").inc()
                 return {"retrain": True, "dispatched": False, "reason": "cooldown"}
             previous, state["last"] = state["last"], now
         try:
@@ -122,8 +136,10 @@ def create_relay(dispatch: Dispatch, api_keys: dict[str, str], cooldown_seconds:
             with lock:
                 state["last"] = previous       # a failed dispatch must not hold back the next alert
             LOG.error(json.dumps({"event": "retrain-dispatch-failed", "error": str(exc)}))
+            outcomes.labels("failed").inc()
             raise HTTPException(status_code=502, detail="the retraining trigger failed; Alertmanager will retry") \
                 from None
+        outcomes.labels("dispatched").inc()
         LOG.info(json.dumps({"event": "retrain-dispatched", "reasons": reasons}))
         return {"retrain": True, "dispatched": True, "reasons": reasons}
 

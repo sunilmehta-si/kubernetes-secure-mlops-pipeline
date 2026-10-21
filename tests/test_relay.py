@@ -91,6 +91,10 @@ class RelayTests(unittest.TestCase):
         client = TestClient(create_relay(flaky, KEYS, clock=self.clock))
         self.assertEqual(client.post("/alerts", json=DRIFT, headers=AUTH).status_code, 502)
         self.assertTrue(client.post("/alerts", json=DRIFT, headers=AUTH).json()["dispatched"])
+        client.post("/alerts", json=DRIFT, headers=AUTH)                     # inside the cooldown
+        text = client.get("/metrics").text                                    # open, like the model's /metrics
+        for outcome in ("dispatched", "suppressed", "failed"):
+            self.assertIn(f'smlops_relay_retrain_requests_total{{outcome="{outcome}"}} 1.0', text)
 
 
 class FakeGitHub(BaseHTTPRequestHandler):
