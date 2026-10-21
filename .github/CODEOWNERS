@@ -11,15 +11,21 @@
 /secure_mlops/registry.py          @sunilmehta-si
 /secure_mlops/safeload.py          @sunilmehta-si
 
-# what runs in production and what may run there: releases, admission policies, endpoint access, alerts
+# what runs in production and what may run there: releases, admission policies, endpoint access, alerts, and
+# what starts retraining or retires a model
 /deploy/gitops/                    @sunilmehta-si
 /deploy/policy/                    @sunilmehta-si
 /deploy/monitoring/alerts.yaml     @sunilmehta-si
 /secure_mlops/gitops.py            @sunilmehta-si
 /secure_mlops/serve/auth.py        @sunilmehta-si
+/secure_mlops/relay.py             @sunilmehta-si
+/deploy/monitoring/alertmanager.yml @sunilmehta-si
+/deploy/monitoring/relay-github-patch.yaml @sunilmehta-si
 
 # the build and its supply chain
 /.github/                          @sunilmehta-si
 /Dockerfile                        @sunilmehta-si
 /pyproject.toml                    @sunilmehta-si
+/requirements-lock.txt             @sunilmehta-si
+/scripts/                          @sunilmehta-si
 /SECURITY.md                       @sunilmehta-si

@@ -23,7 +23,9 @@ class CodeownersTests(unittest.TestCase):
                      "secure_mlops/registry.py", "secure_mlops/safeload.py", ".github/workflows/ci.yml",
                      "Dockerfile", "pyproject.toml", "secure_mlops/data.py",
                      "deploy/gitops/production/inferenceservice.yaml", "deploy/policy/verify-signatures.yaml",
-                     "deploy/monitoring/alerts.yaml", "secure_mlops/gitops.py", "secure_mlops/serve/auth.py"):
+                     "deploy/monitoring/alerts.yaml", "secure_mlops/gitops.py", "secure_mlops/serve/auth.py",
+                     "secure_mlops/relay.py", "deploy/monitoring/alertmanager.yml", "requirements-lock.txt",
+                     "configs/models/ticket-router.yaml", "scripts/install-argocd.sh"):
             with self.subTest(path=path):
                 self.assertTrue(owners(path), f"{path} has no code owner")
 
