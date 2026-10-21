@@ -3,7 +3,7 @@
 # controller, repo server, Redis; no UI and no API server, so nothing to log in to), from the pinned release, checked
 # against its SHA-256 before anything is applied. Releases reach it as OCI artifacts in the cluster registry
 # (scripts/deploy-model.sh pushes them); the committed Application syncs from git the same way in production.
-# Usage: scripts/install-argocd.sh
+# Usage: scripts/install-argocd.sh   (needs docker and kind, as scripts/cluster-up.sh does)
 set -euo pipefail
 cd "$(dirname "$0")/.."
 . deploy/versions.env
@@ -22,6 +22,19 @@ curl -sSfL -o "$manifest" \
   "https://raw.githubusercontent.com/argoproj/argo-cd/${ARGOCD_VERSION}/manifests/core-install.yaml"
 actual="$( (sha256sum "$manifest" 2>/dev/null || shasum -a 256 "$manifest") | cut -d' ' -f1)"
 [ "$actual" = "$expected" ] || { echo "Argo CD ${ARGOCD_VERSION} manifest checksum mismatch: $actual" >&2; exit 1; }
+# The one change made to the verified manifest: use the images loaded below instead of pulling them again.
+sed -i.orig 's/imagePullPolicy: Always/imagePullPolicy: IfNotPresent/' "$manifest" && rm -f "$manifest.orig"
+
+# Pull its images on this machine, with retries, and load them into the node: a pull from a public registry can
+# fail for minutes (one CI run lost Redis to an error from public.ecr.aws), and the node then backs off for longer.
+for image in $(grep -o 'image: [^ ]*' "$manifest" | cut -d' ' -f2 | sort -u); do
+  for attempt in 1 2 3 4; do
+    docker pull -q "$image" >/dev/null && break
+    [ "$attempt" = 4 ] && { echo "could not pull $image" >&2; exit 1; }
+    echo "pull of $image failed, retrying in $((attempt * 15))s" >&2; sleep $((attempt * 15))
+  done
+  kind load docker-image "$image" --name smlops >/dev/null
+done
 
 kubectl create namespace argocd --dry-run=client -o yaml | kubectl apply -f -
 kubectl -n argocd apply --server-side --force-conflicts -f "$manifest"
