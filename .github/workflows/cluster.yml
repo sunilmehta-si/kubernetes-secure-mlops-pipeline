@@ -53,7 +53,16 @@ jobs:
         run: scripts/install-platform.sh "$WORK/keys"
       - name: Install monitoring
         run: scripts/install-monitoring.sh "$WORK"
-      - name: Deploy and call the model
+      - name: Install Argo CD and oras
+        run: |
+          . deploy/versions.env
+          name="oras_${ORAS_VERSION#v}_linux_amd64.tar.gz"
+          curl -sSfL -o "$RUNNER_TEMP/$name" "https://github.com/oras-project/oras/releases/download/${ORAS_VERSION}/$name"
+          echo "f27adb935022d94df8dc77719c322dda592c78a0d57a6f7dcdd8d900b248c454  $RUNNER_TEMP/$name" | sha256sum -c -
+          mkdir -p "$RUNNER_TEMP/bin" && tar -xzf "$RUNNER_TEMP/$name" -C "$RUNNER_TEMP/bin" oras
+          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+          scripts/install-argocd.sh
+      - name: Deploy through Argo CD and call the model
         run: scripts/deploy-model.sh "$WORK"
       - name: Drill the controls
         run: |
@@ -82,4 +91,7 @@ jobs:
           kubectl -n monitoring logs deployment/prometheus --tail=60 || true
           kubectl -n monitoring logs deployment/alertmanager --tail=40 || true
           kubectl -n monitoring logs deployment/alert-relay --tail=40 || true
+          kubectl -n argocd get application ticket-router -o yaml || true
+          kubectl -n argocd logs statefulset/argocd-application-controller --tail=60 || true
+          kubectl -n argocd logs deployment/argocd-repo-server --tail=40 || true
           kubectl get events -A --sort-by=.lastTimestamp | tail -60 || true

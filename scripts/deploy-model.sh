@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
 # Deploy the published model and call it the way a client would.
-#   1. render the release with `smlops render-release`, exactly as a GitOps promotion commits it, and apply it
-#      (admission checks run here)
+#   1. render the release with `smlops render-release`, exactly as a GitOps promotion commits it, push it to the
+#      cluster registry as an OCI artifact, and let Argo CD sync it under the committed project's rules (admission
+#      checks run when Argo CD applies it). Nothing here applies the release itself.
 #   2. wait until KServe reports the model ready (the server only becomes ready after its signature verifies)
 #   3. from the "support" namespace, which the network policy allows, send two tickets and print the answer
-# Usage: scripts/deploy-model.sh WORK    (reads WORK/images.env from scripts/publish-model.sh)
+# Usage: scripts/deploy-model.sh WORK    (reads WORK/images.env from scripts/publish-model.sh; needs oras and Argo CD,
+#        scripts/install-argocd.sh)
 set -euo pipefail
 cd "$(dirname "$0")/.."
 . deploy/versions.env
@@ -26,7 +28,24 @@ hashes="$work/api-keys.txt"
 kubectl -n serving create secret generic smlops-api-keys --from-file "api-keys.txt=${hashes}" \
   --dry-run=client -o yaml | kubectl apply -f -
 smlops render-release --model-image "$MODEL_IMAGE" --server-image "$SERVER_IMAGE" -o "$work/release"
-kubectl apply -k "$work/release"
+tag="release-${GITHUB_RUN_ID:-$(date +%s)}"
+(cd "$work/release" && oras push --plain-http "${REGISTRY}/smlops/release:${tag}" . >/dev/null)
+smlops argocd-ci --source "oci://${REGISTRY}/smlops/release" --revision "$tag" -o "$work/argocd.yaml"
+kubectl apply -f "$work/argocd.yaml"
+for i in $(seq 1 60); do
+  state="$(kubectl -n argocd get application ticket-router \
+           -o jsonpath='{.status.sync.status}/{.status.sync.revision}/{.status.operationState.phase}' 2>/dev/null || true)"
+  case "$state" in
+    Synced/*/Succeeded) break ;;
+    */Failed|*/Error)
+      echo "Argo CD could not sync the release:" >&2
+      kubectl -n argocd get application ticket-router -o jsonpath='{.status.operationState.message}' >&2; exit 1 ;;
+  esac
+  [ "$i" = 60 ] && { echo "Argo CD did not sync the release in 5 minutes (state: $state)" >&2
+                     kubectl -n argocd get application ticket-router -o yaml >&2; exit 1; }
+  sleep 5
+done
+echo "Argo CD synced release ${tag} into serving"
 kubectl -n serving wait --for=condition=Ready inferenceservice/ticket-router --timeout=600s
 
 kubectl create namespace support --dry-run=client -o yaml | kubectl apply -f -
