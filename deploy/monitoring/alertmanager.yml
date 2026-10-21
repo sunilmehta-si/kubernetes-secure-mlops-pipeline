@@ -1,0 +1,40 @@
+# Alertmanager routing for the ticket router. Alerts labelled action=retrain (the two critical drift alerts in
+# alerts.yaml) go to the alert relay, which starts the retraining workflow (`smlops alert-relay`). Everything else
+# goes to "on-call", which has no integration here: a real deployment adds its pager or chat receiver to it.
+# The relay token is a file mounted from a Secret, never part of this config.
+# Check: amtool check-config deploy/monitoring/alertmanager.yml (CI runs it, with routing tests).
+route:
+  receiver: on-call
+  group_by: [alertname]
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+  routes:
+    - receiver: retrain-relay
+      matchers: ['action="retrain"']
+      group_wait: 10s
+      repeat_interval: 1h           # the relay's own cooldown is one hour too; repeats inside it are dropped there
+      continue: true                # and on to the next route: people still hear about a drift that starts retraining
+    - receiver: on-call             # every alert, including the drift alerts above
+
+receivers:
+  - name: on-call
+  - name: retrain-relay
+    webhook_configs:
+      - url: http://alert-relay.monitoring.svc:9095/alerts
+        send_resolved: false
+        max_alerts: 20
+        http_config:
+          authorization:
+            type: Bearer
+            credentials_file: /etc/alertmanager/relay/token
+
+inhibit_rules:
+  # a large shift already says what the moderate one would
+  - source_matchers: ['alertname="TicketRouterTeamMixDrifted"']
+    target_matchers: ['alertname="TicketRouterTeamMixShifting"']
+  - source_matchers: ['alertname="TicketRouterNewVocabulary"']
+    target_matchers: ['alertname="TicketRouterNewVocabularyRising"']
+  # nothing else matters while no model is serving
+  - source_matchers: ['alertname="TicketRouterDown"']
+    target_matchers: ['alertname=~"TicketRouter.+"', 'alertname!="TicketRouterDown"']
