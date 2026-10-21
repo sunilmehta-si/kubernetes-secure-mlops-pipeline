@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1280" height="612" viewBox="0 0 1280 612" role="img" aria-labelledby="title desc" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">
 <title id="title">kubernetes-secure-mlops-pipeline: ML system from ingestion to monitoring</title>
-<desc id="desc">Six stages from left to right: ingest, prepare, train, evaluate, deploy, monitor. Each lists what this repository uses, marked built or planned, and other tools commonly used for that stage. Built: synthetic ticket ingestion with versioned datasets; a pandera data contract, stratified splits and TF-IDF features; logistic regression trained in Kubeflow Pipelines and tracked in MLflow; metrics, an evaluation gate against the champion and a model card; the MLflow model registry; signed OCI models served by KServe; live drift with Prometheus alerts and a Grafana dashboard; and retraining when drift is detected, judged by the same gate. Planned: canary deployment with Argo CD. GitHub Actions runs CI on every change.</desc>
+<desc id="desc">Six stages from left to right: ingest, prepare, train, evaluate, deploy, monitor. Each lists what this repository uses, marked built or planned, and other tools commonly used for that stage. Built: synthetic ticket ingestion with versioned datasets; a pandera data contract, stratified splits and TF-IDF features; logistic regression trained in Kubeflow Pipelines and tracked in MLflow; metrics, an evaluation gate against the champion and a model card; the MLflow model registry; signed OCI models served by KServe; live drift with Prometheus alerts and a Grafana dashboard; GitOps delivery with Argo CD; and retraining when drift is detected, judged by the same gate. GitHub Actions runs CI on every change.</desc>
 <defs><marker id="arrow" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#8a887f"/></marker></defs>
 <rect x="1" y="1" width="1278" height="610" rx="18" fill="#fbfbfa" stroke="#e4e2dc"/>
 <text x="33" y="42" font-size="22" font-weight="700" fill="#0b0b0b" text-anchor="start">kubernetes-secure-mlops-pipeline</text>
@@ -99,8 +99,8 @@
 <text x="663.8" y="408" font-size="9.5" font-weight="700" fill="#8a887f" text-anchor="start" letter-spacing="0.8">ALSO COMMON</text>
 <text x="663.8" y="426" font-size="11.5" font-weight="500" fill="#8a887f" text-anchor="start" font-style="italic">MSE · RMSE</text>
 <text x="663.8" y="441" font-size="11.5" font-weight="500" fill="#8a887f" text-anchor="start" font-style="italic">for regression models</text>
-<rect x="855.4" y="100" width="182" height="364" rx="14" fill="#f6f6f3" stroke="#dcdad3"/>
-<circle cx="878.4" cy="125" r="12" fill="#77756d"/>
+<rect x="855.4" y="100" width="182" height="364" rx="14" fill="#f0f8f2" stroke="#b9dcc4"/>
+<circle cx="878.4" cy="125" r="12" fill="#1a7f37"/>
 <text x="878.4" y="129.5" font-size="12.5" font-weight="700" fill="#fbfbfa" text-anchor="middle">5</text>
 <text x="898.4" y="130.5" font-size="16" font-weight="700" fill="#0b0b0b" text-anchor="start">Deploy</text>
 <text x="869.4" y="156" font-size="11.5" font-weight="400" fill="#57564f" text-anchor="start">Serve it on</text>
@@ -114,10 +114,11 @@
 <rect x="867.4" y="269" width="4" height="30" rx="2" fill="#1a7f37"/>
 <text x="881.4" y="280" font-size="12.5" font-weight="600" fill="#0b0b0b" text-anchor="start">KServe endpoint</text>
 <text x="881.4" y="296" font-size="10.5" font-weight="400" fill="#57564f" text-anchor="start">by digest, restricted pods</text>
-<rect x="867.4" y="316" width="158" height="48" rx="8" fill="#fbfbfa" stroke="#c4c2bb" stroke-dasharray="5 4"/>
-<text x="879.4" y="336" font-size="12.5" font-weight="600" fill="#57564f" text-anchor="start">GitOps + canary</text>
-<text x="879.4" y="352" font-size="10.5" font-weight="400" fill="#8a887f" text-anchor="start">releases rendered; Argo CD next</text>
-<line x1="869.4" y1="392" x2="1023.4" y2="392" stroke="#dcdad3"/>
+<rect x="867.4" y="316" width="158" height="48" rx="8" fill="#ffffff" stroke="#c8e4d1"/>
+<rect x="867.4" y="325" width="4" height="30" rx="2" fill="#1a7f37"/>
+<text x="881.4" y="336" font-size="12.5" font-weight="600" fill="#0b0b0b" text-anchor="start">GitOps delivery</text>
+<text x="881.4" y="352" font-size="10.5" font-weight="400" fill="#57564f" text-anchor="start">Argo CD, synced by digest</text>
+<line x1="869.4" y1="392" x2="1023.4" y2="392" stroke="#b9dcc4"/>
 <text x="869.4" y="408" font-size="9.5" font-weight="700" fill="#8a887f" text-anchor="start" letter-spacing="0.8">ALSO COMMON</text>
 <text x="869.4" y="426" font-size="11.5" font-weight="500" fill="#8a887f" text-anchor="start" font-style="italic">Seldon · BentoML</text>
 <text x="869.4" y="441" font-size="11.5" font-weight="500" fill="#8a887f" text-anchor="start" font-style="italic">SageMaker</text>

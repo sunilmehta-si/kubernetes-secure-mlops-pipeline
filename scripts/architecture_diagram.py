@@ -61,7 +61,7 @@ STAGES = [
     ("Deploy", ("Serve it on", "Kubernetes, safely"), [
         ("Signed OCI model", "verified at admission", "built"),
         ("KServe endpoint", "by digest, restricted pods", "built"),
-        ("GitOps + canary", "releases rendered; Argo CD next", "planned"),
+        ("GitOps delivery", "Argo CD, synced by digest", "built"),
     ], ("Seldon · BentoML", "SageMaker")),
     ("Monitor", ("Watch data and", "predictions in production"), [
         ("Metrics + audit log", "/metrics, no ticket text", "built"),
@@ -138,8 +138,8 @@ def architecture(theme: str) -> str:
                   "splits and TF-IDF features; logistic regression trained in Kubeflow Pipelines and tracked in "
                   "MLflow; metrics, an evaluation gate against the champion and a model card; the MLflow model "
                   "registry; signed OCI models served by KServe; live drift with Prometheus alerts and a Grafana "
-                  "dashboard; and retraining when drift is detected, judged by the same gate. Planned: canary "
-                  "deployment with Argo CD. "
+                  "dashboard; GitOps delivery with Argo CD; and retraining when drift is detected, judged by the "
+                  "same gate. "
                   "GitHub Actions runs CI on every change.", c)
     parts += [_t(33, 42, "kubernetes-secure-mlops-pipeline", 22, c["text"], 700),
               _t(33, 64, "An ML system end to end: from collecting data to watching the model in production. "
