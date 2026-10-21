@@ -149,7 +149,12 @@ sequenceDiagram
     P->>R: previous = v1, champion = v3
     Note over P,R: production shows what the gate could not
     P->>R: rollback: champion = v1, previous removed
+    Note over P,R: the model's use ends
+    P->>R: retire: all aliases removed, why and by whom recorded
 ```
+
+`smlops rollback` and `smlops retire` are the commands; a retired model is also marked in its risk entry, after
+which nothing trains or promotes it ([docs/monitoring.md](monitoring.md#rollback-and-retirement)).
 
 ## 6. What every model carries
 
@@ -163,16 +168,28 @@ From one registered version you can trace back to exactly what produced it:
 | Metrics | run metrics, `evaluation.json` | overall, per team, per slice, calibration and latency |
 | Gate decision | `gate.json`, `gate.md`, version tag `gate` | every check, its value and its limit |
 | Model card | `model_card.md` | intended use, provenance, results and limits, written from the records above |
-| Signature and provenance | **planned**: OCI ModelKit, OpenSSF model signature, ML-BOM | that the model deployed is the model that passed the gate |
+| Signature | `model.sig.json` on the run (OpenSSF model signing), version tag `signature` | every file is the one that passed the gate; checked before any load |
+| ML-BOM | `mlbom.cdx.json` on the run (CycloneDX 1.6) | file hashes, datasets by fingerprint, every installed package |
+| Training profile | `smlops_reference` in the signed MLmodel metadata | the team mix and new-word baseline live drift is judged against |
+| Release | the signed OCI model image and server image, by digest, in a rendered release | that what runs is what was signed |
 
 ## 7. CI on every change
 
 ```mermaid
 flowchart LR
     PR(["Push or pull request"]) --> T["Unit and end-to-end tests<br/>Python 3.12 and 3.13<br/>incl. two full KFP local runs"]
+    T --> L["Nothing installed<br/>outside the lock"]
     PR --> I["Build pipeline image<br/>base pinned by digest"]
     I --> U["Run the CLI inside it<br/>as non-root user 10001"]
     U --> V["Trivy: fail on fixable<br/>HIGH or CRITICAL CVEs"]
+    PR --> D["Governance drills<br/>signing, tampering, drift"]
+    PR --> P["Kyverno CLI<br/>policy tests"]
+    PR --> A["promtool and amtool<br/>alert and routing tests"]
     PR --> C["agentic-code-review-tool<br/>review of changed lines (PRs)"]
+    M(["Push to main"]) --> K["kind cluster: deploy through Argo CD,<br/>14 admission, network, monitoring<br/>and GitOps checks"]
+    S(["Monday, by hand,<br/>or a drift alert"]) --> R["Retrain on existing + recent tickets;<br/>the gate decides"]
     DB(["Dependabot weekly:<br/>pip, actions, base image"]) --> PR
 ```
+
+Every step runs with `pipefail` (a test enforces it), actions are pinned by commit SHA, workflows start with a
+read-only token, and no script interpolates event data, so an alert payload cannot run commands.
