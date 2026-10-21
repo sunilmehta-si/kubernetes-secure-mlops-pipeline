@@ -22,7 +22,8 @@ class DashboardTests(unittest.TestCase):
                          "ticket-router.json is stale: run python scripts/grafana_dashboard.py")
 
     def test_every_metric_a_panel_reads_is_exported_by_the_server(self):
-        exported = set(re.findall(r'"(smlops_[a-z_]+)"', (ROOT / "secure_mlops/serve/app.py").read_text()))
+        source = "".join((ROOT / p).read_text() for p in ("secure_mlops/serve/app.py", "secure_mlops/relay.py"))
+        exported = set(re.findall(r'"(smlops_[a-z_]+)"', source))
         board = json.loads(COMMITTED.read_text())
         for panel in board["panels"]:
             for target in panel.get("targets", []):

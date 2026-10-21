@@ -430,17 +430,60 @@
       "id": 10
     },
     {
+      "type": "timeseries",
+      "title": "Retraining requests from alerts",
+      "description": "What the alert relay did with drift alerts in the past hour: dispatched starts a retraining run, suppressed falls inside its cooldown, failed means retraining did not start and TicketRouterRetrainTriggerFailing fires.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 29,
+        "w": 24,
+        "h": 6
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (outcome) (increase(smlops_relay_retrain_requests_total[1h]))",
+          "legendFormat": "{{outcome}}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#1a7f37",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {},
+      "id": 11
+    },
+    {
       "type": "row",
       "title": "Is anyone abusing the endpoint",
       "collapsed": false,
       "gridPos": {
         "x": 0,
-        "y": 29,
+        "y": 35,
         "w": 24,
         "h": 1
       },
       "panels": [],
-      "id": 11
+      "id": 12
     },
     {
       "type": "timeseries",
@@ -452,7 +495,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 30,
+        "y": 36,
         "w": 24,
         "h": 7
       },
@@ -492,7 +535,7 @@
         "overrides": []
       },
       "options": {},
-      "id": 12
+      "id": 13
     }
   ]
 }

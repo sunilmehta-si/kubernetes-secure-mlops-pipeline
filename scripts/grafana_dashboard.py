@@ -80,11 +80,17 @@ def dashboard() -> dict:
         _panel("stat", "Tickets in the drift window", [("min(smlops_live_window_tickets)", "")], (18, 21, 6, 8),
                thresholds=_steps(), description=f"Drift is judged only once the window holds {p.min_batch} tickets.",
                reduceOptions={"calcs": ["lastNotNull"]}),
-        _row("Is anyone abusing the endpoint", 29),
+        _panel("timeseries", "Retraining requests from alerts", [
+            ('sum by (outcome) (increase(smlops_relay_retrain_requests_total[1h]))', "{{outcome}}")],
+               (0, 29, 24, 6), unit="short",
+               description="What the alert relay did with drift alerts in the past hour: dispatched starts a "
+                           "retraining run, suppressed falls inside its cooldown, failed means retraining did not "
+                           "start and TicketRouterRetrainTriggerFailing fires."),
+        _row("Is anyone abusing the endpoint", 35),
         _panel("timeseries", "Rejected keys and exhausted budgets", [
             ('sum(rate(smlops_predict_requests_total{status="401"}[5m])) * 60', "no valid key"),
             ('sum(rate(smlops_predict_requests_total{status=~"413|429"}[5m])) * 60', "over budget")],
-               (0, 30, 24, 7), unit="short", description="Requests a minute. The audit log names the client of "
+               (0, 36, 24, 7), unit="short", description="Requests a minute. The audit log names the client of "
                                                          "every request that presented a valid key."),
     ]
     for i, panel in enumerate(panels, 1):
