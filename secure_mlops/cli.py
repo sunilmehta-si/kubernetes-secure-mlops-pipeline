@@ -100,6 +100,11 @@ def _parser() -> argparse.ArgumentParser:
     rr.add_argument("--server-image", required=True, help="Server image, registry/repository@sha256:...")
     rr.add_argument("--output", "-o", default="deploy/gitops/production",
                     help="Directory Argo CD syncs (default: deploy/gitops/production).")
+    ac = sub.add_parser("argocd-ci", help="Write the Argo CD project and application for the CI cluster: the committed "
+                                          "ones, syncing a release pushed as an OCI artifact.")
+    ac.add_argument("--source", required=True, help="oci://<cluster registry>/<repository> holding the release.")
+    ac.add_argument("--revision", required=True, help="The release's tag.")
+    ac.add_argument("--output", "-o", required=True, help="YAML file to write.")
     rc = sub.add_parser("retrain-check", help="Decide from an Alertmanager webhook payload whether to retrain; prints "
                                               "retrain=true|false for a CI step output.")
     rc.add_argument("payload", help="JSON file with the webhook payload ('-' for stdin).")
@@ -464,6 +469,21 @@ def _cmd_render_release(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_argocd_ci(args: argparse.Namespace) -> int:
+    import yaml
+
+    from .gitops import ReleaseError, ci_argocd
+    try:
+        docs = ci_argocd(args.source, args.revision)
+        Path(args.output).write_text(yaml.safe_dump_all(docs, sort_keys=False))
+    except (ReleaseError, OSError) as exc:
+        print(f"smlops: {exc}", file=sys.stderr)
+        return 2
+    print(f"smlops: wrote the Argo CD project and application for {args.source}:{args.revision} to {args.output}",
+          file=sys.stderr)
+    return 0
+
+
 def _cmd_retrain_check(args: argparse.Namespace) -> int:
     from .retrain import retrain_reasons
     try:
@@ -495,6 +515,8 @@ def main(argv: list[str] | None = None) -> int:
         return _cmd_promotion_request(args)
     if args.command == "render-release":
         return _cmd_render_release(args)
+    if args.command == "argocd-ci":
+        return _cmd_argocd_ci(args)
     if args.command == "retrain-check":
         return _cmd_retrain_check(args)
     if args.command == "keys":

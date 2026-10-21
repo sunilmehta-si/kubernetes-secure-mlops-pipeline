@@ -293,3 +293,20 @@ class RollbackAndRetireCliTests(unittest.TestCase):
                 self.assertIn("is retired; nothing is promoted", err.getvalue())
             finally:
                 mlflow.set_tracking_uri("")
+
+
+class ArgoCdCiCliTests(unittest.TestCase):
+    def test_writes_both_manifests_or_refuses_a_foreign_source(self):
+        import tempfile
+        from contextlib import redirect_stderr
+        from pathlib import Path
+
+        import yaml
+        with tempfile.TemporaryDirectory() as d, redirect_stderr(io.StringIO()):
+            out = Path(d, "argocd.yaml")
+            self.assertEqual(main(["argocd-ci", "--source", "oci://kind-registry:5000/smlops/release",
+                                   "--revision", "run-7", "-o", str(out)]), 0)
+            kinds = [doc["kind"] for doc in yaml.safe_load_all(out.read_text())]
+            self.assertEqual(kinds, ["AppProject", "Application"])
+            self.assertEqual(main(["argocd-ci", "--source", "oci://ghcr.io/x/y", "--revision", "v1",
+                                   "-o", str(Path(d, "x.yaml"))]), 2)
