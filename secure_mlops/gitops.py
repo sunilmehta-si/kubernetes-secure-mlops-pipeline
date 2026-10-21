@@ -5,11 +5,19 @@ with the model and server images filled in by digest. Reviewers see the exact di
 only merged commits, and Kyverno still verifies signatures at admission, so even a merged change cannot run an
 unsigned image. Only images from the cluster's registry (deploy/versions.env), pinned by digest, are accepted here,
 which is the same rule the require-registry-and-digest policy enforces.
+
+On the CI cluster there is no pull request to merge, so the release travels as an OCI artifact in the cluster
+registry instead of a git commit. ci_argocd() derives that Application and its project from the committed ones,
+changing only where the source comes from: the destination, the allowed kinds and the sync policy CI exercises are
+exactly the ones production uses.
 """
 from __future__ import annotations
 
+import copy
 import re
 from pathlib import Path
+
+import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
 TEMPLATES = ROOT / "deploy" / "serving"
@@ -18,6 +26,11 @@ FILLED = {"servingruntime.yaml": "SERVER_IMAGE", "inferenceservice.yaml": "MODEL
 COPIED = ("networkpolicy.yaml", "serviceaccount.yaml")    # not namespace.yaml: the platform owns the namespace
 DIGEST = re.compile(r"^(?P<registry>[a-z0-9.-]+(:[0-9]+)?)(/[a-z0-9._-]+)+@sha256:[0-9a-f]{64}$")
 PLACEHOLDER = re.compile(r"\$\{[A-Z_]+\}")
+
+
+ARGOCD = ROOT / "deploy" / "gitops" / "argocd" / "ticket-router.yaml"
+OCI_SOURCE = re.compile(r"^oci://(?P<registry>[a-z0-9.-]+(:[0-9]+)?)(/[a-z0-9._-]+)+$")
+TAG = re.compile(r"^[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}$")
 
 
 class ReleaseError(ValueError):
@@ -67,3 +80,17 @@ def render(model_image: str, server_image: str, out_dir: str | Path) -> list[Pat
                      "resources:\n" + "".join(f"  - {p.name}\n" for p in written))
     (out / "kustomization.yaml").write_text(kustomization)
     return [*written, out / "kustomization.yaml"]
+
+
+def ci_argocd(source: str, revision: str) -> list[dict]:
+    """The committed AppProject and Application, with the release read from an OCI artifact in the cluster registry
+    (oci://registry/repository at tag `revision`) instead of git."""
+    match = OCI_SOURCE.fullmatch(source)
+    if not match or match["registry"] != cluster_registry():
+        raise ReleaseError(f"the CI source must be oci://{cluster_registry()}/..., got {source!r}")
+    if not TAG.fullmatch(revision):
+        raise ReleaseError(f"not an OCI tag: {revision!r}")
+    project, app = (copy.deepcopy(d) for d in yaml.safe_load_all(ARGOCD.read_text()) if d)
+    project["spec"]["sourceRepos"] = [source]
+    app["spec"]["source"] = {"repoURL": source, "targetRevision": revision, "path": "."}
+    return [project, app]

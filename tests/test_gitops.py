@@ -4,7 +4,7 @@ from pathlib import Path
 
 import yaml
 
-from secure_mlops.gitops import ReleaseError, render
+from secure_mlops.gitops import ReleaseError, ci_argocd, render
 
 MODEL = "kind-registry:5000/smlops/ticket-router-model@sha256:" + "a" * 64
 SERVER = "kind-registry:5000/smlops/server@sha256:" + "b" * 64
@@ -84,6 +84,26 @@ class ArgoCdTests(unittest.TestCase):
         from secure_mlops.cli import _parser
         args = _parser().parse_args(["render-release", "--model-image", MODEL, "--server-image", SERVER])
         self.assertEqual(args.output, self.manifests()[1]["spec"]["source"]["path"])
+
+
+class CiArgoCdTests(unittest.TestCase):
+    SOURCE = "oci://kind-registry:5000/smlops/release"
+
+    def test_only_the_source_changes_from_the_committed_manifests(self):
+        committed = ArgoCdTests().manifests()
+        project, app = ci_argocd(self.SOURCE, "run-42")
+        self.assertEqual(project["spec"]["sourceRepos"], [self.SOURCE])
+        self.assertEqual(app["spec"]["source"], {"repoURL": self.SOURCE, "targetRevision": "run-42", "path": "."})
+        for theirs, ours in zip(committed, (project, app)):
+            for key in set(theirs["spec"]) - {"sourceRepos", "source"}:
+                self.assertEqual(ours["spec"][key], theirs["spec"][key], key)
+        self.assertEqual(committed[0]["spec"]["sourceRepos"][0][:8], "https://")   # the committed file is untouched
+
+    def test_only_the_cluster_registry_and_plain_tags(self):
+        for source, revision in (("oci://ghcr.io/someone/release", "v1"), ("https://kind-registry:5000/x", "v1"),
+                                 (self.SOURCE, "v1; rm -rf /"), (self.SOURCE + "\n", "v1")):
+            with self.subTest(source=source, revision=revision), self.assertRaises(ReleaseError):
+                ci_argocd(source, revision)
 
 
 if __name__ == "__main__":
