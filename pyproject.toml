@@ -19,6 +19,9 @@ dependencies = [
     "kfp==2.17.0",
     "skops==0.16.0",
     "model-signing==1.1.1",
+    # model-signing 1.1.1 imports OpenSSL without declaring it; sigstore declared it until 4.5.1 (2026-10-20),
+    # so fresh installs broke overnight. Pinned here until model-signing declares it.
+    "pyopenssl==26.4.0",
     "cyclonedx-python-lib[json-validation]==11.12.0",
     "fastapi==0.143.3",
     "uvicorn==0.54.0",
