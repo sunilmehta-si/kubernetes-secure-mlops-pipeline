@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Check, on the running cluster, that Prometheus sees what CI promised: the served model by its signed digest, the
-# alert rules loaded, live drift being measured, and the earlier keyless drill counted as a 401.
+# alert rules loaded, live drift being measured, and the earlier keyless drill counted as a 401. Then drill the path
+# from alert to retraining: a drift alert put into Alertmanager must reach the relay, which logs the dispatch.
 # Usage: scripts/check-monitoring.sh WORK   (WORK holds smoke.json from scripts/deploy-model.sh)
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -46,6 +47,25 @@ for i in $(seq 1 12); do
   sleep 5
 done
 echo "PASS: the keyless drill request is visible to monitoring as a 401"
+
+active="$(api "alertmanagers" | jq '.data.activeAlertmanagers | length')"
+[ "$active" = 1 ] || { echo "FAIL: Prometheus sends alerts to $active Alertmanagers, expected 1" >&2; exit 1; }
+echo "PASS: Prometheus sends its alerts to Alertmanager"
+
+# Drill: a drift alert as Prometheus would send it, put straight into Alertmanager, must start (a dry run of)
+# retraining. amtool ships in the Alertmanager image; the alert expires on its own after five minutes.
+kubectl -n monitoring exec deploy/alertmanager -c alertmanager -- amtool alert add TicketRouterTeamMixDrifted \
+  action=retrain severity=critical gate=G7 drill=true --annotation='summary=drill: drift alert from CI' \
+  --end="$(date -u -d '+5 min' +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date -u -v+5M +%Y-%m-%dT%H:%M:%SZ)" \
+  --alertmanager.url=http://127.0.0.1:9093 >/dev/null
+for i in $(seq 1 12); do        # group_wait is 10s for retrain alerts
+  if kubectl -n monitoring logs deploy/alert-relay --tail=50 | grep '"dry-run-dispatch"' \
+       | grep -q '"alertname": "TicketRouterTeamMixDrifted"'; then break; fi
+  [ "$i" = 12 ] && { echo "FAIL: the drift alert never reached the relay" >&2
+                     kubectl -n monitoring logs deploy/alert-relay --tail=20 >&2; exit 1; }
+  sleep 5
+done
+echo "PASS: a drift alert reached the relay, which would start retraining (dry run, no GitHub token here)"
 
 firing="$(api "alerts" | jq -r '[.data.alerts[] | select(.state == "firing") | .labels.alertname] | join(", ")')"
 echo "Prometheus ${PROMETHEUS_VERSION}; alerts firing: ${firing:-none}"

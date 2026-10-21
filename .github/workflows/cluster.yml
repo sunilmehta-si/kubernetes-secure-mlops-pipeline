@@ -80,4 +80,6 @@ jobs:
           kubectl -n serving get deployment,replicaset,pods -o wide || true
           kubectl -n serving get events --sort-by=.lastTimestamp || true
           kubectl -n monitoring logs deployment/prometheus --tail=60 || true
+          kubectl -n monitoring logs deployment/alertmanager --tail=40 || true
+          kubectl -n monitoring logs deployment/alert-relay --tail=40 || true
           kubectl get events -A --sort-by=.lastTimestamp | tail -60 || true
