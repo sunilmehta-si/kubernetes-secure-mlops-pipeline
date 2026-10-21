@@ -12,6 +12,7 @@ from secure_mlops.relay import EVENT_TYPE, DispatchError, create_relay, forwarde
 
 TOKEN = "relay-test-token"
 AUTH = {"Authorization": f"Bearer {TOKEN}"}
+KEYS = {hashlib.sha256(TOKEN.encode()).hexdigest(): "alertmanager"}
 
 
 def alert(name, status="firing", **labels):
@@ -36,7 +37,7 @@ class RelayTests(unittest.TestCase):
     def setUp(self):
         self.sent, self.clock = [], Clock()
         app = create_relay(lambda event, payload: self.sent.append((event, payload)),
-                           hashlib.sha256(TOKEN.encode()).hexdigest(), cooldown_seconds=3600, clock=self.clock)
+                           KEYS, cooldown_seconds=3600, clock=self.clock)
         self.client = TestClient(app)
 
     def test_a_firing_retrain_alert_dispatches_only_what_the_workflow_needs(self):
@@ -87,7 +88,7 @@ class RelayTests(unittest.TestCase):
             calls.append(event)
             if len(calls) == 1:
                 raise DispatchError("GitHub could not be reached")
-        client = TestClient(create_relay(flaky, hashlib.sha256(TOKEN.encode()).hexdigest(), clock=self.clock))
+        client = TestClient(create_relay(flaky, KEYS, clock=self.clock))
         self.assertEqual(client.post("/alerts", json=DRIFT, headers=AUTH).status_code, 502)
         self.assertTrue(client.post("/alerts", json=DRIFT, headers=AUTH).json()["dispatched"])
 

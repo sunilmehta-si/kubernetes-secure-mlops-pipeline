@@ -64,6 +64,17 @@ def _parser() -> argparse.ArgumentParser:
     sv.add_argument("--burst", type=float, default=120.0, help="Tickets a client may send at once (default: 120).")
     sv.add_argument("--host", default="0.0.0.0", help="Address to listen on (default: 0.0.0.0).")
     sv.add_argument("--port", type=int, default=8080, help="Port (default: 8080, KServe's default).")
+    ar = sub.add_parser("alert-relay", help="Receive Alertmanager webhooks and start retraining on firing retrain "
+                                            "alerts (a GitHub repository dispatch).")
+    ar.add_argument("--api-keys", required=True, help="File of client-id:sha256 lines (smlops api-keys add); "
+                                                      "Alertmanager presents one of the keys.")
+    ar.add_argument("--repo", help="GitHub repository to dispatch to, owner/name.")
+    ar.add_argument("--github-token-file", help="File holding a token allowed to dispatch to --repo.")
+    ar.add_argument("--dry-run", action="store_true", help="Log the dispatch instead of sending it (no token needed).")
+    ar.add_argument("--cooldown", type=float, default=3600.0,
+                    help="Seconds between two dispatches (default: 3600).")
+    ar.add_argument("--host", default="0.0.0.0", help="Address to listen on (default: 0.0.0.0).")
+    ar.add_argument("--port", type=int, default=9095, help="Port (default: 9095).")
     pk = sub.add_parser("package", help="Export the verified champion as a model bundle and modelcar Dockerfile.")
     pk.add_argument("--model-name", default="ticket-router", help="Registered model name (default: ticket-router).")
     pk.add_argument("--alias", default="champion", help="Alias to package (default: champion).")
@@ -311,6 +322,37 @@ def _cmd_serve(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_alert_relay(args: argparse.Namespace) -> int:
+    import logging
+
+    from .relay import create_relay, github_dispatcher, log_dispatcher
+    from .serve.auth import KeyFileError, load as load_keys
+    if args.dry_run == bool(args.repo or args.github_token_file):
+        print("smlops: give either --dry-run, or both --repo and --github-token-file", file=sys.stderr)
+        return 2
+    if not args.dry_run and not (args.repo and args.github_token_file):
+        print("smlops: --repo and --github-token-file go together", file=sys.stderr)
+        return 2
+    if args.cooldown < 0:
+        print("smlops: --cooldown cannot be negative", file=sys.stderr)
+        return 2
+    try:
+        api_keys = load_keys(args.api_keys)            # refuses a file without keys
+        dispatch = log_dispatcher if args.dry_run else github_dispatcher(args.repo, args.github_token_file)
+        if not args.dry_run and not Path(args.github_token_file).read_text().strip():
+            raise KeyFileError(f"{args.github_token_file} is empty")
+    except (KeyFileError, OSError, ValueError) as exc:
+        print(f"smlops: {exc}", file=sys.stderr)
+        return 2
+    import uvicorn
+    logging.basicConfig(level=logging.INFO, format="%(message)s")
+    target = "log only (dry run)" if args.dry_run else f"repository dispatch to {args.repo}"
+    print(f"smlops: alert relay on {args.host}:{args.port}, {target}", file=sys.stderr)
+    uvicorn.run(create_relay(dispatch, api_keys, args.cooldown), host=args.host, port=args.port,
+                log_level="warning", server_header=False)
+    return 0
+
+
 def _cmd_package(args: argparse.Namespace) -> int:
     import mlflow
 
@@ -424,5 +466,7 @@ def main(argv: list[str] | None = None) -> int:
         return _cmd_serve(args)
     if args.command == "package":
         return _cmd_package(args)
+    if args.command == "alert-relay":
+        return _cmd_alert_relay(args)
     _parser().print_help()
     return 0

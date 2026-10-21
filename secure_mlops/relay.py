@@ -4,15 +4,14 @@ Alertmanager posts its webhook here; the relay keeps only firing alerts labelled
 `smlops retrain-check`) and asks GitHub to start the retrain workflow with a repository dispatch of type
 drift-alert. Everything else is acknowledged and dropped.
 
-- Alertmanager must present a bearer token; only its SHA-256 hash is stored, compared in constant time.
+- Alertmanager must present a bearer token from the same kind of key file the model server uses
+  (`smlops api-keys add`): only hashes are stored, compared in constant time.
 - Only what the workflow needs is forwarded: alert name, labels and summary, never the whole payload.
 - A cooldown (default one hour) stops a long-firing alert, which Alertmanager repeats, from starting a run each time.
 - The dispatcher is injected: GitHub in production, a log line on the CI cluster, where no token exists.
 """
 from __future__ import annotations
 
-import hashlib
-import hmac
 import json
 import logging
 import re
@@ -26,6 +25,7 @@ from pathlib import Path
 from fastapi import FastAPI, HTTPException, Request
 
 from .retrain import retrain_reasons
+from .serve.auth import authenticate
 
 EVENT_TYPE = "drift-alert"
 LOG = logging.getLogger("smlops.relay")
@@ -82,8 +82,9 @@ def forwarded(payload: dict) -> list[dict]:
     return keep
 
 
-def create_relay(dispatch: Dispatch, token_sha256: str, cooldown_seconds: float = 3600,
+def create_relay(dispatch: Dispatch, api_keys: dict[str, str], cooldown_seconds: float = 3600,
                  clock: Callable[[], float] = time.monotonic) -> FastAPI:
+    """api_keys: {sha256 of token: client id}, as loaded by serve.auth.load."""
     app = FastAPI(title="smlops alert relay", docs_url=None, redoc_url=None, openapi_url=None)
     state = {"last": None}
     lock = threading.Lock()
@@ -96,7 +97,7 @@ def create_relay(dispatch: Dispatch, token_sha256: str, cooldown_seconds: float 
     async def alerts(request: Request) -> dict:
         header = request.headers.get("authorization", "")
         presented = header[7:].strip() if header[:7].lower() == "bearer " else ""
-        if not hmac.compare_digest(hashlib.sha256(presented.encode()).hexdigest(), token_sha256):
+        if authenticate(api_keys, presented) is None:
             raise HTTPException(status_code=401, detail="a valid token is required",
                                 headers={"WWW-Authenticate": "Bearer"})
         try:

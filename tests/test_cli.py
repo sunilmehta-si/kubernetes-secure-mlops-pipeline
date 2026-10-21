@@ -244,3 +244,26 @@ class RenderReleaseCliTests(unittest.TestCase):
             self.assertEqual(main(["render-release", "--model-image", model.split("@")[0] + ":latest",
                                    "--server-image", server, "-o", str(Path(d, "x"))]), 2)
         self.assertIn("pinned by digest", err.getvalue())
+
+
+class AlertRelayCliTests(unittest.TestCase):
+    def test_refuses_to_start_unless_it_is_safe_and_knows_where_to_send(self):
+        import tempfile
+        from contextlib import redirect_stderr
+        from pathlib import Path
+        with tempfile.TemporaryDirectory() as d, redirect_stderr(io.StringIO()) as err:
+            keys, empty, token = Path(d, "keys.txt"), Path(d, "empty.txt"), Path(d, "token")
+            empty.write_text("# nobody\n")
+            token.write_text("")
+            with redirect_stdout(io.StringIO()):
+                main(["api-keys", "add", "--client", "alertmanager", "--file", str(keys)])
+            for argv in (["--api-keys", str(keys)],                                         # nowhere to send
+                         ["--api-keys", str(keys), "--dry-run", "--repo", "a/b"],           # both
+                         ["--api-keys", str(keys), "--repo", "a/b"],                        # no token file
+                         ["--api-keys", str(empty), "--dry-run"],                           # anyone could call it
+                         ["--api-keys", str(keys), "--repo", "a/b", "--github-token-file", str(token)],
+                         ["--api-keys", str(keys), "--repo", "not a repo", "--github-token-file", str(keys)],
+                         ["--api-keys", str(keys), "--dry-run", "--cooldown", "-1"]):
+                with self.subTest(argv=argv):
+                    self.assertEqual(main(["alert-relay", *argv]), 2)
+        self.assertIn("empty.txt: no keys", err.getvalue())
