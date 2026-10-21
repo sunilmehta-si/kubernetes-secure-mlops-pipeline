@@ -52,7 +52,7 @@ GATES = [
 THREATS = [
     ("T1", "Poisoned or broken training data", "pipelines", "data contract on every split, content fingerprints",
      "ML02", "partial", "secure_mlops/validate.py"),
-    ("T2", "Personal data in training data", "pipelines", "PII scan in the data contract; names need a model",
+    ("T2", "Personal data in training data", "pipelines", "PII scan incl. names in sign-offs; addresses next",
      "-", "partial", "secure_mlops/pii.py"),
     ("T3", "Compromised dependency or base image", "ghcr", "pinned versions and base digest, Trivy gate, Dependabot",
      "ML06", "built", "Dockerfile"),

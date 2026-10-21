@@ -78,8 +78,8 @@ smlops api-keys add --client support-tool --file keys/api-keys.txt   # key print
 - **No pickles:** models are stored with skops, and anything stored as pickle is refused before it is opened.
 - **No model without a risk entry:** [`configs/models/`](configs/models/) holds one reviewed entry per model; an
   overdue review blocks training.
-- **No personal data in training:** the data contract fails on emails, phone, card and IBAN numbers, and reports
-  only masked values.
+- **No personal data in training:** the data contract fails on emails, phone, card and IBAN numbers, and on names
+  in introductions, greetings and sign-offs, and reports only masked values.
 - **No tampered baseline:** with a verification key, the champion is checked before the gate compares against it.
   A drill flips one byte of the stored champion and the next run stops.
 

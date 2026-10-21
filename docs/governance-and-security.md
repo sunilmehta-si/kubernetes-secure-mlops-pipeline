@@ -74,7 +74,7 @@ Decisions are made by versioned files, reviewed like code, rather than by settin
 | | Threat | Where | Control | OWASP ML Top 10 | Status |
 |---|---|---|---|---|---|
 | T1 | Poisoned or broken training data | Pipeline | Data contract on the whole set and every split; content fingerprints. Catches broken exports and skew, not a careful poisoner | ML02 | Partial |
-| T2 | Personal data in training data | Pipeline | The data contract fails on emails, phone numbers, card numbers (Luhn) and IBANs (mod-97), reporting masked values only. Names and addresses need a statistical detector | - | Partial |
+| T2 | Personal data in training data | Pipeline | The data contract fails on emails, phone numbers, card numbers (Luhn) and IBANs (mod-97), and on names where tickets carry them (introductions, greetings, sign-offs), reporting masked values only. Names mentioned in passing and addresses need a statistical detector | - | Partial |
 | T3 | Compromised dependency or base image | Image registry | Pinned versions, base image by digest, Trivy gate, Dependabot | ML06 | Built |
 | T4 | Compromised CI or leaked secret | GitHub Actions | Actions pinned by commit SHA, read-only token, no stored secrets. Keyless signing next | ML06 | Partial |
 | T5 | Unreviewed change to code or gate | Repository | Automated review of every pull request; CODEOWNERS for release-deciding files. Branch protection next | - | Partial |
@@ -145,7 +145,8 @@ advice: classify each real use case with your legal team.
 5. **Monitoring (G7, T9, T10):** ~~drift check~~, ~~live drift with alerts~~, ~~API keys and rate limits~~,
    ~~prediction logging with the model digest~~ and ~~a retraining workflow~~ done; next the Alertmanager relay that
    starts retraining from an alert, and a retirement step.
-6. **Data (G1, T2):** ~~PII scan~~ and ~~risk register (G0)~~ done; a statistical detector for names and addresses.
+6. **Data (G1, T2):** ~~PII scan~~, ~~names in introductions and sign-offs~~ and ~~risk register (G0)~~ done; a
+   statistical detector for names mentioned in passing and addresses.
 7. **Delivery (G6):** ~~rendered releases~~ and ~~an Argo CD project and application~~ done; next Argo CD on the CI
    cluster, syncing a release from a pull request.
 
