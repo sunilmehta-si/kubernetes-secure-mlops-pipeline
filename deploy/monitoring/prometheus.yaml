@@ -76,6 +76,9 @@ data:
             target_label: pod
           - source_labels: [__meta_kubernetes_namespace]
             target_label: namespace
+      - job_name: alert-relay          # did retraining actually start? (smlops_relay_retrain_requests_total)
+        static_configs:
+          - targets: ["alert-relay.monitoring.svc:9095"]
 ---
 apiVersion: apps/v1
 kind: Deployment
