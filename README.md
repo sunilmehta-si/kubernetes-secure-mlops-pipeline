@@ -14,10 +14,10 @@ model it replaces, signed, verified at deploy time, rolled out gradually and rol
   <img src="docs/images/architecture-light.svg" alt="The ML system in six stages, ingest, prepare, train, evaluate, deploy and monitor, with what this repo uses at each stage, other common tools, automatic retraining, and CI on every change">
 </picture>
 
-**Status: under construction.** Training, evaluation, the registry, serving and monitoring are built and tested
-(solid green above), with the governance controls around them: a risk register, a PII scan, signed models verified
-before every load, an ML-BOM per model, admission control on a real cluster, API keys and rate limits, live drift
-with Prometheus alerts, and retraining that the gate still judges. Canary rollouts with Argo CD are next (dashed).
+**Status: under construction.** Every stage above is built and tested, with the governance controls around it:
+a risk register, a PII scan, signed models verified before every load, an ML-BOM per model, admission control on a
+real cluster, API keys and rate limits, GitOps delivery with Argo CD, live drift with Prometheus alerts that start
+a retraining run the gate still judges, rollback and retirement. Canary rollouts and keyless signing are next.
 This README describes only what works. Each stage also lists other tools commonly used for the same job, so the
 diagram doubles as a map of MLOps.
 
@@ -73,6 +73,8 @@ smlops verify --public-key keys/signing-key.pub.pem    # exit 1 if the champion 
 smlops promotion-request -o promotion.md               # PR body with gate result, model card, approver checklist
 smlops drift --reference data/train.csv --current batch.csv   # PSI, new words, accuracy; exit 1 on alert
 smlops api-keys add --client support-tool --file keys/api-keys.txt   # key printed once; only its hash is stored
+smlops rollback                                        # champion back to the previous one, in one step
+smlops retire --reason "replaced" --by @owner          # remove every release alias; record why and who
 ```
 
 - **No pickles:** models are stored with skops, and anything stored as pickle is refused before it is opened.
@@ -102,28 +104,35 @@ signed by the pipeline and pinned by digest, and the server verifies the model's
 The latest run:
 
 ```text
+Argo CD synced release release-39557059626 into serving
 ticket-router answered: ["billing","shipping"], model 1
 PASS: an unsigned image rejected by verify-model-signatures
 PASS: an image referenced by tag rejected by require-registry-and-digest
 PASS: a client outside the allowed namespaces could not reach the model
 PASS: a request without an API key was refused (401)
-PASS: Prometheus scrapes the served model, digest sha256:554e091df022...
-PASS: all 10 alert rules loaded
+PASS: Prometheus scrapes the served model, digest sha256:d539d91cfd41...
+PASS: all 11 alert rules loaded
 PASS: live drift is measuring the 2 tickets served so far
 PASS: the keyless drill request is visible to monitoring as a 401
+PASS: a drift alert reached the relay, which would start retraining (dry run, no GitHub token here)
+PASS: a hand edit to the endpoint was reverted to the release by Argo CD
+PASS: a release adding a ClusterRole and a Secret was refused by the project; neither was created
 ```
 
-Releases are rendered manifests with both images by digest (`smlops render-release`): CI deploys exactly those
-files, and promoting a model is a pull request that commits them for Argo CD to sync.
+(Fourteen checks in all; [docs/serving.md](docs/serving.md) lists every one.) Releases are rendered manifests with
+both images by digest (`smlops render-release`). On the CI cluster Argo CD syncs each one from the cluster
+registry under the committed project's rules; in production, promoting a model is a pull request that commits
+the same files.
 
 ## Watching it in production
 
 The server measures its own traffic against the training profile signed into the model: the mix of predicted teams
 (PSI) and the share of words its vectorizer has never seen, as a multiple of the model's own baseline. Prometheus
-alerts on both with the same thresholds as the batch drift check; ten alert rules are unit-tested with promtool on
-every push, and a Grafana dashboard is generated from code. A critical drift alert, or the weekly schedule, starts
-a retraining run on existing plus recent tickets, and the challenger still has to beat the champion on recent
-traffic before a person approves it. [docs/monitoring.md](docs/monitoring.md) has the details.
+alerts on both with the same thresholds as the batch drift check; eleven alert rules are unit-tested with promtool on
+every push, and a Grafana dashboard is generated from code. A critical drift alert goes through Alertmanager to a
+token-checked relay that starts the retraining workflow (as does the weekly schedule); the run trains on existing
+plus recent tickets, and the challenger still has to beat the champion on recent traffic before a person approves
+it. [docs/monitoring.md](docs/monitoring.md) has the details.
 
 ## Governance and security
 
@@ -152,6 +161,9 @@ Problems this project's checks found in itself while it was being built:
   `bash -e`, which ignores a failure on the left of a pipe; a flaky keyless-request drill had failed twice behind
   green runs. The new monitoring check exposed it. Every workflow now runs with `pipefail`, a test enforces it, and
   the drills pass only on curl's own result, never on a kubectl error.
+- **A dependency broke every fresh install overnight.** sigstore 4.5.1 stopped pulling in pyOpenSSL, which
+  model-signing imports without declaring. Only direct dependencies were pinned; now every transitive package is
+  locked, and CI fails if anything outside the lock gets installed.
 - **Retraining on recent data alone made a worse model.** Trained only on shifted tickets, a challenger lost 6.6
   points of account recall and the gate blocked it. Retraining now uses existing plus recent tickets, and scored
   0.964 against the champion's 0.942 on the same recent traffic.
