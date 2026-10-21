@@ -31,3 +31,13 @@ class RiskTests(unittest.TestCase):
             e.check_current(e.review_by + dt.timedelta(days=1))
         with tempfile.TemporaryDirectory() as d, self.assertRaisesRegex(RiskError, "no risk register entry"):
             load("other-model", d)
+
+    def test_a_retired_model_is_never_trained_or_promoted_again(self):
+        e = parse({**ENTRY, "retired": dt.date(2026, 11, 1), "retired_reason": "replaced by a vendor router"})
+        e.check_current(dt.date(2026, 10, 31))                          # still live the day before
+        with self.assertRaisesRegex(RiskError, "retired on 2026-11-01 \\(replaced by a vendor router\\)"):
+            e.check_current(dt.date(2026, 11, 1))
+        for change in ({"retired": dt.date(2026, 11, 1)}, {"retired_reason": "why"},
+                       {"retired": "soon", "retired_reason": "why"}):
+            with self.subTest(change=change), self.assertRaisesRegex(RiskError, "retired"):
+                parse({**ENTRY, **change})

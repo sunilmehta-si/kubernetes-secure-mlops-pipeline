@@ -1,7 +1,8 @@
 """The risk register (gate G0): one reviewed entry per model, saying what it is for and how much harm it could do.
 
-A model is only promoted if its entry exists, is valid, and has not passed its review date. High-risk entries must
-keep a human in the loop. The entry is versioned next to the code, so a change of use case is a reviewed change.
+A model is only promoted if its entry exists, is valid, has not passed its review date, and is not retired.
+High-risk entries must keep a human in the loop. The entry is versioned next to the code, so a change of use case,
+or retiring the model (gate G7), is a reviewed change.
 """
 from __future__ import annotations
 
@@ -16,6 +17,7 @@ TIERS = ("minimal", "limited", "high")
 PERSONAL_DATA = ("none", "pseudonymised", "personal")
 REQUIRED = ("name", "owner", "intended_use", "out_of_scope", "risk_tier", "affected_people", "human_in_the_loop",
             "personal_data", "reviewed", "review_by")
+OPTIONAL = ("retired", "retired_reason")       # both or neither: the date the model was retired, and why
 
 
 class RiskError(ValueError):
@@ -34,9 +36,14 @@ class RiskEntry:
     personal_data: str
     reviewed: dt.date
     review_by: dt.date
+    retired: dt.date | None = None
+    retired_reason: str = ""
 
     def check_current(self, today: dt.date | None = None) -> None:
         today = today or dt.date.today()
+        if self.retired is not None and today >= self.retired:
+            raise RiskError(f"{self.name} was retired on {self.retired} ({self.retired_reason}); nothing is trained "
+                            f"or promoted for it")
         if today > self.review_by:
             raise RiskError(f"{self.name}: risk review was due by {self.review_by}; review the entry before promoting")
 
@@ -45,7 +52,7 @@ def parse(data: dict, source: str = "risk entry") -> RiskEntry:
     if not isinstance(data, dict):
         raise RiskError(f"{source}: expected a mapping")
     missing = [k for k in REQUIRED if data.get(k) in (None, "", [])]
-    unknown = sorted(set(data) - set(REQUIRED))
+    unknown = sorted(set(data) - set(REQUIRED) - set(OPTIONAL))
     if missing or unknown:
         raise RiskError(f"{source}: " + "; ".join(filter(None, [missing and f"missing {', '.join(missing)}",
                                                                    unknown and f"unknown {', '.join(unknown)}"])))
@@ -58,9 +65,14 @@ def parse(data: dict, source: str = "risk entry") -> RiskEntry:
     reviewed, review_by = data["reviewed"], data["review_by"]
     if not isinstance(reviewed, dt.date) or not isinstance(review_by, dt.date) or review_by <= reviewed:
         raise RiskError(f"{source}: reviewed and review_by must be dates, review_by after reviewed")
+    retired, reason = data.get("retired"), str(data.get("retired_reason") or "").strip()
+    if (retired is None) != (not reason):
+        raise RiskError(f"{source}: retired and retired_reason go together")
+    if retired is not None and not isinstance(retired, dt.date):
+        raise RiskError(f"{source}: retired must be a date")
     return RiskEntry(data["name"], str(data["owner"]), data["intended_use"], tuple(data["out_of_scope"]),
                      data["risk_tier"], data["affected_people"], bool(data["human_in_the_loop"]),
-                     data["personal_data"], reviewed, review_by)
+                     data["personal_data"], reviewed, review_by, retired, reason)
 
 
 def register_dir() -> Path:
