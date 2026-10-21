@@ -3,8 +3,11 @@
 A deliberately small, dependency-free scanner for the identifiers that most often leak into support tickets: email
 addresses, phone numbers, payment card numbers and IBANs. Card numbers must pass the Luhn checksum and IBANs the
 mod-97 check, so order numbers and ticket references are not mistaken for them. Findings are always masked: a
-report about personal data must not become a copy of it. Names and street addresses need a statistical tool
-(such as Presidio) and are not covered.
+report about personal data must not become a copy of it.
+
+Names are found where tickets usually carry them: a self-introduction ("my name is Priya Shah", "this is Tom"),
+a greeting ("Dear Ms Okafor") and a sign-off ("Regards, Jan de Vries"). A name mentioned in passing ("ask Priya")
+and street addresses still need a statistical tool such as Presidio and are not covered.
 """
 from __future__ import annotations
 
@@ -17,6 +20,17 @@ EMAIL = re.compile(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b")
 PHONE = re.compile(r"(?<![\w#])(?:\+\d{1,3}[\s.-]?\d(?:[\s.-]?\d){6,13}|\(?\d{3}\)?[\s.-]\d{3}[\s.-]\d{4})(?!\w)")
 CARD = re.compile(r"(?<!\d)(?:\d[ -]?){12,18}\d(?!\d)")
 IBAN = re.compile(r"\b[A-Z]{2}\d{2}(?: ?[A-Z0-9]{4}){2,7}(?: ?[A-Z0-9]{1,3})?\b")
+# A capitalised word, allowing O'Brien, Jean-Luc and particles inside a name (van, de, da, al, bin)
+_NAME = r"[A-Z][a-z]+(?:['-][A-Z]?[a-z]+)?(?:\s+(?:(?:van|von|de|da|del|di|al|bin|der|den)\s+)?[A-Z][a-z]+(?:['-][A-Z]?[a-z]+)?){0,2}"
+NAME_CUES = re.compile(
+    r"(?:\b(?:[Mm]y name is|[Tt]his is|[Ii] am|[Ii]'m)\s+(?P<intro>" + _NAME + r")"
+    r"|\b(?:Dear|Hi|Hello)\s+(?:(?:Mr|Mrs|Ms|Dr)\.?\s+)?(?P<greeting>" + _NAME + r")"
+    r"|\b(?:[Rr]egards|[Tt]hanks|[Tt]hank you|[Cc]heers|[Ss]incerely|[Bb]est)\s*,\s*(?P<signoff>" + _NAME + r"))")
+# Words that follow those cues without being a person: "this is Urgent", "Thanks, Support Team", "Hi All"
+NOT_A_NAME = {"all", "team", "support", "there", "everyone", "again", "urgent", "still", "not", "unable", "the",
+              "a", "an", "sorry", "happy", "billing", "shipping", "security", "account", "technical", "customer",
+              "service", "sir", "madam", "you", "your", "it", "my", "our", "we", "please", "regarding", "about",
+              "writing", "contacting", "following", "very", "so", "really", "just", "now"}
 
 
 @dataclass(frozen=True)
@@ -56,6 +70,10 @@ def scan(text: str) -> list[Finding]:
     for m in IBAN.finditer(text):
         if _iban_ok(m.group()):
             found.append(Finding("IBAN", _mask(m.group())))
+    for m in NAME_CUES.finditer(text):
+        name = next(g for g in (m["intro"], m["greeting"], m["signoff"]) if g)
+        if name.split()[0].lower() not in NOT_A_NAME:
+            found.append(Finding("name", _mask(name, 1)))
     cards = {f.masked for f in found if f.kind == "payment card"}
     for m in PHONE.finditer(text):
         digits = re.sub(r"\D", "", m.group())

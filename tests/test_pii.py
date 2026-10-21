@@ -24,3 +24,23 @@ class PiiTests(unittest.TestCase):
     def test_synthetic_tickets_contain_no_personal_data(self):
         rows, kinds, _ = summary(r["text"] for r in generate(DataSpec(n=10000, drift=0.5)))
         self.assertEqual((rows, dict(kinds)), (0, {}))
+
+    def test_names_where_tickets_carry_them_are_found_and_masked(self):
+        for text, name in (("Hi, my name is Priya Shah and my order is late", "Priya Shah"),
+                           ("this is Tom, the login keeps failing", "Tom"),
+                           ("Dear Ms Okafor, the refund never came", "Okafor"),
+                           ("parcel lost. Regards, Jan de Vries", "Jan de Vries"),
+                           ("thanks, Sean O'Brien", "Sean O'Brien"),
+                           ("I'm Jean-Luc Picard and I was charged twice", "Jean-Luc Picard")):
+            with self.subTest(text=text):
+                (finding,) = scan(text)
+                self.assertEqual(finding.kind, "name")
+                self.assertTrue(finding.masked.startswith(name[0]) and finding.masked.endswith(name[-1]))
+                self.assertNotIn(name, finding.masked)
+
+    def test_cue_words_without_a_person_are_not_names(self):
+        for text in ("this is Urgent, the app crashes", "Thanks, Support Team", "Hi All, the site is down",
+                     "I am Unable to log in", "this is the third time", "Hello there", "Regards, Billing",
+                     "I am not getting emails", "Thanks for the help"):
+            with self.subTest(text=text):
+                self.assertEqual(scan(text), [])
