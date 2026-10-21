@@ -1,4 +1,5 @@
-# Prometheus for the cluster: scrapes the ticket router's /metrics and evaluates deploy/monitoring/alerts.yaml.
+# Prometheus for the cluster: scrapes the ticket router's /metrics, evaluates deploy/monitoring/alerts.yaml and
+# sends firing alerts to Alertmanager (alerting.yaml).
 # Least privilege throughout: it may list pods in the serving namespace only (a Role, not a ClusterRole), runs
 # under Pod Security "restricted" with a read-only root filesystem, and accepts no inbound connections; it is
 # queried with kubectl exec. Its namespace carries smlops.io/model-clients=true, which is what lets it through the
@@ -55,6 +56,10 @@ data:
       evaluation_interval: 15s
     rule_files:
       - /etc/prometheus/rules/*.yaml
+    alerting:
+      alertmanagers:
+        - static_configs:
+            - targets: ["alertmanager.monitoring.svc:9093"]
     scrape_configs:
       - job_name: ticket-router
         kubernetes_sd_configs:
