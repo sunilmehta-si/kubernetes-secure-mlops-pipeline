@@ -1,9 +1,10 @@
 # Monitoring and retraining
 
-Gate G7 asks whether the model is still working. This page covers how the served model measures its own traffic,
-how Prometheus turns that into alerts, and how an alert becomes a retraining run that the evaluation gate still
-judges. Every part runs in CI: the alert rules are unit-tested with promtool, and the cluster workflow checks that
-Prometheus scrapes the served model.
+Gate G7 asks whether the model is still working, and whether it can be undone. This page covers how the served
+model measures its own traffic, how Prometheus turns that into alerts, how an alert becomes a retraining run that
+the evaluation gate still judges, and how a model is rolled back or retired. Every part runs in CI: the alert rules
+are unit-tested with promtool, routing with amtool, and the cluster workflow checks that Prometheus scrapes the
+served model and that a drift alert reaches the retraining trigger.
 
 ## Live drift, measured by the server
 
@@ -97,5 +98,43 @@ Recent tickets alone were not enough. On the generator, a model trained only on 
 account recall against the champion and the gate blocked it. Trained on both, it scored 0.964 against the
 champion's 0.942 on the same recent tickets and passed.
 
-Still planned: the small relay that turns an Alertmanager webhook into the repository dispatch, and running
-Alertmanager itself on the cluster.
+## From alert to retraining
+
+```text
+Prometheus --> Alertmanager --> alert relay --> GitHub repository dispatch (drift-alert) --> retrain workflow
+```
+
+[`deploy/monitoring/alertmanager.yml`](../deploy/monitoring/alertmanager.yml) sends alerts labelled
+`action=retrain` to the relay and every alert, those included, to on-call (which has no integration here; a real
+deployment adds its pager or chat receiver). A large drift inhibits the moderate alert for the same signal, and a
+model that is down inhibits everything else. [`scripts/test-alert-routing.sh`](../scripts/test-alert-routing.sh)
+checks with amtool, in CI, that every alert in `alerts.yaml` reaches exactly the receivers it should.
+
+The relay, `smlops alert-relay` ([`relay.py`](../secure_mlops/relay.py)), is the only piece that talks to GitHub:
+
+- Alertmanager presents a bearer token; the relay holds only its SHA-256 hash, in the same key-file format as the
+  model server (`smlops api-keys add`). Its network policy admits Alertmanager and Prometheus only.
+- It forwards only what the workflow reads (alert name, a few labels, a summary capped at 300 characters), never
+  the whole payload.
+- A one-hour cooldown stops a long-firing alert, which Alertmanager repeats, from starting a run each time. A
+  failed dispatch answers 502, so Alertmanager retries, and does not start the cooldown.
+- `/metrics` counts dispatched, suppressed and failed requests; TicketRouterRetrainTriggerFailing fires when one
+  fails, and the dashboard shows all three.
+- The GitHub token, a fine-grained token for this repository with Contents: write and nothing more, is read from a
+  mounted Secret at every dispatch. [`relay-github-patch.yaml`](../deploy/monitoring/relay-github-patch.yaml) is
+  the production configuration; the CI cluster has no token and runs the relay with `--dry-run`, which logs what
+  it would send.
+
+The cluster workflow drills the path on every push: a drift alert put into Alertmanager must reach the relay and
+produce a dispatch, and an ordinary alert must not.
+
+## Rollback and retirement
+
+`smlops rollback` points the `champion` alias back at the previous champion in one step; production follows its
+release, so the matching step there is reverting the commit that last changed `deploy/gitops/production/`.
+
+`smlops retire --reason ... --by ...` ends a model's life (gate G7): it removes the `champion`, `challenger` and
+`previous` aliases, so nothing can be packaged or promoted from it, records when, why and by whom on the
+registered model, and keeps every version, signature and record for audit. It then says what else belongs in the
+same pull request: `retired` and `retired_reason` in the model's risk entry, after which training refuses it, and
+deleting the release in `deploy/gitops/production/`, after which Argo CD removes the endpoint.
