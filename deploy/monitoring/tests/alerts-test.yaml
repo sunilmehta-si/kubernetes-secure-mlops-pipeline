@@ -60,6 +60,23 @@ tests:
               summary: "Tickets use 1.20x the model's usual share of unknown words"
               runbook: "New products or phrasing; collect labelled tickets for the next training run."
 
+  - name: a retraining trigger that fails is itself an alert
+    interval: 1m
+    input_series:
+      - series: 'smlops_relay_retrain_requests_total{outcome="failed"}'
+        values: '0x10 1x20'
+      - series: 'smlops_relay_retrain_requests_total{outcome="dispatched"}'
+        values: '0x30'
+    alert_rule_test:
+      - {eval_time: 9m, alertname: TicketRouterRetrainTriggerFailing, exp_alerts: []}
+      - eval_time: 15m
+        alertname: TicketRouterRetrainTriggerFailing
+        exp_alerts:
+          - exp_labels: {severity: critical, gate: G7}
+            exp_annotations:
+              summary: "The alert relay could not start retraining 1 times in 30 minutes"
+              runbook: "kubectl -n monitoring logs deploy/alert-relay; check the GitHub token and that GitHub is reachable."
+
   - name: no server reporting is an outage
     interval: 1m
     input_series:

@@ -32,6 +32,13 @@ groups:
         annotations:
           summary: "Tickets use {{ $value | printf \"%.2f\" }}x the model's usual share of unknown words"
           runbook: "Retraining starts on this alert; the new model must still pass the evaluation gate."
+      - alert: TicketRouterRetrainTriggerFailing
+        expr: sum(increase(smlops_relay_retrain_requests_total{outcome="failed"}[30m])) > 0
+        for: 1m
+        labels: {severity: critical, gate: G7}
+        annotations:
+          summary: "The alert relay could not start retraining {{ $value | printf \"%.0f\" }} times in 30 minutes"
+          runbook: "kubectl -n monitoring logs deploy/alert-relay; check the GitHub token and that GitHub is reachable."
 
   - name: ticket-router-serving
     rules:

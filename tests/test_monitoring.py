@@ -29,7 +29,7 @@ class AlertRuleTests(unittest.TestCase):
         self.assertTrue(all(RULES[name]["labels"]["severity"] == "critical" for name in retrain))
 
     def test_every_metric_an_alert_reads_is_exported_by_the_server(self):
-        source = (ROOT / "secure_mlops/serve/app.py").read_text()
+        source = "".join((ROOT / p).read_text() for p in ("secure_mlops/serve/app.py", "secure_mlops/relay.py"))
         exported = set(re.findall(r'"(smlops_[a-z_]+)"', source))
         for name, rule in RULES.items():
             for metric in re.findall(r"smlops_[a-z_]+", rule["expr"]):

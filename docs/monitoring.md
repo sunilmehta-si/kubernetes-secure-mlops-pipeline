@@ -32,13 +32,14 @@ tickets, 1.12 at 30% shifted traffic, 1.21 at 50% and 1.51 fully shifted, so war
 
 ## Alerts
 
-[`deploy/monitoring/alerts.yaml`](../deploy/monitoring/alerts.yaml) holds ten alerts in three groups. The drift
+[`deploy/monitoring/alerts.yaml`](../deploy/monitoring/alerts.yaml) holds eleven alerts in three groups. The drift
 thresholds are the ones in `configs/drift.yaml`, and a test keeps them equal, so batch and live checks agree.
 
 | Alert | Fires when | Severity |
 |---|---|---|
 | TicketRouterTeamMixShifting, TicketRouterTeamMixDrifted | Team mix PSI above 0.10 for 30 minutes / above 0.25 for 15 | warning / **critical, retrain** |
 | TicketRouterNewVocabularyRising, TicketRouterNewVocabulary | Unknown-word ratio above 1.15 for 30 minutes / above 1.30 for 15 | warning / **critical, retrain** |
+| TicketRouterRetrainTriggerFailing | The alert relay failed to start retraining at least once in 30 minutes | critical |
 | TicketRouterDown | No model reporting for 5 minutes (a server that cannot verify its model never starts) | critical |
 | TicketRouterErrors | Over 2% of requests fail for 10 minutes | critical |
 | TicketRouterSlow | 95th percentile latency above 0.5 s for 10 minutes | warning |
