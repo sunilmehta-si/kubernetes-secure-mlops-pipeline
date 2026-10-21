@@ -3,9 +3,13 @@
 Aliases carry the release state. `challenger` is the newest registered model, `champion` is what production should
 serve, and `previous` is the champion it replaced, kept for one-step rollback. The champion is loaded and evaluated
 on the current test set when a challenger is judged, so both are always compared on the same tickets.
+
+Retiring a model (gate G7) removes all three aliases, so nothing can be packaged or promoted from it, and records
+when, why and by whom on the registered model. Its versions stay, with their signatures and records, for audit.
 """
 from __future__ import annotations
 
+import datetime as dt
 import os
 from dataclasses import dataclass
 from pathlib import Path
@@ -84,9 +88,40 @@ def load(version: Version, public_key: str | Path | None = None):
         return safe_load(local)                       # load the verified copy, not a second download
 
 
-def promote(version: Version, decision: dict) -> bool:
-    """Make `version` the champion if the gate passed; the old champion becomes `previous`."""
+def retired(name: str) -> dict | None:
+    """{at, reason, by} if the model was retired, else None."""
+    try:
+        tags = MlflowClient().get_registered_model(name).tags
+    except MlflowException:
+        return None
+    if tags.get("retired") != "true":
+        return None
+    return {"at": tags.get("retired_at", ""), "reason": tags.get("retired_reason", ""), "by": tags.get("retired_by", "")}
+
+
+def retire(name: str, reason: str, by: str) -> list[str]:
+    """Retire a registered model: remove its release aliases and record why. Returns the aliases removed."""
+    if not reason.strip() or not by.strip():
+        raise ValueError("retiring a model needs a reason and who decided it")
     client = MlflowClient()
+    client.get_registered_model(name)                 # raises if there is no such model
+    removed = []
+    for alias in (CHAMPION, CHALLENGER, PREVIOUS):
+        if by_alias(name, alias) is not None:
+            client.delete_registered_model_alias(name, alias)
+            removed.append(alias)
+    for key, value in {"retired": "true", "retired_at": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"),
+                       "retired_reason": reason.strip(), "retired_by": by.strip()}.items():
+        client.set_registered_model_tag(name, key, value)
+    return removed
+
+
+def promote(version: Version, decision: dict) -> bool:
+    """Make `version` the champion if the gate passed; the old champion becomes `previous`. A retired model is
+    never promoted, whatever the gate says."""
+    client = MlflowClient()
+    if retired(version.name):
+        raise ValueError(f"{version.name} is retired; nothing is promoted for it")
     client.set_model_version_tag(version.name, version.version, "gate", "passed" if decision["passed"] else "failed")
     if not decision["passed"]:
         return False

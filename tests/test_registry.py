@@ -49,3 +49,22 @@ class RegistryTests(unittest.TestCase):
             registry.rollback("router")
         self.assertEqual(list(registry.load(v1).predict(SPLITS.test[["text"]].head(1))), [registry.load(v3).predict(
             SPLITS.test[["text"]].head(1))[0]])
+
+    def test_retiring_removes_every_release_alias_and_blocks_promotion(self):
+        v1 = registry.register(logged_model(), "router", {})
+        registry.promote(v1, {"passed": True})
+        v2 = registry.register(logged_model(), "router", {})
+        registry.promote(v2, {"passed": True})
+        self.assertIsNone(registry.retired("router"))
+        with self.assertRaisesRegex(ValueError, "a reason and who"):
+            registry.retire("router", " ", "on-call")
+        self.assertEqual(registry.retire("router", "replaced by a vendor router", "@owner"),
+                         ["champion", "challenger", "previous"])
+        for alias in (registry.CHAMPION, registry.CHALLENGER, registry.PREVIOUS):
+            self.assertIsNone(registry.by_alias("router", alias))
+        record = registry.retired("router")
+        self.assertEqual((record["reason"], record["by"]), ("replaced by a vendor router", "@owner"))
+        self.assertRegex(record["at"], r"^\d{4}-\d{2}-\d{2}T")
+        with self.assertRaisesRegex(ValueError, "retired"):
+            registry.promote(v2, {"passed": True})
+        self.assertIsNotNone(registry.load(v1))                            # the versions stay, for audit
