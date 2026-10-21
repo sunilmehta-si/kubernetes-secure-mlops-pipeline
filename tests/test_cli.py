@@ -267,3 +267,29 @@ class AlertRelayCliTests(unittest.TestCase):
                 with self.subTest(argv=argv):
                     self.assertEqual(main(["alert-relay", *argv]), 2)
         self.assertIn("empty.txt: no keys", err.getvalue())
+
+
+class RollbackAndRetireCliTests(unittest.TestCase):
+    def test_rollback_one_step_then_retire_blocks_promotion(self):
+        import tempfile
+        from contextlib import redirect_stderr
+
+        import mlflow
+        with tempfile.TemporaryDirectory() as d, redirect_stderr(io.StringIO()) as err, redirect_stdout(io.StringIO()):
+            uri = f"sqlite:///{d}/mlflow.db"
+            common = ["--tracking-uri", uri]
+            try:
+                self.assertEqual(main(["data", "generate", "-o", f"{d}/data"]), 0)       # enough to pass the floors
+                for run in ("a", "b"):                    # the same config twice: v2 passes the gate against v1
+                    self.assertEqual(main(["train", "--data", f"{d}/data", "-o", f"{d}/{run}", *common]), 0)
+                self.assertEqual(main(["rollback", *common]), 0)
+                self.assertIn("champion is v1 again", err.getvalue())
+                self.assertEqual(main(["rollback", *common]), 1)                  # only one step back
+                self.assertEqual(main(["retire", "--reason", "replaced", "--by", "@owner", "--model-name", "nope",
+                                       *common]), 2)
+                self.assertEqual(main(["retire", "--reason", "replaced", "--by", "@owner", *common]), 0)
+                self.assertIn("removed champion, challenger", err.getvalue())
+                self.assertEqual(main(["train", "--data", f"{d}/data", "-o", f"{d}/c", *common]), 2)
+                self.assertIn("is retired; nothing is promoted", err.getvalue())
+            finally:
+                mlflow.set_tracking_uri("")

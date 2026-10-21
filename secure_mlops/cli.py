@@ -48,6 +48,14 @@ def _parser() -> argparse.ArgumentParser:
     vf.add_argument("--version", help="A version number instead of an alias.")
     vf.add_argument("--public-key", required=True, help="Public key the model must be signed with.")
     vf.add_argument("--tracking-uri", default="sqlite:///mlflow.db", help="MLflow URI (default: sqlite:///mlflow.db).")
+    rb = sub.add_parser("rollback", help="Point the champion alias back at the previous champion (one step).")
+    rb.add_argument("--model-name", default="ticket-router", help="Registered model name (default: ticket-router).")
+    rb.add_argument("--tracking-uri", default="sqlite:///mlflow.db", help="MLflow URI (default: sqlite:///mlflow.db).")
+    rt = sub.add_parser("retire", help="Retire a model (gate G7): remove its release aliases and record why.")
+    rt.add_argument("--model-name", default="ticket-router", help="Registered model name (default: ticket-router).")
+    rt.add_argument("--reason", required=True, help="Why the model is retired; recorded on the registered model.")
+    rt.add_argument("--by", required=True, help="Who decided it, e.g. the model owner's handle.")
+    rt.add_argument("--tracking-uri", default="sqlite:///mlflow.db", help="MLflow URI (default: sqlite:///mlflow.db).")
     dr = sub.add_parser("drift", help="Check a batch of production tickets for drift against the champion; exit 1 on alert.")
     dr.add_argument("--reference", required=True, help="Training tickets CSV (the reference distribution).")
     dr.add_argument("--current", required=True, help="Production tickets CSV; a label column adds an accuracy check.")
@@ -255,6 +263,41 @@ def _cmd_verify(args: argparse.Namespace) -> int:
         print(f"smlops: NOT VERIFIED: {exc}", file=sys.stderr)
         return 1
     print(f"smlops: {version.name} v{version.version} verified: every file matches its signature", file=sys.stderr)
+    return 0
+
+
+def _cmd_rollback(args: argparse.Namespace) -> int:
+    import mlflow
+
+    from . import registry
+    mlflow.set_tracking_uri(args.tracking_uri)
+    try:
+        version = registry.rollback(args.model_name)
+    except ValueError as exc:
+        print(f"smlops: {exc}", file=sys.stderr)
+        return 1
+    print(f"smlops: {args.model_name} champion is v{version.version} again. The registry follows at once; "
+          f"production follows its release: revert the commit that last changed deploy/gitops/production/",
+          file=sys.stderr)
+    return 0
+
+
+def _cmd_retire(args: argparse.Namespace) -> int:
+    import mlflow
+    from mlflow.exceptions import MlflowException
+
+    from . import registry
+    mlflow.set_tracking_uri(args.tracking_uri)
+    try:
+        removed = registry.retire(args.model_name, args.reason, args.by)
+    except (ValueError, MlflowException) as exc:
+        print(f"smlops: cannot retire {args.model_name}: {exc}", file=sys.stderr)
+        return 2
+    print(f"smlops: {args.model_name} retired in the registry"
+          f" (removed {', '.join(removed) if removed else 'no aliases, none were set'}). To finish, in one pull request:\n"
+          f"  1. set retired and retired_reason in configs/models/{args.model_name}.yaml, so nothing trains it again\n"
+          f"  2. delete the manifests in deploy/gitops/production/; Argo CD then removes the endpoint\n"
+          f"  Its versions, signatures and records stay in the registry for audit.", file=sys.stderr)
     return 0
 
 
@@ -468,5 +511,9 @@ def main(argv: list[str] | None = None) -> int:
         return _cmd_package(args)
     if args.command == "alert-relay":
         return _cmd_alert_relay(args)
+    if args.command == "rollback":
+        return _cmd_rollback(args)
+    if args.command == "retire":
+        return _cmd_retire(args)
     _parser().print_help()
     return 0
