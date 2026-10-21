@@ -1,5 +1,40 @@
 # Changelog
 
+## [0.4.0] - 2026-10-21
+
+The loop closes: a drift alert starts a retraining run on its own, Argo CD delivers every release on the cluster
+and undoes hand edits, a model can be rolled back or retired, and every installed package is locked.
+
+### Added
+- **Alertmanager** on the cluster, routing alerts labelled `action=retrain` to the alert relay and every alert to
+  on-call, with inhibitions; routing tested with amtool in CI at a pinned, checksummed release.
+- **Alert relay** (`smlops alert-relay`): turns a firing retrain alert into a GitHub repository dispatch that starts
+  the retrain workflow. Bearer token checked against a stored hash, only the alert summary forwarded, a one-hour
+  cooldown, 502 without cooldown when GitHub fails, outcomes on `/metrics`, and a production patch with a narrowly
+  scoped token from a Secret. The CI cluster runs it as a dry run.
+- **Argo CD on the CI cluster** (core install, checksum-verified): every release is pushed to the cluster registry
+  as an OCI artifact and synced under the committed project; `smlops argocd-ci` derives CI's project and
+  application from the committed ones, changing only the source.
+- **Cluster drills**, now fourteen checks: a drift alert reaches the relay and an ordinary alert does not;
+  Prometheus scrapes the relay; a hand edit to the endpoint is reverted by Argo CD; a release adding a ClusterRole
+  and a Secret is refused with neither created.
+- **Rollback and retirement:** `smlops rollback`, and `smlops retire`, which removes every release alias and records
+  why and by whom; a `retired` date in the risk entry stops training and promotion.
+- **Dependency lock** (`requirements-lock.txt`): CI, the image and the cluster install from it, and CI fails if
+  anything outside it is installed.
+- **Names in the PII scan:** self-introductions, greetings and sign-offs, masked like other personal data.
+- An alert when the relay fails to start retraining; a dashboard panel of relay outcomes.
+- Hardening tests for the monitoring manifests; a test that the docs show every check the cluster scripts make.
+- Governance statuses: operate and retire (G7) built; GitOps delivery drilled under G6.
+
+### Fixed
+- Fresh installs broke overnight when sigstore 4.5.1 stopped pulling in pyOpenSSL, which model-signing imports
+  without declaring; pinned, and prevented by the lock.
+- A public registry error for Argo CD's Redis image failed a cluster run; the install now pulls Argo CD's images
+  with retries and loads them into the node.
+- `registry.rollback` existed with no command to run it.
+- The architecture guide still listed model signatures and the ML-BOM as planned.
+
 ## [0.3.0] - 2026-10-20
 
 Operating the model: only known clients can call it, it watches its own traffic for drift, alerts are tested like
@@ -68,6 +103,7 @@ cannot start, and a server cannot run a model whose signature does not verify.
 - Pods created before Kyverno registered its Pod webhook missed the hardening and were retried for minutes; the install
   now waits for the webhook.
 
+[0.4.0]: https://github.com/sunilmehta-si/kubernetes-secure-mlops-pipeline/releases/tag/v0.4.0
 [0.3.0]: https://github.com/sunilmehta-si/kubernetes-secure-mlops-pipeline/releases/tag/v0.3.0
 [0.2.0]: https://github.com/sunilmehta-si/kubernetes-secure-mlops-pipeline/releases/tag/v0.2.0
 
