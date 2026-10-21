@@ -52,12 +52,17 @@ active="$(api "alertmanagers" | jq '.data.activeAlertmanagers | length')"
 [ "$active" = 1 ] || { echo "FAIL: Prometheus sends alerts to $active Alertmanagers, expected 1" >&2; exit 1; }
 echo "PASS: Prometheus sends its alerts to Alertmanager"
 
-# Drill: a drift alert as Prometheus would send it, put straight into Alertmanager, must start (a dry run of)
-# retraining. amtool ships in the Alertmanager image; the alert expires on its own after five minutes.
-kubectl -n monitoring exec deploy/alertmanager -c alertmanager -- amtool alert add TicketRouterTeamMixDrifted \
-  action=retrain severity=critical gate=G7 drill=true --annotation='summary=drill: drift alert from CI' \
-  --end="$(date -u -d '+5 min' +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date -u -v+5M +%Y-%m-%dT%H:%M:%SZ)" \
-  --alertmanager.url=http://127.0.0.1:9093 >/dev/null
+# Drills: alerts as Prometheus would send them, put straight into Alertmanager. amtool ships in the Alertmanager
+# image; the alerts expire on their own after five minutes. First one that must NOT start retraining: it reaches
+# on-call, never the relay. Then a drift alert, which must start (a dry run of) retraining.
+amtool_add() {
+  kubectl -n monitoring exec deploy/alertmanager -c alertmanager -- amtool alert add "$@" \
+    --end="$(date -u -d '+5 min' +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date -u -v+5M +%Y-%m-%dT%H:%M:%SZ)" \
+    --alertmanager.url=http://127.0.0.1:9093 >/dev/null
+}
+amtool_add TicketRouterSlow severity=warning drill=true --annotation='summary=drill: a slow endpoint'
+amtool_add TicketRouterTeamMixDrifted action=retrain severity=critical gate=G7 drill=true \
+  --annotation='summary=drill: drift alert from CI'
 for i in $(seq 1 12); do        # group_wait is 10s for retrain alerts
   if kubectl -n monitoring logs deploy/alert-relay --tail=50 | grep '"dry-run-dispatch"' \
        | grep -q '"alertname": "TicketRouterTeamMixDrifted"'; then break; fi
@@ -66,6 +71,17 @@ for i in $(seq 1 12); do        # group_wait is 10s for retrain alerts
   sleep 5
 done
 echo "PASS: a drift alert reached the relay, which would start retraining (dry run, no GitHub token here)"
+if kubectl -n monitoring logs deploy/alert-relay --tail=200 | grep '"dry-run-dispatch"' | grep -q TicketRouterSlow; then
+  echo "FAIL: an alert without action=retrain started retraining" >&2; exit 1
+fi
+echo "PASS: an alert without action=retrain did not start retraining"
+
+for i in $(seq 1 12); do         # the relay's own metrics, scraped like the model's
+  [ "$(value 'up{job="alert-relay"}')" = 1 ] && break
+  [ "$i" = 12 ] && { echo "FAIL: Prometheus does not scrape the alert relay" >&2; exit 1; }
+  sleep 5
+done
+echo "PASS: Prometheus scrapes the relay, so a failing retraining trigger alerts"
 
 firing="$(api "alerts" | jq -r '[.data.alerts[] | select(.state == "firing") | .labels.alertname] | join(", ")')"
 echo "Prometheus ${PROMETHEUS_VERSION}; alerts firing: ${firing:-none}"
