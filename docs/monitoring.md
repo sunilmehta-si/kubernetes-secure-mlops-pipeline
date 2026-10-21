@@ -76,10 +76,14 @@ On every push the cluster workflow runs [`scripts/check-monitoring.sh`](../scrip
 drills. The latest run:
 
 ```text
-PASS: Prometheus scrapes the served model, digest sha256:554e091df022...
-PASS: all 10 alert rules loaded
+PASS: Prometheus scrapes the served model, digest sha256:d539d91cfd41...
+PASS: all 11 alert rules loaded
 PASS: live drift is measuring the 2 tickets served so far
 PASS: the keyless drill request is visible to monitoring as a 401
+PASS: Prometheus sends its alerts to Alertmanager
+PASS: a drift alert reached the relay, which would start retraining (dry run, no GitHub token here)
+PASS: an alert without action=retrain did not start retraining
+PASS: Prometheus scrapes the relay, so a failing retraining trigger alerts
 Prometheus v3.15.0; alerts firing: none
 ```
 

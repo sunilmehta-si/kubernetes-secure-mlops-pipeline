@@ -37,3 +37,14 @@ class SecurityPolicyTests(unittest.TestCase):
         self.assertIn("not in a public issue", text)
         self.assertIn("docs/governance-and-security.md#4-threat-model", text)
         self.assertIn("## 4. Threat model", DOC_GOV)
+
+
+class DrillOutputDocTests(unittest.TestCase):
+    def test_the_documented_runs_show_every_check_the_cluster_scripts_make(self):
+        import re
+        documented = (ROOT / "docs/serving.md").read_text() + (ROOT / "docs/monitoring.md").read_text()
+        for script in ("drill-admission.sh", "check-monitoring.sh", "drill-gitops.sh"):
+            text = (ROOT / "scripts" / script).read_text()
+            for line in re.findall(r'echo "(PASS: [^"$]+)', text):
+                with self.subTest(script=script, check=line[:50]):
+                    self.assertIn(line.split(" ${")[0].split(" $(")[0].rstrip(" .,"), documented)
