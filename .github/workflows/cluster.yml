@@ -2,7 +2,8 @@ name: cluster
 
 # The whole path on a real cluster: kind with a local registry, KServe, Kyverno; train and sign a model, publish
 # signed model and server images, deploy by digest, call the endpoint, then drill the controls (unsigned image,
-# tag reference, outside client, missing API key) and check that Prometheus sees the model and its live drift.
+# tag reference, outside client, missing API key), check that Prometheus sees the model and its live drift and that
+# a drift alert reaches the retraining relay, and drill GitOps (hand edits reverted, out-of-project releases refused).
 # No secrets: keys are made for the run and never leave it.
 on:
   push:
@@ -75,6 +76,10 @@ jobs:
         run: |
           scripts/check-monitoring.sh "$WORK" | tee "$WORK/monitoring.txt"
           { echo "### Monitoring"; echo '```'; cat "$WORK/monitoring.txt"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+      - name: Drill GitOps
+        run: |
+          scripts/drill-gitops.sh "$WORK" | tee "$WORK/gitops.txt"
+          { echo "### GitOps drills"; echo '```'; cat "$WORK/gitops.txt"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
       - name: Diagnostics
         if: failure()
         run: |
