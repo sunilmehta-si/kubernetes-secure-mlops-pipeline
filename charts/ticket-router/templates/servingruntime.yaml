@@ -1,0 +1,58 @@
+# The KServe runtime for smlops model bundles: `smlops serve` from the pipeline image, which verifies the bundle's
+# signature with the mounted public key before it opens a port, and admits only clients presenting an API key.
+# The image is pinned by digest; the container meets Pod Security "restricted".
+apiVersion: serving.kserve.io/v1alpha1
+kind: ServingRuntime
+metadata:
+  name: smlops-runtime
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "ticket-router.labels" . | nindent 4 }}
+spec:
+  supportedModelFormats:
+    - name: smlops-bundle
+      version: "1"
+      autoSelect: true
+  protocolVersions: ["v1"]
+  containers:
+    - name: kserve-container
+      image: {{ include "ticket-router.digest" (dict "ref" .Values.server.image "what" "server.image") }}
+      args: ["serve", "--bundle", "/mnt/models", "--public-key", "/etc/smlops/keys/signing-key.pub.pem",
+             "--api-keys", "/etc/smlops/api/api-keys.txt", "--port", "8080",
+             "--tickets-per-minute", {{ .Values.server.ticketsPerMinute | quote }}, "--burst", {{ .Values.server.burst | quote }}]
+      env:
+        - name: MLFLOW_DISABLE_AGENT_HINT
+          value: "1"
+        - name: HOME
+          value: /tmp
+      ports:
+        - containerPort: 8080
+          protocol: TCP
+      readinessProbe:
+        httpGet: {path: /healthz, port: 8080}
+        periodSeconds: 5
+      livenessProbe:
+        httpGet: {path: /healthz, port: 8080}
+        initialDelaySeconds: 20
+        periodSeconds: 10
+      resources:
+        {{- toYaml .Values.server.resources | nindent 8 }}
+      securityContext:
+        runAsNonRoot: true
+        allowPrivilegeEscalation: false
+        readOnlyRootFilesystem: true
+        capabilities: {drop: ["ALL"]}
+        seccompProfile: {type: RuntimeDefault}
+      volumeMounts:
+        - {name: verify-key, mountPath: /etc/smlops/keys, readOnly: true}
+        - {name: api-keys, mountPath: /etc/smlops/api, readOnly: true}
+        - {name: tmp, mountPath: /tmp}
+  volumes:
+    - name: verify-key
+      configMap:
+        name: smlops-verify-key
+    - name: api-keys
+      secret:
+        secretName: smlops-api-keys        # client-id:sha256 lines; no raw keys ever reach the cluster
+    - name: tmp
+      emptyDir: {sizeLimit: 256Mi}
