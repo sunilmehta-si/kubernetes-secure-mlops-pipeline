@@ -54,7 +54,7 @@ for i in $(seq 1 36); do
   sleep 5
 done
 
-kubectl apply -f deploy/serving/namespace.yaml -f deploy/serving/networkpolicy.yaml
+kubectl apply -f deploy/serving/namespace.yaml          # what runs inside it, network policies included, is the release
 kubectl -n serving create configmap smlops-verify-key --from-file=signing-key.pub.pem="$keys/signing-key.pub.pem" \
   --dry-run=client -o yaml | kubectl apply -f -
 echo "platform ready: cert-manager ${CERT_MANAGER_VERSION}, KServe ${KSERVE_VERSION}, Kyverno ${KYVERNO_VERSION}"
