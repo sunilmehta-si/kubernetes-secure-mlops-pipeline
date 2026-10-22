@@ -1,5 +1,8 @@
 # The endpoint. The model arrives as an OCI image (modelcar) pinned by digest, so what runs is exactly what was
 # signed. Standard deployment mode: a plain Deployment, no Knative or Istio.
+{{- if gt (int .Values.replicas.min) (int .Values.replicas.max) }}
+{{- fail (printf "replicas.min (%v) is above replicas.max (%v)" .Values.replicas.min .Values.replicas.max) }}
+{{- end }}
 apiVersion: serving.kserve.io/v1beta1
 kind: InferenceService
 metadata:
