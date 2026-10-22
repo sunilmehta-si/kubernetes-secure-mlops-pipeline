@@ -4,7 +4,7 @@ from pathlib import Path
 
 import yaml
 
-from secure_mlops.gitops import ORDER, ReleaseError, ci_argocd, promote, released_images, render
+from secure_mlops.gitops import ORDER, ReleaseError, ci_argocd, promote, released_images, render, stale_releases
 
 MODEL = "kind-registry:5000/smlops/ticket-router-model@sha256:" + "a" * 64
 SERVER = "kind-registry:5000/smlops/server@sha256:" + "b" * 64
@@ -88,6 +88,18 @@ class PromotionTests(unittest.TestCase):
                 with self.subTest(source=source, target=target), self.assertRaisesRegex(ReleaseError, message):
                     promote(source, target, rendered)
             self.assertFalse((rendered / "prod").exists())
+
+    def test_committed_releases_are_exactly_what_the_chart_renders(self):
+        self.assertEqual(stale_releases(), {}, "re-render with smlops render-release; never edit releases by hand")
+
+    def test_a_hand_edit_or_an_unrendered_values_change_is_caught(self):
+        with tempfile.TemporaryDirectory() as d:
+            rendered = Path(d)
+            render(MODEL, SERVER, rendered / "dev", "dev")
+            self.assertEqual(stale_releases(rendered), {})
+            isvc = rendered / "dev/inferenceservice.yaml"
+            isvc.write_text(isvc.read_text().replace("maxReplicas: 1", "maxReplicas: 9"))
+            self.assertEqual(stale_releases(rendered), {"dev": ["inferenceservice.yaml"]})
 
     def test_the_order_covers_every_environment(self):
         envs = sorted(p.name for p in (Path(__file__).resolve().parents[1] / "deploy/gitops/envs").iterdir())

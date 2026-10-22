@@ -115,6 +115,24 @@ def released_images(env: str, rendered: Path = RENDERED) -> tuple[str, str]:
     return images
 
 
+def stale_releases(rendered: Path = RENDERED) -> dict[str, list[str]]:
+    """{env: files that differ} for every committed release that is not exactly what the chart renders today for
+    that environment with the same images: a hand edit, or a chart or values change nobody re-rendered."""
+    import tempfile
+    stale = {}
+    for kustomization in sorted(rendered.glob("*/kustomization.yaml")):
+        env = kustomization.parent.name
+        model, server = released_images(env, rendered)
+        with tempfile.TemporaryDirectory() as d:
+            fresh = {p.name: p.read_text() for p in render(model, server, d, env)}
+            fresh["target.yaml"] = Path(d, "target.yaml").read_text()
+        committed = {p.name: p.read_text() for p in kustomization.parent.glob("*.yaml")}
+        differ = sorted(n for n in set(fresh) | set(committed) if fresh.get(n) != committed.get(n))
+        if differ:
+            stale[env] = differ
+    return stale
+
+
 def promote(source: str, target: str, rendered: Path = RENDERED) -> list[Path]:
     """Render `target` with exactly the images `source` runs: the same digests, never a rebuild. Only one step
     along ORDER at a time, so nothing reaches prod without having run in staging."""
