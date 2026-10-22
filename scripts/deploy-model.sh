@@ -27,7 +27,7 @@ fi
 hashes="$work/api-keys.txt"
 kubectl -n serving create secret generic smlops-api-keys --from-file "api-keys.txt=${hashes}" \
   --dry-run=client -o yaml | kubectl apply -f -
-smlops render-release --model-image "$MODEL_IMAGE" --server-image "$SERVER_IMAGE" -o "$work/release"
+smlops render-release --env dev --model-image "$MODEL_IMAGE" --server-image "$SERVER_IMAGE" -o "$work/release"
 tag="release-${GITHUB_RUN_ID:-$(date +%s)}"
 (cd "$work/release" && oras push --plain-http "${REGISTRY}/smlops/release:${tag}" . >/dev/null)
 smlops argocd-ci --source "oci://${REGISTRY}/smlops/release" --revision "$tag" -o "$work/argocd.yaml"

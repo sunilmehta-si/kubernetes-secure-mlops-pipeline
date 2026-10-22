@@ -54,9 +54,13 @@ jobs:
         run: scripts/install-platform.sh "$WORK/keys"
       - name: Install monitoring
         run: scripts/install-monitoring.sh "$WORK"
-      - name: Install Argo CD and oras
+      - name: Install Argo CD, oras and Helm
         run: |
           . deploy/versions.env
+          name="helm-${HELM_VERSION}-linux-amd64.tar.gz"
+          curl -sSfL -o "$RUNNER_TEMP/$name" "https://get.helm.sh/$name"
+          echo "86584a54def73570558f66f5111cc53dfed56689637ae32c1201205d494f54fb  $RUNNER_TEMP/$name" | sha256sum -c -
+          mkdir -p "$RUNNER_TEMP/bin" && tar -xzf "$RUNNER_TEMP/$name" -C "$RUNNER_TEMP/bin" --strip-components=1 linux-amd64/helm
           name="oras_${ORAS_VERSION#v}_linux_amd64.tar.gz"
           curl -sSfL -o "$RUNNER_TEMP/$name" "https://github.com/oras-project/oras/releases/download/${ORAS_VERSION}/$name"
           echo "f27adb935022d94df8dc77719c322dda592c78a0d57a6f7dcdd8d900b248c454  $RUNNER_TEMP/$name" | sha256sum -c -

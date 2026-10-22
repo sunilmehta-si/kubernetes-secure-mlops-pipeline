@@ -21,6 +21,7 @@ class RenderTests(unittest.TestCase):
             self.assertEqual([f.name for f in files], ["inferenceservice.yaml", "networkpolicy.yaml",
                                                        "serviceaccount.yaml", "servingruntime.yaml",
                                                        "kustomization.yaml"])
+            self.assertIn("--env prod", files[0].read_text().splitlines()[0])
             isvc = docs(Path(d, "inferenceservice.yaml"))[0]
             self.assertEqual(isvc["spec"]["predictor"]["model"]["storageUri"], f"oci://{MODEL}")
             runtime = docs(Path(d, "servingruntime.yaml"))[0]
@@ -28,6 +29,7 @@ class RenderTests(unittest.TestCase):
             kustomization = docs(Path(d, "kustomization.yaml"))[0]
             self.assertEqual(kustomization["resources"], [f.name for f in files[:-1]])
             self.assertEqual(kustomization["commonAnnotations"]["smlops.io/model-image"], MODEL)
+            self.assertEqual(kustomization["commonAnnotations"]["smlops.io/environment"], "prod")
             for f in files:
                 self.assertNotIn("${", f.read_text(), f.name)
 
@@ -48,7 +50,18 @@ class RenderTests(unittest.TestCase):
             ]:
                 with self.subTest(message=message), self.assertRaisesRegex(ReleaseError, message):
                     render(model, server, d)
+            with self.assertRaisesRegex(ReleaseError, "no environment 'qa'; environments are dev, prod, staging"):
+                render(MODEL, SERVER, d, env="qa")
             self.assertEqual(list(Path(d).iterdir()), [])                   # nothing written on refusal
+
+    def test_each_environment_gets_its_own_values(self):
+        with tempfile.TemporaryDirectory() as d:
+            replicas = {}
+            for env in ("dev", "prod"):
+                render(MODEL, SERVER, Path(d, env), env=env)
+                isvc = docs(Path(d, env, "inferenceservice.yaml"))[0]
+                replicas[env] = isvc["spec"]["predictor"]["minReplicas"]
+            self.assertEqual(replicas, {"dev": 1, "prod": 2})
 
 
 class ArgoCdTests(unittest.TestCase):

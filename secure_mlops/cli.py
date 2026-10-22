@@ -98,6 +98,7 @@ def _parser() -> argparse.ArgumentParser:
                                                "the pull request that changes them is the promotion.")
     rr.add_argument("--model-image", required=True, help="Model image, registry/repository@sha256:...")
     rr.add_argument("--server-image", required=True, help="Server image, registry/repository@sha256:...")
+    rr.add_argument("--env", default="prod", help="Environment in deploy/gitops/envs/ (default: prod).")
     rr.add_argument("--output", "-o", default="deploy/gitops/production",
                     help="Directory Argo CD syncs (default: deploy/gitops/production).")
     ac = sub.add_parser("argocd-ci", help="Write the Argo CD project and application for the CI cluster: the committed "
@@ -460,11 +461,12 @@ def _cmd_promotion_request(args: argparse.Namespace) -> int:
 def _cmd_render_release(args: argparse.Namespace) -> int:
     from .gitops import ReleaseError, render
     try:
-        files = render(args.model_image, args.server_image, args.output)
+        files = render(args.model_image, args.server_image, args.output, args.env)
     except (ReleaseError, OSError) as exc:
         print(f"smlops: {exc}", file=sys.stderr)
         return 2
-    print(f"smlops: wrote {len(files)} manifests to {args.output}; commit them in a pull request to promote",
+    print(f"smlops: wrote the {args.env} release ({len(files)} files) to {args.output}; commit them in a pull "
+          f"request to promote",
           file=sys.stderr)
     return 0
 
