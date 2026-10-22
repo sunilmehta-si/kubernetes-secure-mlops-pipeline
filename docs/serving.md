@@ -128,10 +128,11 @@ git commit -m "Promote ticket-router v5" && gh pr create --body-file promotion.m
 The renderer accepts only images from the cluster registry pinned by digest, the same rule Kyverno enforces. The
 namespace is not part of a release: the platform owns it.
 
-[`deploy/gitops/argocd/ticket-router.yaml`](../deploy/gitops/argocd/ticket-router.yaml) has the Argo CD project and
-application. The application syncs `deploy/gitops/production/` from `main`, prunes what git no longer has and
-reverts hand edits. The project allows one source repository, one destination namespace, nothing cluster-scoped,
-and only the four kinds a release contains; tests check that every rendered kind is allowed and nothing more.
+[`deploy/gitops/argocd/`](../deploy/gitops/argocd/) has the Argo CD projects and the ApplicationSet that makes
+one Application per environment. Each syncs `deploy/gitops/rendered/<env>/` from `main`, prunes what git no longer
+has and reverts hand edits. Each environment's project allows one source repository, one destination namespace,
+nothing cluster-scoped, and only the four kinds a release contains; tests check that every rendered kind is allowed
+and nothing more.
 
 ### On the CI cluster
 

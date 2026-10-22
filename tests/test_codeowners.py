@@ -22,7 +22,7 @@ class CodeownersTests(unittest.TestCase):
         for path in ("configs/gate.yaml", "configs/train.yaml", "secure_mlops/gate.py", "secure_mlops/validate.py",
                      "secure_mlops/registry.py", "secure_mlops/safeload.py", ".github/workflows/ci.yml",
                      "Dockerfile", "pyproject.toml", "secure_mlops/data.py",
-                     "deploy/gitops/production/inferenceservice.yaml", "deploy/policy/verify-signatures.yaml",
+                     "deploy/gitops/rendered/prod/inferenceservice.yaml", "deploy/policy/verify-signatures.yaml",
                      "deploy/monitoring/alerts.yaml", "secure_mlops/gitops.py", "secure_mlops/serve/auth.py",
                      "secure_mlops/relay.py", "deploy/monitoring/alertmanager.yml", "requirements-lock.txt",
                      "configs/models/ticket-router.yaml", "scripts/install-argocd.sh"):

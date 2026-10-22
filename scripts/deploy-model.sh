@@ -33,16 +33,16 @@ tag="release-${GITHUB_RUN_ID:-$(date +%s)}"
 smlops argocd-ci --source "oci://${REGISTRY}/smlops/release" --revision "$tag" -o "$work/argocd.yaml"
 kubectl apply -f "$work/argocd.yaml"
 for i in $(seq 1 60); do
-  state="$(kubectl -n argocd get application ticket-router \
+  state="$(kubectl -n argocd get application ticket-router-dev \
            -o jsonpath='{.status.sync.status}/{.status.sync.revision}/{.status.operationState.phase}' 2>/dev/null || true)"
   case "$state" in
     Synced/*/Succeeded) break ;;
     */Failed|*/Error)
       echo "Argo CD could not sync the release:" >&2
-      kubectl -n argocd get application ticket-router -o jsonpath='{.status.operationState.message}' >&2; exit 1 ;;
+      kubectl -n argocd get application ticket-router-dev -o jsonpath='{.status.operationState.message}' >&2; exit 1 ;;
   esac
   [ "$i" = 60 ] && { echo "Argo CD did not sync the release in 5 minutes (state: $state)" >&2
-                     kubectl -n argocd get application ticket-router -o yaml >&2; exit 1; }
+                     kubectl -n argocd get application ticket-router-dev -o yaml >&2; exit 1; }
   sleep 5
 done
 echo "Argo CD synced release ${tag} into serving"

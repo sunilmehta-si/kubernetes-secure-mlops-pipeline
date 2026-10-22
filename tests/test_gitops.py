@@ -65,35 +65,6 @@ class RenderTests(unittest.TestCase):
             self.assertEqual(replicas, {"dev": 1, "prod": 2})
 
 
-class ArgoCdTests(unittest.TestCase):
-    ROOT = Path(__file__).resolve().parents[1]
-
-    def manifests(self):
-        project, app = docs(self.ROOT / "deploy/gitops/argocd/ticket-router.yaml")
-        return project, app
-
-    def test_every_kind_a_release_contains_is_allowed_and_nothing_cluster_scoped(self):
-        project, _ = self.manifests()
-        allowed = {(k["group"], k["kind"]) for k in project["spec"]["namespaceResourceWhitelist"]}
-        self.assertEqual(project["spec"]["clusterResourceWhitelist"], [])
-        with tempfile.TemporaryDirectory() as d:
-            files = render(MODEL, SERVER, d)
-            rendered = {(doc["apiVersion"].rpartition("/")[0], doc["kind"]) for f in files[:-1] for doc in docs(f)}
-            namespaces = {doc["metadata"]["namespace"] for f in files[:-1] for doc in docs(f)}
-        self.assertLessEqual(rendered, allowed)
-        self.assertEqual(rendered, allowed, "the project allows kinds no release uses")
-        self.assertEqual(namespaces, {"serving"})
-
-    def test_the_application_syncs_rendered_releases_from_main_into_serving_only(self):
-        project, app = self.manifests()
-        self.assertEqual(app["spec"]["project"], project["metadata"]["name"])
-        self.assertEqual((app["spec"]["source"]["targetRevision"], app["spec"]["source"]["path"]),
-                         ("main", "deploy/gitops/production"))
-        self.assertEqual(project["spec"]["sourceRepos"], [app["spec"]["source"]["repoURL"]])
-        self.assertEqual([d["namespace"] for d in project["spec"]["destinations"]], ["serving"])
-        self.assertEqual(app["spec"]["destination"]["namespace"], "serving")
-        self.assertEqual(app["spec"]["syncPolicy"]["automated"], {"prune": True, "selfHeal": True})
-
 class ProjectTests(unittest.TestCase):
     ROOT = Path(__file__).resolve().parents[1]
 
@@ -169,15 +140,21 @@ class ApplicationSetTests(unittest.TestCase):
 class CiArgoCdTests(unittest.TestCase):
     SOURCE = "oci://kind-registry:5000/smlops/release"
 
-    def test_only_the_source_changes_from_the_committed_manifests(self):
-        committed = ArgoCdTests().manifests()
+    def test_only_the_source_changes_from_what_the_applicationset_and_project_say(self):
+        from secure_mlops.gitops import application
+        root = Path(__file__).resolve().parents[1]
+        committed_project = ProjectTests().projects()["ml-serving-dev"]
+        committed_app = application("dev")
         project, app = ci_argocd(self.SOURCE, "run-42")
+        self.assertEqual((app["metadata"]["name"], app["spec"]["project"]), ("ticket-router-dev", "ml-serving-dev"))
         self.assertEqual(project["spec"]["sourceRepos"], [self.SOURCE])
         self.assertEqual(app["spec"]["source"], {"repoURL": self.SOURCE, "targetRevision": "run-42", "path": "."})
-        for theirs, ours in zip(committed, (project, app)):
+        for theirs, ours in ((committed_project, project), (committed_app, app)):
             for key in set(theirs["spec"]) - {"sourceRepos", "source"}:
                 self.assertEqual(ours["spec"][key], theirs["spec"][key], key)
-        self.assertEqual(committed[0]["spec"]["sourceRepos"][0][:8], "https://")   # the committed file is untouched
+        self.assertEqual(committed_app["spec"]["source"]["path"], "deploy/gitops/rendered/dev")
+        self.assertNotIn("{{", yaml.safe_dump(app))                          # every field filled in
+        self.assertTrue((root / "deploy/gitops/argocd/applicationset.yaml").exists())
 
     def test_only_the_cluster_registry_and_plain_tags(self):
         for source, revision in (("oci://ghcr.io/someone/release", "v1"), ("https://kind-registry:5000/x", "v1"),

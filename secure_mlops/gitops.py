@@ -7,8 +7,8 @@ unsigned image. Only images from the cluster's registry (deploy/versions.env), p
 which is the same rule the require-registry-and-digest policy enforces.
 
 On the CI cluster there is no pull request to merge, so the release travels as an OCI artifact in the cluster
-registry instead of a git commit. ci_argocd() derives that Application and its project from the committed ones,
-changing only where the source comes from: the destination, the allowed kinds and the sync policy CI exercises are
+registry instead of a git commit. ci_argocd() derives that Application from the ApplicationSet and the
+environment's project, changing only where the source comes from: the destination, the allowed kinds and the sync policy CI exercises are
 exactly the ones production uses.
 """
 from __future__ import annotations
@@ -29,7 +29,9 @@ RENDERED = ROOT / "deploy" / "gitops" / "rendered"     # what the ApplicationSet
 DIGEST = re.compile(r"^(?P<registry>[a-z0-9.-]+(:[0-9]+)?)(/[a-z0-9._-]+)+@sha256:[0-9a-f]{64}$")
 
 
-ARGOCD = ROOT / "deploy" / "gitops" / "argocd" / "ticket-router.yaml"
+APPSET = ROOT / "deploy" / "gitops" / "argocd" / "applicationset.yaml"
+PROJECTS = ROOT / "deploy" / "gitops" / "argocd" / "projects.yaml"
+FIELD = re.compile(r"\{\{ \.(\w+) \}\}")
 OCI_SOURCE = re.compile(r"^oci://(?P<registry>[a-z0-9.-]+(:[0-9]+)?)(/[a-z0-9._-]+)+$")
 TAG = re.compile(r"^[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}$")
 
@@ -100,15 +102,39 @@ def render(model_image: str, server_image: str, out_dir: str | Path, env: str = 
     return [*written, out / "kustomization.yaml"]
 
 
-def ci_argocd(source: str, revision: str) -> list[dict]:
-    """The committed AppProject and Application, with the release read from an OCI artifact in the cluster registry
-    (oci://registry/repository at tag `revision`) instead of git."""
+def application(env: str) -> dict:
+    """The Application the ApplicationSet makes for an environment: its template filled in from the environment's
+    target.yaml, as Argo CD's go templates do (an unknown field is an error, as with missingkey=error)."""
+    (appset,) = [d for d in yaml.safe_load_all(APPSET.read_text()) if d]
+    target = yaml.safe_load((ENVS / env / "target.yaml").read_text())
+
+    def fill(value):
+        if isinstance(value, str):
+            for key in FIELD.findall(value):
+                if key not in target:
+                    raise ReleaseError(f"the ApplicationSet reads {key}, which {env}/target.yaml does not set")
+            return FIELD.sub(lambda m: str(target[m[1]]), value)
+        if isinstance(value, dict):
+            return {k: fill(v) for k, v in value.items()}
+        if isinstance(value, list):
+            return [fill(v) for v in value]
+        return value
+    template = fill(copy.deepcopy(appset["spec"]["template"]))
+    return {"apiVersion": "argoproj.io/v1alpha1", "kind": "Application",
+            "metadata": {**template["metadata"], "namespace": "argocd"}, "spec": template["spec"]}
+
+
+def ci_argocd(source: str, revision: str, env: str = "dev") -> list[dict]:
+    """The committed project and the ApplicationSet's Application for `env`, with the release read from an OCI
+    artifact in the cluster registry (oci://registry/repository at tag `revision`) instead of git."""
     match = OCI_SOURCE.fullmatch(source)
     if not match or match["registry"] != cluster_registry():
         raise ReleaseError(f"the CI source must be oci://{cluster_registry()}/..., got {source!r}")
     if not TAG.fullmatch(revision):
         raise ReleaseError(f"not an OCI tag: {revision!r}")
-    project, app = (copy.deepcopy(d) for d in yaml.safe_load_all(ARGOCD.read_text()) if d)
+    app = application(env)
+    projects = {p["metadata"]["name"]: p for p in yaml.safe_load_all(PROJECTS.read_text()) if p}
+    project = copy.deepcopy(projects[app["spec"]["project"]])
     project["spec"]["sourceRepos"] = [source]
     app["spec"]["source"] = {"repoURL": source, "targetRevision": revision, "path": "."}
     return [project, app]
