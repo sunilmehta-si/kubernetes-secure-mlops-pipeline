@@ -1,0 +1,43 @@
+# One Argo CD Application per rendered environment (gate G6). An environment gets an Application the moment its
+# release is first committed to deploy/gitops/rendered/<env>/ (smlops render-release writes target.yaml there),
+# and loses it when the release is removed, which is how a model is retired from an environment.
+# Each Application syncs only its environment's directory, under that environment's project (projects.yaml).
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: ticket-router
+  namespace: argocd
+spec:
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]      # a target.yaml without a field fails, it does not render blank
+  generators:
+    - git:
+        repoURL: https://github.com/sunilmehta-si/kubernetes-secure-mlops-pipeline.git
+        revision: main
+        files:
+          - path: deploy/gitops/rendered/*/target.yaml
+  template:
+    metadata:
+      name: "ticket-router-{{ .env }}"
+      labels:
+        smlops.io/environment: "{{ .env }}"
+    spec:
+      project: "{{ .project }}"
+      source:
+        repoURL: https://github.com/sunilmehta-si/kubernetes-secure-mlops-pipeline.git
+        targetRevision: main
+        path: "deploy/gitops/rendered/{{ .env }}"
+      destination:
+        server: "{{ .server }}"
+        namespace: "{{ .namespace }}"
+      syncPolicy:
+        automated:
+          prune: true          # what the release no longer has is removed
+          selfHeal: true       # a hand edit on the cluster is reverted to the release
+        syncOptions:
+          - ServerSideApply=true
+        retry:
+          limit: 3
+          backoff: {duration: 30s, factor: 2, maxDuration: 5m}
+  syncPolicy:
+    preserveResourcesOnDeletion: false

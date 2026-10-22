@@ -25,6 +25,7 @@ ROOT = Path(__file__).resolve().parents[1]
 CHART = ROOT / "charts" / "ticket-router"          # the namespace is not in it: the platform owns the namespace
 ENVS = ROOT / "deploy" / "gitops" / "envs"
 ENV = re.compile(r"^[a-z][a-z0-9-]{0,30}$")
+RENDERED = ROOT / "deploy" / "gitops" / "rendered"     # what the ApplicationSet syncs, one directory per environment
 DIGEST = re.compile(r"^(?P<registry>[a-z0-9.-]+(:[0-9]+)?)(/[a-z0-9._-]+)+@sha256:[0-9a-f]{64}$")
 
 
@@ -50,6 +51,11 @@ def check_image(ref: str, what: str) -> None:
         raise ReleaseError(f"{what} must be pinned by digest (registry/repository@sha256:...), got {ref!r}")
     if match["registry"] != cluster_registry():
         raise ReleaseError(f"{what} must come from the cluster registry {cluster_registry()}, got {ref!r}")
+
+
+def release_dir(env: str) -> Path:
+    """Where an environment's release is committed, and where its Argo CD Application reads it from."""
+    return RENDERED / env
 
 
 def render(model_image: str, server_image: str, out_dir: str | Path, env: str = "prod") -> list[Path]:

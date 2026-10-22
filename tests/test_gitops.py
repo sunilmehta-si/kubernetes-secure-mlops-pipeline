@@ -94,12 +94,6 @@ class ArgoCdTests(unittest.TestCase):
         self.assertEqual(app["spec"]["destination"]["namespace"], "serving")
         self.assertEqual(app["spec"]["syncPolicy"]["automated"], {"prune": True, "selfHeal": True})
 
-    def test_cli_default_output_is_the_path_argo_cd_syncs(self):
-        from secure_mlops.cli import _parser
-        args = _parser().parse_args(["render-release", "--model-image", MODEL, "--server-image", SERVER])
-        self.assertEqual(args.output, self.manifests()[1]["spec"]["source"]["path"])
-
-
 class ProjectTests(unittest.TestCase):
     ROOT = Path(__file__).resolve().parents[1]
 
@@ -135,6 +129,41 @@ class ProjectTests(unittest.TestCase):
         targets = {e: yaml.safe_load((self.ROOT / f"deploy/gitops/envs/{e}/target.yaml").read_text())["project"]
                    for e in ("dev", "staging", "prod")}
         self.assertEqual(set(targets.values()), set(projects))                 # every target names a real project
+
+
+class ApplicationSetTests(unittest.TestCase):
+    ROOT = Path(__file__).resolve().parents[1]
+
+    def appset(self):
+        (appset,) = docs(self.ROOT / "deploy/gitops/argocd/applicationset.yaml")
+        return appset
+
+    def test_one_application_per_rendered_environment_in_its_own_directory_and_project(self):
+        spec = self.appset()["spec"]
+        (gen,) = spec["generators"]
+        self.assertEqual(gen["git"]["files"], [{"path": "deploy/gitops/rendered/*/target.yaml"}])
+        template = spec["template"]["spec"]
+        self.assertEqual(template["project"], "{{ .project }}")
+        self.assertEqual(template["source"]["path"], "deploy/gitops/rendered/{{ .env }}")
+        self.assertEqual((template["source"]["targetRevision"], gen["git"]["revision"]), ("main", "main"))
+        self.assertEqual(template["syncPolicy"]["automated"], {"prune": True, "selfHeal": True})
+        self.assertIn("missingkey=error", spec["goTemplateOptions"])
+
+    def test_the_template_reads_only_fields_every_target_has(self):
+        import re
+        fields = set(re.findall(r"\{\{ \.(\w+) \}\}", (self.ROOT / "deploy/gitops/argocd/applicationset.yaml")
+                                .read_text()))
+        for env in ("dev", "staging", "prod"):
+            target = yaml.safe_load((self.ROOT / f"deploy/gitops/envs/{env}/target.yaml").read_text())
+            self.assertLessEqual(fields, set(target), env)
+
+    def test_cli_default_output_is_the_directory_the_applicationset_reads(self):
+        from secure_mlops.cli import _parser
+        args = _parser().parse_args(["render-release", "--env", "staging", "--model-image", MODEL,
+                                     "--server-image", SERVER])
+        self.assertEqual(args.output, None)                    # resolved per environment by the command
+        from secure_mlops.gitops import release_dir
+        self.assertEqual(release_dir("staging"), self.ROOT / "deploy/gitops/rendered/staging")
 
 
 class CiArgoCdTests(unittest.TestCase):

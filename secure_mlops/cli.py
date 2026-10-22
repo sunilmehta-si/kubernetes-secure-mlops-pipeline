@@ -99,8 +99,8 @@ def _parser() -> argparse.ArgumentParser:
     rr.add_argument("--model-image", required=True, help="Model image, registry/repository@sha256:...")
     rr.add_argument("--server-image", required=True, help="Server image, registry/repository@sha256:...")
     rr.add_argument("--env", default="prod", help="Environment in deploy/gitops/envs/ (default: prod).")
-    rr.add_argument("--output", "-o", default="deploy/gitops/production",
-                    help="Directory Argo CD syncs (default: deploy/gitops/production).")
+    rr.add_argument("--output", "-o", help="Directory to write (default: deploy/gitops/rendered/<env>, which the "
+                                           "ApplicationSet syncs).")
     ac = sub.add_parser("argocd-ci", help="Write the Argo CD project and application for the CI cluster: the committed "
                                           "ones, syncing a release pushed as an OCI artifact.")
     ac.add_argument("--source", required=True, help="oci://<cluster registry>/<repository> holding the release.")
@@ -459,13 +459,14 @@ def _cmd_promotion_request(args: argparse.Namespace) -> int:
 
 
 def _cmd_render_release(args: argparse.Namespace) -> int:
-    from .gitops import ReleaseError, render
+    from .gitops import ReleaseError, release_dir, render
+    output = args.output or str(release_dir(args.env))
     try:
-        files = render(args.model_image, args.server_image, args.output, args.env)
+        files = render(args.model_image, args.server_image, output, args.env)
     except (ReleaseError, OSError) as exc:
         print(f"smlops: {exc}", file=sys.stderr)
         return 2
-    print(f"smlops: wrote the {args.env} release ({len(files)} files) to {args.output}; commit them in a pull "
+    print(f"smlops: wrote the {args.env} release ({len(files)} files) to {output}; commit them in a pull "
           f"request to promote",
           file=sys.stderr)
     return 0
