@@ -22,7 +22,7 @@ class VersionTests(unittest.TestCase):
         v = versions()
         self.assertEqual(set(v), {"KIND_VERSION", "KIND_NODE_IMAGE", "CERT_MANAGER_VERSION", "KSERVE_VERSION",
                                   "KYVERNO_VERSION", "ZOT_VERSION", "COSIGN_VERSION", "PROMETHEUS_VERSION", "ALERTMANAGER_VERSION", "ARGOCD_VERSION",
-                                  "ORAS_VERSION", "REGISTRY",
+                                  "ORAS_VERSION", "HELM_VERSION", "REGISTRY",
                                   "KIND_CONTEXT"})
         self.assertEqual(v.pop("REGISTRY"), "kind-registry:5000")
         self.assertEqual(v.pop("KIND_CONTEXT"), "kind-smlops")                       # kind-<name in kind.yaml>
