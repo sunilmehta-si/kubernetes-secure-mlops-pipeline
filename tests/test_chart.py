@@ -44,6 +44,22 @@ class ChartTests(unittest.TestCase):
             finally:
                 os.environ.pop("SMLOPS_HELM") if old is None else os.environ.__setitem__("SMLOPS_HELM", old)
 
+    def test_the_readme_documents_every_value_and_app_version_tracks_the_package(self):
+        from secure_mlops import __version__
+        values = yaml.safe_load((CHART / "values.yaml").read_text())
+
+        def leaves(d, prefix=""):
+            for k, v in d.items():
+                if isinstance(v, dict) and k != "resources":
+                    yield from leaves(v, f"{prefix}{k}.")
+                else:
+                    yield prefix + k
+        readme = (CHART / "README.md").read_text()
+        for key in leaves(values):
+            with self.subTest(value=key):
+                self.assertIn(f"| `{key}` |", readme)
+        self.assertEqual(yaml.safe_load((CHART / "Chart.yaml").read_text())["appVersion"], __version__)
+
 
 if __name__ == "__main__":
     unittest.main()
