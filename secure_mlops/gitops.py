@@ -57,8 +57,8 @@ def render(model_image: str, server_image: str, out_dir: str | Path, env: str = 
     written, kustomization.yaml last."""
     check_image(model_image, "the model image")
     check_image(server_image, "the server image")
-    values = ENVS / env / "values.yaml"
-    if not ENV.fullmatch(env) or not values.is_file():
+    values, target = ENVS / env / "values.yaml", ENVS / env / "target.yaml"
+    if not ENV.fullmatch(env) or not values.is_file() or not target.is_file():
         known = ", ".join(sorted(p.name for p in ENVS.iterdir() if (p / "values.yaml").is_file()))
         raise ReleaseError(f"no environment {env!r}; environments are {known}")
     try:
@@ -89,6 +89,8 @@ def render(model_image: str, server_image: str, out_dir: str | Path, env: str = 
                      f"  smlops.io/server-image: \"{server_image}\"\n"
                      "resources:\n" + "".join(f"  - {p.name}\n" for p in written))
     (out / "kustomization.yaml").write_text(kustomization)
+    # Where it runs, for the ApplicationSet; not a manifest, so the kustomization does not list it.
+    (out / "target.yaml").write_text(target.read_text())
     return [*written, out / "kustomization.yaml"]
 
 

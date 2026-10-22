@@ -1,0 +1,7 @@
+# Where the staging release runs. The ApplicationSet (deploy/gitops/argocd/) makes one Argo CD Application per rendered
+# environment from this file; `smlops render-release --env staging` copies it next to the release.
+# All three point at the cluster Argo CD runs in; a real setup points each at its own cluster.
+env: staging
+server: https://kubernetes.default.svc
+namespace: serving
+project: ml-serving-staging

@@ -38,6 +38,15 @@ class EnvironmentTests(unittest.TestCase):
         defaults = template(CHART, values=IMAGES)
         self.assertEqual(template(CHART, [ENVS / "staging/values.yaml"], IMAGES), defaults)
 
+    def test_every_environment_says_where_it_runs_under_its_own_project(self):
+        for env in ("dev", "staging", "prod"):
+            with self.subTest(env=env):
+                target = yaml.safe_load((ENVS / env / "target.yaml").read_text())
+                self.assertEqual(set(target), {"env", "server", "namespace", "project"})
+                self.assertEqual((target["env"], target["project"]), (env, f"ml-serving-{env}"))
+                self.assertEqual(target["namespace"], "serving")
+                self.assertTrue(target["server"].startswith("https://"))
+
 
 if __name__ == "__main__":
     unittest.main()

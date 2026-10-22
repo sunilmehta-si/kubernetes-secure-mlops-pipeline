@@ -22,6 +22,7 @@ class RenderTests(unittest.TestCase):
                                                        "serviceaccount.yaml", "servingruntime.yaml",
                                                        "kustomization.yaml"])
             self.assertIn("--env prod", files[0].read_text().splitlines()[0])
+            self.assertEqual(yaml.safe_load(Path(d, "target.yaml").read_text())["env"], "prod")   # not a resource
             isvc = docs(Path(d, "inferenceservice.yaml"))[0]
             self.assertEqual(isvc["spec"]["predictor"]["model"]["storageUri"], f"oci://{MODEL}")
             runtime = docs(Path(d, "servingruntime.yaml"))[0]
