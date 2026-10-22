@@ -68,7 +68,7 @@ The bundle layout is what KServe mounts at `/mnt/models` from the model image:
 
 ## On a local cluster
 
-Needs Docker, kind, kubectl, jq, cosign and oras. Versions are pinned in [`deploy/versions.env`](../deploy/versions.env).
+Needs Docker, kind, kubectl, jq, cosign, oras and Helm. Versions are pinned in [`deploy/versions.env`](../deploy/versions.env).
 
 ```bash
 echo "127.0.0.1 kind-registry" | sudo tee -a /etc/hosts   # push to the registry under the name the cluster uses
@@ -115,15 +115,11 @@ PASS: a release adding a ClusterRole and a Secret was refused by the project; ne
 
 ## Delivery with GitOps
 
-A release is the set of files `smlops render-release` writes: the templates in `deploy/serving/` with both images
-filled in by digest, plus a kustomization that records them. The cluster workflow deploys exactly these files, and
-promotion to production is a pull request that commits them to `deploy/gitops/production/`:
-
-```bash
-smlops render-release --model-image "$MODEL_IMAGE" --server-image "$SERVER_IMAGE"   # writes deploy/gitops/production
-git switch -c promote-ticket-router-v5 && git add deploy/gitops/production
-git commit -m "Promote ticket-router v5" && gh pr create --body-file promotion.md      # from smlops promotion-request
-```
+A release is the set of files `smlops render-release --env <env>` writes: the
+[ticket-router chart](../charts/ticket-router/) rendered with that environment's values and both images by digest,
+plus a kustomization that records them. The cluster workflow deploys exactly these files for dev, and promotion is
+a pull request that commits them to `deploy/gitops/rendered/<env>/`, one environment at a time with the same
+digests (`smlops promote`). [docs/environments.md](environments.md) has the layout, the reasons and the steps.
 
 The renderer accepts only images from the cluster registry pinned by digest, the same rule Kyverno enforces. The
 namespace is not part of a release: the platform owns it.
