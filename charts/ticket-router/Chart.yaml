@@ -1,0 +1,10 @@
+# The ticket-router endpoint as a Helm chart: the one source of the serving manifests for every environment.
+# Environments differ only in values (deploy/gitops/envs/<env>/values.yaml); templates never test which environment
+# they are in. `smlops render-release --env <env>` renders it, and the rendered files are what Argo CD applies.
+apiVersion: v2
+name: ticket-router
+description: Signed ticket-router model served by KServe, verified twice, reachable only by allowed clients
+type: application
+version: 0.1.0          # the chart; bump on every template or default change
+appVersion: "0.4.0"     # the smlops release whose server the chart runs
+kubeVersion: ">=1.30.0-0"

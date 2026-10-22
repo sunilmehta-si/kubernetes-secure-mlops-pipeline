@@ -1,0 +1,26 @@
+# Defaults are the production shape: hardened, two replicas at most, every limit set. An environment overrides only
+# what must differ (replicas, resources, rate limits); nothing here is safe to loosen by omission.
+# The two images have no default on purpose: a release names them by digest, or rendering fails.
+
+namespace: serving
+
+model:
+  name: ticket-router
+  image: ""                  # registry/repository@sha256:...  the signed modelcar image (required)
+
+server:
+  image: ""                  # registry/repository@sha256:...  the signed smlops server image (required)
+  # Per-client ticket budget (threat T9): sustained rate and the largest batch at once.
+  ticketsPerMinute: 600
+  burst: 120
+  resources:
+    requests: {cpu: 100m, memory: 512Mi}
+    limits: {cpu: "1", memory: 1Gi}
+
+replicas:
+  min: 1
+  max: 2
+
+# Namespaces with this label set to "true" may call the model; nothing else can connect.
+clients:
+  namespaceLabel: smlops.io/model-clients
