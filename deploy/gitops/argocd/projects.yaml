@@ -1,0 +1,72 @@
+# One Argo CD project per environment (gate G6). Each fences its environment in the same way: one source repository,
+# the serving namespace only, nothing cluster-scoped (not even the namespace, which the platform owns), and only
+# the four kinds a release contains. Prod adds sync windows: changes reach it on weekday working hours only, and
+# a person may still sync by hand outside them to roll back.
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: ml-serving-dev
+  namespace: argocd
+spec:
+  description: Signed models served by KServe (dev)
+  sourceRepos:
+    - https://github.com/sunilmehta-si/kubernetes-secure-mlops-pipeline.git
+  destinations:
+    - server: https://kubernetes.default.svc
+      namespace: serving
+  clusterResourceWhitelist: []
+  namespaceResourceWhitelist:
+    - {group: serving.kserve.io, kind: InferenceService}
+    - {group: serving.kserve.io, kind: ServingRuntime}
+    - {group: networking.k8s.io, kind: NetworkPolicy}
+    - {group: "", kind: ServiceAccount}
+  orphanedResources:
+    warn: true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: ml-serving-staging
+  namespace: argocd
+spec:
+  description: Signed models served by KServe (staging)
+  sourceRepos:
+    - https://github.com/sunilmehta-si/kubernetes-secure-mlops-pipeline.git
+  destinations:
+    - server: https://kubernetes.default.svc
+      namespace: serving
+  clusterResourceWhitelist: []
+  namespaceResourceWhitelist:
+    - {group: serving.kserve.io, kind: InferenceService}
+    - {group: serving.kserve.io, kind: ServingRuntime}
+    - {group: networking.k8s.io, kind: NetworkPolicy}
+    - {group: "", kind: ServiceAccount}
+  orphanedResources:
+    warn: true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: ml-serving-prod
+  namespace: argocd
+spec:
+  description: Signed models served by KServe (prod)
+  sourceRepos:
+    - https://github.com/sunilmehta-si/kubernetes-secure-mlops-pipeline.git
+  destinations:
+    - server: https://kubernetes.default.svc
+      namespace: serving
+  clusterResourceWhitelist: []
+  namespaceResourceWhitelist:
+    - {group: serving.kserve.io, kind: InferenceService}
+    - {group: serving.kserve.io, kind: ServingRuntime}
+    - {group: networking.k8s.io, kind: NetworkPolicy}
+    - {group: "", kind: ServiceAccount}
+  orphanedResources:
+    warn: true
+  syncWindows:
+    - kind: allow
+      schedule: "0 8 * * 1-5"       # Monday to Friday, from 08:00 UTC
+      duration: 10h
+      applications: ["*"]
+      manualSync: true              # a person can always sync by hand, e.g. to roll back at night

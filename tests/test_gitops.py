@@ -100,6 +100,43 @@ class ArgoCdTests(unittest.TestCase):
         self.assertEqual(args.output, self.manifests()[1]["spec"]["source"]["path"])
 
 
+class ProjectTests(unittest.TestCase):
+    ROOT = Path(__file__).resolve().parents[1]
+
+    def projects(self):
+        return {p["metadata"]["name"]: p for p in docs(self.ROOT / "deploy/gitops/argocd/projects.yaml")}
+
+    def test_one_fenced_project_per_environment_with_the_same_fence(self):
+        projects = self.projects()
+        self.assertEqual(sorted(projects), ["ml-serving-dev", "ml-serving-prod", "ml-serving-staging"])
+        fences = {name: {k: v for k, v in p["spec"].items() if k not in ("description", "syncWindows")}
+                  for name, p in projects.items()}
+        self.assertEqual(fences["ml-serving-dev"], fences["ml-serving-staging"])
+        self.assertEqual(fences["ml-serving-dev"], fences["ml-serving-prod"])
+        for name, project in projects.items():
+            with self.subTest(project=name):
+                self.assertEqual(project["spec"]["clusterResourceWhitelist"], [])
+                self.assertEqual([d["namespace"] for d in project["spec"]["destinations"]], ["serving"])
+
+    def test_every_kind_a_release_contains_is_allowed_and_nothing_more(self):
+        allowed = {(k["group"], k["kind"])
+                   for k in self.projects()["ml-serving-prod"]["spec"]["namespaceResourceWhitelist"]}
+        with tempfile.TemporaryDirectory() as d:
+            files = render(MODEL, SERVER, d)
+            rendered = {(doc["apiVersion"].rpartition("/")[0], doc["kind"]) for f in files[:-1] for doc in docs(f)}
+        self.assertEqual(rendered, allowed)
+
+    def test_only_prod_has_sync_windows_and_hand_syncs_stay_possible(self):
+        projects = self.projects()
+        self.assertNotIn("syncWindows", projects["ml-serving-dev"]["spec"])
+        self.assertNotIn("syncWindows", projects["ml-serving-staging"]["spec"])
+        (window,) = projects["ml-serving-prod"]["spec"]["syncWindows"]
+        self.assertEqual((window["kind"], window["schedule"], window["manualSync"]), ("allow", "0 8 * * 1-5", True))
+        targets = {e: yaml.safe_load((self.ROOT / f"deploy/gitops/envs/{e}/target.yaml").read_text())["project"]
+                   for e in ("dev", "staging", "prod")}
+        self.assertEqual(set(targets.values()), set(projects))                 # every target names a real project
+
+
 class CiArgoCdTests(unittest.TestCase):
     SOURCE = "oci://kind-registry:5000/smlops/release"
 
