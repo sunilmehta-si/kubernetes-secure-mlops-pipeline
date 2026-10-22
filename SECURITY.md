@@ -30,7 +30,10 @@ threat model, including ways to:
   an alert that does not carry `action=retrain`;
 - get Argo CD to apply something outside its project (another namespace, a cluster-scoped object, a kind no
   release contains), or keep a hand edit on the cluster against the release;
-- install a dependency version other than the one in `requirements-lock.txt`.
+- install a dependency version other than the one in `requirements-lock.txt`;
+- make the chart render a weaker workload in any environment (root, privilege escalation, a writable root
+  filesystem, egress, an image by tag), or commit a release that differs from what the chart renders;
+- move a release into prod without it having run in staging, or with different digests from staging.
 
 ## Keys and credentials in this project
 
