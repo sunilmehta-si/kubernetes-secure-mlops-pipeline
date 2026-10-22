@@ -187,7 +187,7 @@ NODES = {
     "registry": (651, 150, "MLflow + zot", "versions, OCI models"),
     "policy": (861, 150, "Kyverno", "verify model signature"),
     "monitoring": (441, 314, "Prometheus", "live drift, alert rules"),
-    "argocd": (651, 234, "Argo CD", "syncs releases by digest"),   # between the rows: scrapes pass below it
+    "argocd": (651, 234, "Argo CD", "an app per environment"),   # between the rows: scrapes pass below it
     "serving": (861, 314, "KServe", "ticket-router endpoint"),
     "clients": (1077, 314, "Support tool", "sends tickets"),
 }

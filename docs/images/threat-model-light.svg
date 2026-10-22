@@ -60,7 +60,7 @@
 <text x="453" y="351" font-size="10.5" font-weight="400" fill="#57564f" text-anchor="start">live drift, alert rules</text>
 <rect x="651" y="234" width="164" height="50" rx="9" fill="#ffffff" stroke="#c8e4d1"/>
 <text x="663" y="255" font-size="12.5" font-weight="600" fill="#0b0b0b" text-anchor="start">Argo CD</text>
-<text x="663" y="271" font-size="10.5" font-weight="400" fill="#57564f" text-anchor="start">syncs releases by digest</text>
+<text x="663" y="271" font-size="10.5" font-weight="400" fill="#57564f" text-anchor="start">an app per environment</text>
 <rect x="861" y="314" width="164" height="50" rx="9" fill="#ffffff" stroke="#c8e4d1"/>
 <text x="873" y="335" font-size="12.5" font-weight="600" fill="#0b0b0b" text-anchor="start">KServe</text>
 <text x="873" y="351" font-size="10.5" font-weight="400" fill="#57564f" text-anchor="start">ticket-router endpoint</text>
