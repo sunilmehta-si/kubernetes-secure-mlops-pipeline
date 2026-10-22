@@ -1,0 +1,21 @@
+# The endpoint. The model arrives as an OCI image (modelcar) pinned by digest, so what runs is exactly what was
+# signed. Standard deployment mode: a plain Deployment, no Knative or Istio.
+apiVersion: serving.kserve.io/v1beta1
+kind: InferenceService
+metadata:
+  name: {{ .Values.model.name }}
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "ticket-router.labels" . | nindent 4 }}
+  annotations:
+    serving.kserve.io/deploymentMode: Standard     # explicit: KServe's release manifest defaults to Serverless
+spec:
+  predictor:
+    serviceAccountName: model-server
+    minReplicas: {{ .Values.replicas.min }}
+    maxReplicas: {{ .Values.replicas.max }}
+    model:
+      modelFormat:
+        name: smlops-bundle
+      runtime: smlops-runtime
+      storageUri: oci://{{ include "ticket-router.digest" (dict "ref" .Values.model.image "what" "model.image") }}
