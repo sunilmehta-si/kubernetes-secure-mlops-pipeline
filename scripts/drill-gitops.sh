@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # Drill the GitOps controls on the running cluster (gate G6), after scripts/deploy-model.sh:
+#   0. the endpoint runs the dev release rendered from the chart, as Argo CD's dev Application synced it
 #   1. a hand edit to the live InferenceService             -> Argo CD puts back what the release says (self-heal)
 #   2. a release that adds a ClusterRole and a Secret       -> refused by the project; neither reaches the cluster
 # Prints PASS/FAIL per drill; exits 1 if any control failed.
@@ -12,6 +13,17 @@ cd "$(dirname "$0")/.."
   || { echo "refusing to run: kubectl context is not $KIND_CONTEXT (scripts/cluster-up.sh creates it)" >&2; exit 1; }
 work="${1:?usage: drill-gitops.sh WORK_DIR}"
 failed=0
+
+# 0. what runs is the dev release, from the chart, synced by the ApplicationSet's dev Application
+notes="$(kubectl -n serving get inferenceservice ticket-router \
+         -o jsonpath='{.metadata.annotations.smlops\.io/environment} {.metadata.annotations.smlops\.io/chart}')"
+chart="ticket-router-$(sed -n 's/^version: \([0-9.]*\).*/\1/p' charts/ticket-router/Chart.yaml)"
+project="$(kubectl -n argocd get application ticket-router-dev -o jsonpath='{.spec.project}' 2>/dev/null || true)"
+if [ "$notes" = "dev $chart" ] && [ "$project" = "ml-serving-dev" ]; then
+  echo "PASS: the endpoint runs the dev release of chart $chart, synced under project ml-serving-dev"
+else
+  echo "FAIL: the endpoint says '$notes' (want 'dev $chart'), project '$project'"; failed=1
+fi
 
 # 1. self-heal: someone scales the endpoint by hand
 want="$(kubectl -n serving get inferenceservice ticket-router -o jsonpath='{.spec.predictor.maxReplicas}')"

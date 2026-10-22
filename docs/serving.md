@@ -93,7 +93,7 @@ The [`cluster` workflow](../.github/workflows/cluster.yml) runs these steps on e
 rejections: an unsigned image, an image referenced by tag, a client outside the allowed namespaces (curl's own "no
 connection", never a kubectl error), and a request without an API key (401). Every step runs with `pipefail`: an
 earlier version piped the drill into `tee`, which hid a failing drill behind a green run until the monitoring
-check exposed it. The latest run, all fourteen checks:
+check exposed it. The latest run, all fifteen checks:
 
 ```text
 Argo CD synced release release-39557059626 into serving
@@ -109,6 +109,7 @@ PASS: Prometheus sends its alerts to Alertmanager
 PASS: a drift alert reached the relay, which would start retraining (dry run, no GitHub token here)
 PASS: an alert without action=retrain did not start retraining
 PASS: Prometheus scrapes the relay, so a failing retraining trigger alerts
+PASS: the endpoint runs the dev release of chart ticket-router-0.1.0, synced under project ml-serving-dev
 PASS: a hand edit to the endpoint was reverted to the release by Argo CD
 PASS: a release adding a ClusterRole and a Secret was refused by the project; neither was created
 ```
