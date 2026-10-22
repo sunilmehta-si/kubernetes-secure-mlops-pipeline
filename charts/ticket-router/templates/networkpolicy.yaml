@@ -1,0 +1,34 @@
+# Everything in the namespace is denied by default, in and out. The predictor accepts connections on 8080 only from
+# namespaces labelled {{ .Values.clients.namespaceLabel }}=true (the support tool, and Prometheus for /metrics). It
+# gets no egress at all: a model server needs nothing from the network, and a compromised one cannot send data out.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "ticket-router.labels" . | nindent 4 }}
+spec:
+  podSelector: {}
+  policyTypes: ["Ingress", "Egress"]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ .Values.model.name }}-clients
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "ticket-router.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      serving.kserve.io/inferenceservice: {{ .Values.model.name }}
+  policyTypes: ["Ingress"]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              {{ .Values.clients.namespaceLabel }}: "true"
+      ports:
+        - protocol: TCP
+          port: 8080
