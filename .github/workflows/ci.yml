@@ -151,3 +151,20 @@ jobs:
           tar -xzf "$RUNNER_TEMP/$name.tar.gz" -C "$RUNNER_TEMP" --strip-components=1 "$name/amtool"
       - run: pip install pyyaml==6.0.3
       - run: scripts/test-alert-routing.sh "$RUNNER_TEMP/amtool"
+
+  chart:
+    # The ticket-router chart linted strictly in every environment, at the pinned and checksummed Helm.
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install Helm
+        run: |
+          . deploy/versions.env
+          name="helm-${HELM_VERSION}-linux-amd64.tar.gz"
+          curl -sSfL -o "$RUNNER_TEMP/$name" "https://get.helm.sh/$name"
+          echo "86584a54def73570558f66f5111cc53dfed56689637ae32c1201205d494f54fb  $RUNNER_TEMP/$name" | sha256sum -c -
+          tar -xzf "$RUNNER_TEMP/$name" -C "$RUNNER_TEMP" --strip-components=1 linux-amd64/helm
+      - run: scripts/lint-chart.sh "$RUNNER_TEMP/helm"
