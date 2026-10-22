@@ -13,6 +13,7 @@
 
 # what runs in production and what may run there: releases, admission policies, endpoint access, alerts, and
 # what starts retraining or retires a model
+/charts/                          @sunilmehta-si
 /deploy/gitops/                    @sunilmehta-si
 /deploy/policy/                    @sunilmehta-si
 /deploy/monitoring/alerts.yaml     @sunilmehta-si

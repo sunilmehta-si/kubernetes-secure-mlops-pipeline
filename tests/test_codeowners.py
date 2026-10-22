@@ -25,7 +25,8 @@ class CodeownersTests(unittest.TestCase):
                      "deploy/gitops/rendered/prod/inferenceservice.yaml", "deploy/policy/verify-signatures.yaml",
                      "deploy/monitoring/alerts.yaml", "secure_mlops/gitops.py", "secure_mlops/serve/auth.py",
                      "secure_mlops/relay.py", "deploy/monitoring/alertmanager.yml", "requirements-lock.txt",
-                     "configs/models/ticket-router.yaml", "scripts/install-argocd.sh"):
+                     "configs/models/ticket-router.yaml", "scripts/install-argocd.sh",
+                     "charts/ticket-router/values.yaml", "deploy/gitops/envs/prod/values.yaml"):
             with self.subTest(path=path):
                 self.assertTrue(owners(path), f"{path} has no code owner")
 
