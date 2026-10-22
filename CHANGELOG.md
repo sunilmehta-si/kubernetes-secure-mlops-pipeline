@@ -1,5 +1,33 @@
 # Changelog
 
+## [0.5.0] - 2026-10-22
+
+One Helm chart, three environments: dev, staging and prod differ only in a few lines of values, each has its own
+folder, Argo CD Application and project, and a release moves between them one step at a time with the same digests.
+
+### Added
+- **Helm chart** `charts/ticket-router`: the only source of the serving manifests. Hardened defaults, images
+  required by digest, a values schema that rejects unknown keys and wrong types, rate limits and resources as
+  values, a README covering every value; rendered only with the Helm version pinned in `deploy/versions.env`.
+- **Environments** `deploy/gitops/envs/{dev,staging,prod}`: small values files (staging has none, so it is
+  prod-shaped; prod runs two to four replicas) and a target per environment.
+- **Rendered releases** in `deploy/gitops/rendered/<env>/` (`smlops render-release --env`), and **promotion**
+  (`smlops promote --from --to`) along dev → staging → prod only, copying exactly the previous environment's digests.
+- **Argo CD per environment:** an ApplicationSet that makes one Application per rendered environment, and one
+  AppProject per environment with the same fence; prod syncs on weekday working hours, by hand at any time.
+- CI: the chart linted strictly in every environment; the hardening tested in every environment's render; a check
+  that every committed release equals what the chart renders for it.
+- A cluster drill that the endpoint runs the chart's dev release, synced under the dev project (fifteen checks).
+- `docs/environments.md`; code owners for the chart.
+
+### Changed
+- The CI cluster deploys the chart's dev release, through the ApplicationSet's dev Application.
+- `deploy/serving/` keeps only the namespace, which the platform owns; the old templates are gone.
+
+### Fixed
+- public.ecr.aws rate-limited anonymous pulls of Argo CD's Redis image from CI; the install falls back to the same
+  image on Docker Hub, pinned to the identical digest.
+
 ## [0.4.0] - 2026-10-21
 
 The loop closes: a drift alert starts a retraining run on its own, Argo CD delivers every release on the cluster
@@ -103,6 +131,7 @@ cannot start, and a server cannot run a model whose signature does not verify.
 - Pods created before Kyverno registered its Pod webhook missed the hardening and were retried for minutes; the install
   now waits for the webhook.
 
+[0.5.0]: https://github.com/sunilmehta-si/kubernetes-secure-mlops-pipeline/releases/tag/v0.5.0
 [0.4.0]: https://github.com/sunilmehta-si/kubernetes-secure-mlops-pipeline/releases/tag/v0.4.0
 [0.3.0]: https://github.com/sunilmehta-si/kubernetes-secure-mlops-pipeline/releases/tag/v0.3.0
 [0.2.0]: https://github.com/sunilmehta-si/kubernetes-secure-mlops-pipeline/releases/tag/v0.2.0
