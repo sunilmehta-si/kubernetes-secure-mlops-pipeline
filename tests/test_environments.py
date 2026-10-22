@@ -47,6 +47,16 @@ class EnvironmentTests(unittest.TestCase):
                 self.assertEqual(target["namespace"], "serving")
                 self.assertTrue(target["server"].startswith("https://"))
 
+    def test_the_guide_states_each_environment_as_its_values_render_it(self):
+        guide = (ROOT / "docs/environments.md").read_text()
+        for env in ("dev", "staging", "prod"):
+            with self.subTest(env=env):
+                pred = rendered(env)["InferenceService"]["spec"]["predictor"]
+                self.assertIn(f"| {env} | {pred['minReplicas']} to {pred['maxReplicas']} |", guide)
+        import re
+        for target in re.findall(r"\]\(([a-z.-]+\.md)", guide):
+            self.assertTrue((ROOT / "docs" / target).exists(), target)
+
 
 if __name__ == "__main__":
     unittest.main()
