@@ -1,0 +1,9 @@
+# prod: two replicas at least, so one can be lost or rolled without downtime, and room to scale to four.
+# Changes here need code-owner review (.github/CODEOWNERS).
+replicas:
+  min: 2
+  max: 4
+server:
+  resources:
+    requests: {cpu: 250m, memory: 512Mi}
+    limits: {cpu: "2", memory: 1Gi}

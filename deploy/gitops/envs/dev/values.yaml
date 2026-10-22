@@ -1,0 +1,10 @@
+# dev: one replica, small requests; the CI cluster deploys this environment on every push.
+# Only what differs from charts/ticket-router/values.yaml belongs here. Images are never set here: a release
+# names them by digest when it is rendered (smlops render-release --env dev).
+replicas:
+  min: 1
+  max: 1
+server:
+  resources:
+    requests: {cpu: 50m, memory: 384Mi}
+    limits: {cpu: 500m, memory: 768Mi}

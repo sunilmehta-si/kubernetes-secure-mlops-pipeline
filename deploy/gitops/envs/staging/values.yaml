@@ -1,0 +1,3 @@
+# staging: the production shape at production defaults, so a release behaves here as it will in prod.
+# Deliberately empty of overrides: anything set here would make staging prove less about prod.
+{}
