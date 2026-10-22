@@ -15,6 +15,15 @@ case "$ARGOCD_VERSION" in    # SHA-256 of core-install.yaml per pinned version; 
   v3.5.4) expected=7f6e38f3d1826c2ab92b22c04160dec3778563b84bdafd3f262c2353edf34602 ;;
   *) expected="" ;;
 esac
+# The same image from a second registry, by digest, for when the first refuses us: public.ecr.aws limits anonymous
+# pulls from CI runners ("toomanyrequests: Data limit exceeded"). The digest is the one public.ecr.aws serves, so
+# the bytes are identical; it is retagged under the manifest's own name, which stays as verified.
+mirror() {
+  case "$1" in
+    public.ecr.aws/docker/library/redis:8.2.3-alpine)
+      echo docker.io/library/redis@sha256:08ad0b1d280850169a790dba1393ff7a90aef951fc19632cf4d3ce4f78e679ba ;;
+  esac
+}
 [ -n "$expected" ] || { echo "no checksum recorded for Argo CD ${ARGOCD_VERSION}" >&2; exit 1; }
 manifest="$(mktemp)"
 trap 'rm -f "$manifest"' EXIT
@@ -27,12 +36,20 @@ sed -i.orig 's/imagePullPolicy: Always/imagePullPolicy: IfNotPresent/' "$manifes
 
 # Pull its images on this machine, with retries, and load them into the node: a pull from a public registry can
 # fail for minutes (one CI run lost Redis to an error from public.ecr.aws), and the node then backs off for longer.
-for image in $(grep -o 'image: [^ ]*' "$manifest" | cut -d' ' -f2 | sort -u); do
-  for attempt in 1 2 3 4; do
-    docker pull -q "$image" >/dev/null && break
-    [ "$attempt" = 4 ] && { echo "could not pull $image" >&2; exit 1; }
-    echo "pull of $image failed, retrying in $((attempt * 15))s" >&2; sleep $((attempt * 15))
+pull() {   # pull with retries; returns 1 if every attempt failed
+  for attempt in 1 2 3; do
+    docker pull -q "$1" >/dev/null && return 0
+    [ "$attempt" = 3 ] || { echo "pull of $1 failed, retrying in $((attempt * 15))s" >&2; sleep $((attempt * 15)); }
   done
+  return 1
+}
+for image in $(grep -o 'image: [^ ]*' "$manifest" | cut -d' ' -f2 | sort -u); do
+  if ! pull "$image"; then
+    alt="$(mirror "$image")"
+    [ -n "$alt" ] && pull "$alt" || { echo "could not pull $image${alt:+ or $alt}" >&2; exit 1; }
+    docker tag "$alt" "$image"
+    echo "pulled $image as $alt (same digest)" >&2
+  fi
   kind load docker-image "$image" --name smlops >/dev/null
 done
 
