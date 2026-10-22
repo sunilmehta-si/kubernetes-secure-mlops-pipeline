@@ -185,8 +185,10 @@ flowchart LR
     PR --> D["Governance drills<br/>signing, tampering, drift"]
     PR --> P["Kyverno CLI<br/>policy tests"]
     PR --> A["promtool and amtool<br/>alert and routing tests"]
+    PR --> H["Helm chart linted strictly<br/>in dev, staging and prod"]
+    T --> RR["Committed releases equal<br/>what the chart renders"]
     PR --> C["agentic-code-review-tool<br/>review of changed lines (PRs)"]
-    M(["Push to main"]) --> K["kind cluster: deploy through Argo CD,<br/>14 admission, network, monitoring<br/>and GitOps checks"]
+    M(["Push to main"]) --> K["kind cluster: deploy the chart's dev release<br/>through Argo CD; 15 admission, network,<br/>monitoring and GitOps checks"]
     S(["Monday, by hand,<br/>or a drift alert"]) --> R["Retrain on existing + recent tickets;<br/>the gate decides"]
     DB(["Dependabot weekly:<br/>pip, actions, base image"]) --> PR
 ```
