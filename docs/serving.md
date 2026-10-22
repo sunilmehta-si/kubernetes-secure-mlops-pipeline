@@ -109,7 +109,7 @@ PASS: Prometheus sends its alerts to Alertmanager
 PASS: a drift alert reached the relay, which would start retraining (dry run, no GitHub token here)
 PASS: an alert without action=retrain did not start retraining
 PASS: Prometheus scrapes the relay, so a failing retraining trigger alerts
-PASS: the endpoint runs the dev release of chart ticket-router-0.1.0, synced under project ml-serving-dev
+PASS: the endpoint runs the dev release of chart ticket-router-0.1.1, synced under project ml-serving-dev
 PASS: a hand edit to the endpoint was reverted to the release by Argo CD
 PASS: a release adding a ClusterRole and a Secret was refused by the project; neither was created
 ```
