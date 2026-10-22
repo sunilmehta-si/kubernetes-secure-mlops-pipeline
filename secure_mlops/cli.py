@@ -101,6 +101,10 @@ def _parser() -> argparse.ArgumentParser:
     rr.add_argument("--env", default="prod", help="Environment in deploy/gitops/envs/ (default: prod).")
     rr.add_argument("--output", "-o", help="Directory to write (default: deploy/gitops/rendered/<env>, which the "
                                            "ApplicationSet syncs).")
+    pm = sub.add_parser("promote", help="Render the next environment's release with exactly the images the previous "
+                                         "one runs (dev -> staging -> prod); commit it in a pull request.")
+    pm.add_argument("--from", dest="source", required=True, help="Environment whose release to promote.")
+    pm.add_argument("--to", dest="target", required=True, help="The next environment.")
     ac = sub.add_parser("argocd-ci", help="Write the Argo CD project and application for the CI cluster: the committed "
                                           "ones, syncing a release pushed as an OCI artifact.")
     ac.add_argument("--source", required=True, help="oci://<cluster registry>/<repository> holding the release.")
@@ -472,6 +476,20 @@ def _cmd_render_release(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_promote(args: argparse.Namespace) -> int:
+    from .gitops import ReleaseError, promote, release_dir, released_images
+    try:
+        promote(args.source, args.target)
+        model, server = released_images(args.target)
+    except (ReleaseError, OSError) as exc:
+        print(f"smlops: {exc}", file=sys.stderr)
+        return 2
+    print(f"smlops: rendered {args.target} with the images {args.source} runs (model {model.split('@')[1][:19]}..., "
+          f"server {server.split('@')[1][:19]}...) to {release_dir(args.target)}; commit it in a pull request",
+          file=sys.stderr)
+    return 0
+
+
 def _cmd_argocd_ci(args: argparse.Namespace) -> int:
     import yaml
 
@@ -518,6 +536,8 @@ def main(argv: list[str] | None = None) -> int:
         return _cmd_promotion_request(args)
     if args.command == "render-release":
         return _cmd_render_release(args)
+    if args.command == "promote":
+        return _cmd_promote(args)
     if args.command == "argocd-ci":
         return _cmd_argocd_ci(args)
     if args.command == "retrain-check":

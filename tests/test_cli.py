@@ -310,3 +310,13 @@ class ArgoCdCiCliTests(unittest.TestCase):
             self.assertEqual(kinds, ["AppProject", "Application"])
             self.assertEqual(main(["argocd-ci", "--source", "oci://ghcr.io/x/y", "--revision", "v1",
                                    "-o", str(Path(d, "x.yaml"))]), 2)
+
+
+class PromoteCliTests(unittest.TestCase):
+    def test_refuses_to_skip_staging_and_explains(self):
+        from contextlib import redirect_stderr
+        with redirect_stderr(io.StringIO()) as err:
+            self.assertEqual(main(["promote", "--from", "dev", "--to", "prod"]), 2)
+            self.assertEqual(main(["promote", "--from", "staging", "--to", "prod"]), 2)   # nothing in staging yet
+        self.assertIn("prod is promoted from staging, not dev", err.getvalue())
+        self.assertIn("staging has no release yet", err.getvalue())
