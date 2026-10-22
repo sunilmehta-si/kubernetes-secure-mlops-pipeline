@@ -26,6 +26,7 @@ CHART = ROOT / "charts" / "ticket-router"          # the namespace is not in it:
 ENVS = ROOT / "deploy" / "gitops" / "envs"
 ENV = re.compile(r"^[a-z][a-z0-9-]{0,30}$")
 RENDERED = ROOT / "deploy" / "gitops" / "rendered"     # what the ApplicationSet syncs, one directory per environment
+ORDER = ("dev", "staging", "prod")                     # a release reaches an environment only from the one before
 DIGEST = re.compile(r"^(?P<registry>[a-z0-9.-]+(:[0-9]+)?)(/[a-z0-9._-]+)+@sha256:[0-9a-f]{64}$")
 
 
@@ -100,6 +101,30 @@ def render(model_image: str, server_image: str, out_dir: str | Path, env: str = 
     # Where it runs, for the ApplicationSet; not a manifest, so the kustomization does not list it.
     (out / "target.yaml").write_text(target.read_text())
     return [*written, out / "kustomization.yaml"]
+
+
+def released_images(env: str, rendered: Path = RENDERED) -> tuple[str, str]:
+    """(model image, server image) of the release committed for `env`, from its kustomization."""
+    path = rendered / env / "kustomization.yaml"
+    if not path.is_file():
+        raise ReleaseError(f"{env} has no release yet ({path.relative_to(rendered.parent.parent.parent)} is missing)")
+    notes = yaml.safe_load(path.read_text()).get("commonAnnotations", {})
+    images = notes.get("smlops.io/model-image"), notes.get("smlops.io/server-image")
+    if not all(images):
+        raise ReleaseError(f"{path} does not say which images it runs")
+    return images
+
+
+def promote(source: str, target: str, rendered: Path = RENDERED) -> list[Path]:
+    """Render `target` with exactly the images `source` runs: the same digests, never a rebuild. Only one step
+    along ORDER at a time, so nothing reaches prod without having run in staging."""
+    if source not in ORDER or target not in ORDER:
+        raise ReleaseError(f"promotion goes {' -> '.join(ORDER)}; {source} -> {target} is not on that path")
+    if ORDER.index(target) != ORDER.index(source) + 1:
+        raise ReleaseError(f"{target} is promoted from {ORDER[ORDER.index(target) - 1]}, not {source}"
+                           if ORDER.index(target) > 0 else f"nothing is promoted to {target}; it is the first step")
+    model, server = released_images(source, rendered)
+    return render(model, server, rendered / target, target)
 
 
 def application(env: str) -> dict:

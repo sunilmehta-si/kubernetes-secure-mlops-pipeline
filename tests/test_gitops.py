@@ -4,7 +4,7 @@ from pathlib import Path
 
 import yaml
 
-from secure_mlops.gitops import ReleaseError, ci_argocd, render
+from secure_mlops.gitops import ORDER, ReleaseError, ci_argocd, promote, released_images, render
 
 MODEL = "kind-registry:5000/smlops/ticket-router-model@sha256:" + "a" * 64
 SERVER = "kind-registry:5000/smlops/server@sha256:" + "b" * 64
@@ -63,6 +63,35 @@ class RenderTests(unittest.TestCase):
                 isvc = docs(Path(d, env, "inferenceservice.yaml"))[0]
                 replicas[env] = isvc["spec"]["predictor"]["minReplicas"]
             self.assertEqual(replicas, {"dev": 1, "prod": 2})
+
+
+class PromotionTests(unittest.TestCase):
+    def test_the_next_environment_gets_exactly_the_same_digests(self):
+        with tempfile.TemporaryDirectory() as d:
+            rendered = Path(d)
+            render(MODEL, SERVER, rendered / "dev", "dev")
+            promote("dev", "staging", rendered)
+            promote("staging", "prod", rendered)
+            self.assertEqual(released_images("prod", rendered), (MODEL, SERVER))
+            prod = docs(rendered / "prod/inferenceservice.yaml")[0]
+            self.assertEqual(prod["spec"]["predictor"]["minReplicas"], 2)       # prod's own values, same images
+
+    def test_no_skipping_no_going_back_and_nothing_from_an_empty_environment(self):
+        with tempfile.TemporaryDirectory() as d:
+            rendered = Path(d)
+            with self.assertRaisesRegex(ReleaseError, "dev has no release yet"):
+                promote("dev", "staging", rendered)
+            render(MODEL, SERVER, rendered / "dev", "dev")
+            for source, target, message in (("dev", "prod", "prod is promoted from staging, not dev"),
+                                            ("staging", "dev", "nothing is promoted to dev"),
+                                            ("dev", "qa", "not on that path")):
+                with self.subTest(source=source, target=target), self.assertRaisesRegex(ReleaseError, message):
+                    promote(source, target, rendered)
+            self.assertFalse((rendered / "prod").exists())
+
+    def test_the_order_covers_every_environment(self):
+        envs = sorted(p.name for p in (Path(__file__).resolve().parents[1] / "deploy/gitops/envs").iterdir())
+        self.assertEqual(sorted(ORDER), envs)
 
 
 class ProjectTests(unittest.TestCase):
