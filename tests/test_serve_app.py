@@ -249,6 +249,7 @@ class FeedbackTests(unittest.TestCase):
         self.assertRegex(text, r"smlops_live_accuracy_drop (0\.4|-0\.1)")
         self.assertIn('smlops_feedback_requests_total{outcome="counted"} 1.0', text)
         self.assertIn('smlops_feedback_requests_total{outcome="repeated"} 1.0', text)
+        self.assertIn('smlops_feedback_requests_total{outcome="other-client"} 0.0', text)   # exported from the start
 
     def test_the_audit_line_records_the_count_never_the_teams_or_text(self):
         with self.assertLogs("smlops.audit", level="INFO") as logs:

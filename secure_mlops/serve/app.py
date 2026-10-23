@@ -131,6 +131,8 @@ def create_app(served: ServedModel, api_keys: dict[str, str], limiter: TicketLim
     metrics.register(_AccuracyGauges(accuracy))
     feedback_requests = Metric("smlops_feedback_requests", "Feedback requests by outcome", ["outcome"],
                                registry=metrics)
+    for outcome in ("counted", "unknown-team", "other-client", "unknown-request", "repeated", "wrong-count"):
+        feedback_requests.labels(outcome)            # exported as 0 from the start, so "no feedback" can alert
 
     @app.middleware("http")
     async def limit_body(request: Request, call_next):

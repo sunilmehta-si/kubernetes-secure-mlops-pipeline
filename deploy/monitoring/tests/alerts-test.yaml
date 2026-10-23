@@ -75,6 +75,21 @@ tests:
               summary: "Agents corrected enough tickets to put live accuracy 0.060 below the model's held-out accuracy"
               runbook: "Real harm, not just drift: retraining starts; check the corrections in the audit log for a pattern."
 
+  - name: a day without counted feedback warns that live accuracy is blind
+    interval: 1h
+    input_series:
+      - series: 'smlops_feedback_requests_total{outcome="counted"}'
+        values: '0+5x24 120x30'
+    alert_rule_test:
+      - {eval_time: 24h, alertname: TicketRouterNoFeedback, exp_alerts: []}
+      - eval_time: 50h
+        alertname: TicketRouterNoFeedback
+        exp_alerts:
+          - exp_labels: {severity: warning, gate: G7}
+            exp_annotations:
+              summary: "No agent feedback counted for a day: live accuracy is blind"
+              runbook: "Check that the support tool still sends confirmed teams to :feedback with its API key."
+
   - name: a retraining trigger that fails is itself an alert
     interval: 1m
     input_series:

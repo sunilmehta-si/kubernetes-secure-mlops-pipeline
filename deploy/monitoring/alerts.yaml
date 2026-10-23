@@ -39,6 +39,13 @@ groups:
         annotations:
           summary: "Agents corrected enough tickets to put live accuracy {{ $value | printf \"%.3f\" }} below the model's held-out accuracy"
           runbook: "Real harm, not just drift: retraining starts; check the corrections in the audit log for a pattern."
+      - alert: TicketRouterNoFeedback
+        expr: sum(increase(smlops_feedback_requests_total{outcome="counted"}[1d])) == 0
+        for: 1h
+        labels: {severity: warning, gate: G7}
+        annotations:
+          summary: "No agent feedback counted for a day: live accuracy is blind"
+          runbook: "Check that the support tool still sends confirmed teams to :feedback with its API key."
       - alert: TicketRouterRetrainTriggerFailing
         expr: sum(increase(smlops_relay_retrain_requests_total{outcome="failed"}[30m])) > 0
         for: 1m
