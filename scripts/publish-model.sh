@@ -4,6 +4,8 @@
 #   2. smlops: generate data, train with the gate, sign the stored model, package the verified champion
 #   3. build and push the model image (modelcar) and the server image, then sign both by digest with cosign
 #      (no transparency-log upload: a local key needs no public record)
+#   4. attest SLSA v1 provenance for both with the same key: what each image was built from (smlops provenance);
+#      admission requires it (deploy/policy/verify-signatures.yaml)
 # Usage: scripts/publish-model.sh WORK    Writes WORK/images.env with MODEL_IMAGE and SERVER_IMAGE digests.
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -37,5 +39,14 @@ server_image="$(push . "${REGISTRY}/smlops-server:$(git rev-parse --short HEAD)"
 for image in "$model_image" "$server_image"; do
   COSIGN_PASSWORD="" cosign sign --yes --key "$keys/cosign.key" --tlog-upload=false --use-signing-config=false \
     --new-bundle-format=false --allow-http-registry "$image"
+done
+
+commit="$(git rev-parse HEAD)"
+smlops provenance --kind model --commit "$commit" --bundle "$work/bundle" -o "$work/provenance-model.json"
+smlops provenance --kind server --commit "$commit" -o "$work/provenance-server.json"
+for pair in "model:$model_image" "server:$server_image"; do
+  COSIGN_PASSWORD="" cosign attest --yes --key "$keys/cosign.key" --type slsaprovenance1 \
+    --predicate "$work/provenance-${pair%%:*}.json" --tlog-upload=false --use-signing-config=false \
+    --new-bundle-format=false --allow-http-registry "${pair#*:}"
 done
 printf 'MODEL_IMAGE=%s\nSERVER_IMAGE=%s\n' "$model_image" "$server_image" | tee "$work/images.env"
