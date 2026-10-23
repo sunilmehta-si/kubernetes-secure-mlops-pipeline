@@ -29,6 +29,7 @@ Defaults are the production shape. Environments override only what must differ, 
 | `replicas.min` | `1` | Fewest predictor replicas; prod sets 2 |
 | `replicas.max` | `2` | Most predictor replicas; must not be below `replicas.min` |
 | `disruptionBudget.minAvailable` | `1` | Predictors kept up through drains; only rendered when `replicas.min` is 2 or more |
+| `spread.topologyKey` | `kubernetes.io/hostname` | What replicas prefer to spread across; only rendered when `replicas.min` is 2 or more |
 | `clients.namespaceLabel` | `smlops.io/model-clients` | Namespaces with this label set to `"true"` may call the model |
 
 ## What every render guarantees

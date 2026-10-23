@@ -40,6 +40,14 @@ class ChartTests(unittest.TestCase):
         self.assertEqual(pdb["spec"]["minAvailable"], 1)
         self.assertEqual(pdb["spec"]["selector"]["matchLabels"], {"serving.kserve.io/inferenceservice": "ticket-router"})
 
+    def test_prod_replicas_prefer_different_nodes_without_refusing_to_run(self):
+        prod = objects(template(CHART, [ROOT / "deploy/gitops/envs/prod/values.yaml"], IMAGES))
+        (spread,) = prod[("InferenceService", "ticket-router")]["spec"]["predictor"]["topologySpreadConstraints"]
+        self.assertEqual((spread["topologyKey"], spread["whenUnsatisfiable"], spread["maxSkew"]),
+                         ("kubernetes.io/hostname", "ScheduleAnyway", 1))
+        dev = objects(template(CHART, [ROOT / "deploy/gitops/envs/dev/values.yaml"], IMAGES))
+        self.assertNotIn("topologySpreadConstraints", dev[("InferenceService", "ticket-router")]["spec"]["predictor"])
+
     def test_another_helm_version_is_refused(self):
         with tempfile.TemporaryDirectory() as d:
             fake = Path(d, "helm")

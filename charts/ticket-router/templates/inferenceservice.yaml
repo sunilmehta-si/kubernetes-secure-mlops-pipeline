@@ -17,6 +17,17 @@ spec:
     serviceAccountName: model-server
     minReplicas: {{ .Values.replicas.min }}
     maxReplicas: {{ .Values.replicas.max }}
+    {{- if ge (int .Values.replicas.min) 2 }}
+    # Prefer replicas on different nodes, so losing one node does not take the endpoint down. ScheduleAnyway: a
+    # cluster with fewer nodes still runs every replica.
+    topologySpreadConstraints:
+      - maxSkew: 1
+        topologyKey: {{ .Values.spread.topologyKey }}
+        whenUnsatisfiable: ScheduleAnyway
+        labelSelector:
+          matchLabels:
+            serving.kserve.io/inferenceservice: {{ .Values.model.name }}
+    {{- end }}
     model:
       modelFormat:
         name: smlops-bundle

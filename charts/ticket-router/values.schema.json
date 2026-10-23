@@ -10,7 +10,8 @@
     "server",
     "replicas",
     "clients",
-    "disruptionBudget"
+    "disruptionBudget",
+    "spread"
   ],
   "definitions": {
     "digestRef": {
@@ -145,6 +146,19 @@
         "minAvailable": {
           "type": "integer",
           "minimum": 1
+        }
+      }
+    },
+    "spread": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "topologyKey"
+      ],
+      "properties": {
+        "topologyKey": {
+          "type": "string",
+          "minLength": 1
         }
       }
     }

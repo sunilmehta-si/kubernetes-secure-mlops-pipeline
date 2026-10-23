@@ -25,6 +25,10 @@ replicas:
 disruptionBudget:
   minAvailable: 1
 
+# Rendered only when replicas.min is 2 or more: what replicas should be spread across.
+spread:
+  topologyKey: kubernetes.io/hostname
+
 # Namespaces with this label set to "true" may call the model; nothing else can connect.
 clients:
   namespaceLabel: smlops.io/model-clients
