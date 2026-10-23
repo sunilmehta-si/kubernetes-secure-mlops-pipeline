@@ -124,7 +124,7 @@ PASS: agents' feedback on a prediction was counted (2 tickets)
 PASS: the same feedback a second time was refused (409), so no ticket counts twice
 PASS: Prometheus sees the agent-confirmed tickets in live accuracy
 PASS: the audit log shows the support tool's confirmed tickets, without any ticket text
-PASS: the endpoint runs the dev release of chart ticket-router-0.1.1, synced under project ml-serving-dev
+PASS: the endpoint runs the dev release of chart ticket-router-0.2.0, synced under project ml-serving-dev
 PASS: a hand edit to the endpoint was reverted to the release by Argo CD
 PASS: a release adding a ClusterRole and a Secret was refused by the project; neither was created
 ```
