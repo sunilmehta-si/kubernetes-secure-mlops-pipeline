@@ -15,9 +15,11 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ec
 
 PRIVATE, PUBLIC = "signing-key.pem", "signing-key.pub.pem"
-# Files a model registry writes into a model directory after it was signed. MLflow adds `registered_model_meta`
-# (the registered name and version) when a model is registered; it is bookkeeping, not model content. Exactly these
-# names are excluded, the same way when signing and verifying; every other file, including any new one, is covered.
+# Files a model registry adds to a model directory that were never part of the logged model. MLflow writes
+# `registered_model_meta` (the registered name and version) into every copy downloaded from a models:/ URI
+# (mlflow/store/artifact/models_artifact_repo.py); it is bookkeeping, not model content. Exactly these names are
+# excluded, the same way when signing and verifying; every other file, including any new one, is covered. Proposed
+# upstream as an opt-out: https://github.com/mlflow/mlflow/pull/27052
 REGISTRY_BOOKKEEPING = ("registered_model_meta",)
 
 
