@@ -24,7 +24,7 @@ certifi==2026.10.19
 cffi==2.1.1
 charset-normalizer==3.5.2
 click==8.5.0
-click-option-group==0.5.7
+click-option-group==0.5.9
 cloudpickle==3.1.2
 contourpy==1.4.0
 cryptography==50.0.2
