@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Try to get around the deploy-time controls; every attempt must fail, or this script fails.
 #   1. an unsigned image in serving        -> rejected by verify-model-signatures (G6, T7)
+#   1b. an image signed with the pipeline's key but without provenance -> rejected by the same policy (G5)
 #   2. a signed image referenced by tag    -> rejected by require-registry-and-digest
 #   3. a client outside the allowed namespaces calls the model -> blocked by the network policy
 #   4. an allowed client without an API key                    -> 401 from the server (T9)
@@ -48,6 +49,21 @@ printf 'FROM %s\nLABEL smlops.io/drill=unsigned\n' "$(grep '^FROM' "$work/bundle
 docker push -q "${REGISTRY}/drill-unsigned:1" >/dev/null
 unsigned="$(docker inspect --format '{{index .RepoDigests 0}}' "${REGISTRY}/drill-unsigned:1")"
 pod drill-unsigned "$unsigned" | expect_denied "an unsigned image" "verify-model-signatures"
+
+# 1b. signed with the real key, but by hand: no provenance attestation saying what it was built from
+printf 'FROM %s\nLABEL smlops.io/drill=signed-only\n' "$(grep '^FROM' "$work/bundle/Dockerfile" | cut -d' ' -f2)" \
+  | docker build -q -t "${REGISTRY}/drill-signed-only:1" - >/dev/null
+docker push -q "${REGISTRY}/drill-signed-only:1" >/dev/null
+signed_only="$(docker inspect --format '{{index .RepoDigests 0}}' "${REGISTRY}/drill-signed-only:1")"
+COSIGN_PASSWORD="" cosign sign --yes --key "$work/keys/cosign.key" --tlog-upload=false --use-signing-config=false \
+  --new-bundle-format=false --allow-http-registry "$signed_only" >/dev/null 2>&1
+if out="$(pod drill-signed-only "$signed_only" | kubectl apply -f - 2>&1)"; then
+  echo "FAIL: an image signed without provenance was admitted"; failed=1
+elif grep -q "verify-model-signatures" <<<"$out" && grep -qi "attestation" <<<"$out"; then
+  echo "PASS: an image signed by the pipeline's key but without provenance rejected by verify-model-signatures"
+else
+  echo "FAIL: the signed-only image was rejected, but not for missing provenance: $out"; failed=1
+fi
 
 # 2. signed image, but by tag: what runs could change after approval
 pod drill-by-tag "${MODEL_IMAGE%@*}:v1" | expect_denied "an image referenced by tag" "require-registry-and-digest"

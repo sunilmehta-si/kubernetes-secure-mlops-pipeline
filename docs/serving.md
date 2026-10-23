@@ -94,11 +94,12 @@ The [`cluster` workflow](../.github/workflows/cluster.yml) runs these steps on e
 rejections: an unsigned image, an image referenced by tag, a client outside the allowed namespaces (curl's own "no
 connection", never a kubectl error), and a request without an API key (401). Every step runs with `pipefail`: an
 earlier version piped the drill into `tee`, which hid a failing drill behind a green run until the monitoring
-check exposed it. The latest run, all eighteen checks:
+check exposed it. The latest run, all nineteen checks:
 
 ```text
 Argo CD synced release release-39557059626 into serving
 PASS: an unsigned image rejected by verify-model-signatures
+PASS: an image signed by the pipeline's key but without provenance rejected by verify-model-signatures
 PASS: an image referenced by tag rejected by require-registry-and-digest
 PASS: a client outside the allowed namespaces could not reach the model
 PASS: a request without an API key was refused (401)
