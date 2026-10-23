@@ -96,11 +96,15 @@ def dashboard() -> dict:
         _panel("stat", "Tickets agents confirmed", [("min(smlops_live_labelled_tickets)", "")], (16, 36, 8, 7),
                thresholds=_steps(), description="Accuracy is judged once the window holds 100 confirmed tickets.",
                reduceOptions={"calcs": ["lastNotNull"]}),
-        _row("Is anyone abusing the endpoint", 43),
+        _panel("timeseries", "Live recall per team", [("min by (team) (smlops_live_recall)", "{{team}}")],
+               (0, 43, 24, 7), unit="percentunit",
+               description="Of the tickets agents confirmed for each team, the share the model routed there. One "
+                           "team falling here can hide inside an overall accuracy that looks fine."),
+        _row("Is anyone abusing the endpoint", 50),
         _panel("timeseries", "Rejected keys and exhausted budgets", [
             ('sum(rate(smlops_predict_requests_total{status="401"}[5m])) * 60', "no valid key"),
             ('sum(rate(smlops_predict_requests_total{status=~"413|429"}[5m])) * 60', "over budget")],
-               (0, 44, 24, 7), unit="short", description="Requests a minute. The audit log names the client of "
+               (0, 51, 24, 7), unit="short", description="Requests a minute. The audit log names the client of "
                                                          "every request that presented a valid key."),
     ]
     for i, panel in enumerate(panels, 1):
