@@ -93,6 +93,13 @@ class _AccuracyGauges:
             if value is not None:
                 name, doc = self.GAUGES[key]
                 yield GaugeMetricFamily(name, doc, value=value)
+        recall = self.accuracy.recall_by_team()
+        if recall:
+            family = GaugeMetricFamily("smlops_live_recall", "Share of agent-confirmed tickets per team the model "
+                                       "routed to that team", labels=["team"])
+            for team, value in recall.items():
+                family.add_metric([team], value)
+            yield family
 
 
 def default_drift(served: ServedModel) -> LiveDrift:

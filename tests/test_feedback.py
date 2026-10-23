@@ -47,6 +47,14 @@ class LiveAccuracyTests(unittest.TestCase):
         live.observe([("billing", "billing")] * 30 + [("billing", "account")] * 20)
         self.assertEqual(live.snapshot(), {"labelled": 100, "accuracy": 0.8, "accuracy_drop": 0.14})
 
+    def test_recall_per_team_shows_the_team_overall_accuracy_hides(self):
+        live = LiveAccuracy(baseline=0.95, window=500, min_labels=100)
+        live.observe([("shipping", "shipping")] * 180 + [("billing", "billing")] * 14 + [("shipping", "billing")] * 6
+                     + [("account", "account")] * 5)
+        self.assertEqual(live.snapshot()["accuracy"], 0.9707)                  # looks fine overall
+        self.assertEqual(live.recall_by_team(), {"billing": 0.7, "shipping": 1.0})   # billing does not
+        self.assertNotIn("account", live.recall_by_team())                    # five labels say nothing yet
+
     def test_the_window_slides_and_a_model_without_a_baseline_reports_no_drop(self):
         live = LiveAccuracy(baseline=None, window=100, min_labels=100)
         live.observe([("a", "b")] * 100 + [("a", "a")] * 100)

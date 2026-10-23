@@ -77,6 +77,18 @@ class LiveAccuracy:
         with self._lock:
             self._pairs.extend(pairs)
 
+    def recall_by_team(self, min_per_team: int = 20) -> dict[str, float]:
+        """Of the tickets agents confirmed for each team, the share the model had routed there: one team's
+        regression stays visible when overall accuracy hides it. Teams with fewer than min_per_team are left out."""
+        with self._lock:
+            pairs = list(self._pairs)
+        out = {}
+        for team in sorted({c for _, c in pairs}):
+            mine = [p for p, c in pairs if c == team]
+            if len(mine) >= min_per_team:
+                out[team] = round(sum(p == team for p in mine) / len(mine), 4)
+        return out
+
     def snapshot(self) -> dict:
         """{labelled, accuracy, accuracy_drop}; the last two are None below min_labels, the drop without a baseline."""
         with self._lock:
