@@ -111,7 +111,7 @@ PASS: an image referenced by tag rejected by require-registry-and-digest
 PASS: a client outside the allowed namespaces could not reach the model
 PASS: a request without an API key was refused (401)
 PASS: Prometheus scrapes the served model, digest sha256:d539d91cfd41...
-PASS: all 11 alert rules loaded
+PASS: all 13 alert rules loaded
 PASS: live drift is measuring the 2 tickets served so far
 PASS: the keyless drill request is visible to monitoring as a 401
 PASS: a drift alert reached the relay, which would start retraining (dry run, no GitHub token here)

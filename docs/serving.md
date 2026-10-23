@@ -9,14 +9,22 @@ smlops train --signing-key ...     the stored model files are signed (OpenSSF mo
 smlops package --public-key ...    the verified champion is exported as a bundle + modelcar Dockerfile
 docker build / push                the model image and the server image go to the cluster registry
 cosign sign (by digest)            both images are signed; no public transparency-log entry for a local key
+cosign attest                      both get signed SLSA provenance (smlops provenance); the model image its ML-BOM
 smlops render-release              the release: serving manifests with both images by digest (GitOps commits these)
-kubectl apply -k / Argo CD sync    Kyverno checks both signatures and the digests before any pod is created
+kubectl apply -k / Argo CD sync    Kyverno checks signatures, attestations and digests before any pod is created
 smlops serve                       the server verifies the model's own signature again before opening a port
 ```
 
 Two signatures protect two different things. The **model signature** covers every file of the model and is checked
 by the server itself, so a model swapped inside a valid image still cannot be served. The **image signatures**
 cover the containers and are checked at admission, so an image the pipeline did not build never starts.
+
+A signature says who published an image, not what it was built from: anyone holding the key could sign anything.
+So each image also carries a signed **provenance attestation** (SLSA v1, [`attest.py`](../secure_mlops/attest.py)):
+the source commit, and for the model image its name, registry version, training run, signature file and datasets
+by fingerprint; for the server image the dependency lock. The model image also carries its **ML-BOM** as a signed
+attestation, so it travels with the image. Kyverno requires both, with this repository's build type, and the
+cluster workflow drills an image signed with the real key but without provenance: it is rejected.
 
 ## Run the server locally
 
@@ -52,6 +60,7 @@ The bundle layout is what KServe mounts at `/mnt/models` from the model image:
 | Every prediction needs an API key; keys are stored only as SHA-256 hashes and compared in constant time; 401 otherwise. Health and metrics stay open for the platform | [`serve/auth.py`](../secure_mlops/serve/auth.py) |
 | Per-client ticket budget (600 a minute, bursts of 120 by default): 429 with Retry-After, or 413 for a batch over the burst | [`serve/ratelimit.py`](../secure_mlops/serve/ratelimit.py) |
 | Live drift of its own traffic against the training profile signed into the model ([monitoring](monitoring.md)) | [`serve/live_drift.py`](../secure_mlops/serve/live_drift.py) |
+| Feedback: agents' confirmed teams, only from the client that asked, once each, within its ticket budget; live accuracy and recall per team against the signed held-out accuracy | [`serve/feedback.py`](../secure_mlops/serve/feedback.py) |
 | Every response and audit line names the model version and the digest of its signature | [`serve/app.py`](../secure_mlops/serve/app.py) |
 | Audit log: one JSON line per request with the calling client, never the ticket text | `smlops.audit` logger |
 | Prometheus metrics: requests by status, latency, tickets by team, model identity, live drift | `/metrics` |
@@ -62,7 +71,7 @@ The bundle layout is what KServe mounts at `/mnt/models` from the model image:
 |---|---|
 | Pod Security "restricted" in `serving`; service account without an API token | [`deploy/serving/namespace.yaml`](../deploy/serving/namespace.yaml), [`serviceaccount.yaml`](../charts/ticket-router/templates/serviceaccount.yaml) |
 | Non-root, read-only root filesystem, no capabilities, seccomp, CPU and memory limits | [`servingruntime.yaml`](../charts/ticket-router/templates/servingruntime.yaml), tested in every environment |
-| Every image in `serving` signed by the pipeline's cosign key | [`deploy/policy/verify-signatures.yaml`](../deploy/policy/verify-signatures.yaml) |
+| Every image in `serving` signed by the pipeline's cosign key, with signed SLSA provenance from this repository's publish step; model images also with their ML-BOM | [`deploy/policy/verify-signatures.yaml`](../deploy/policy/verify-signatures.yaml) |
 | Every image from the cluster registry and pinned by digest | [`deploy/policy/require-digests.yaml`](../deploy/policy/require-digests.yaml) |
 | Deny all traffic by default; only labelled client namespaces reach port 8080; no egress | [`networkpolicy.yaml`](../charts/ticket-router/templates/networkpolicy.yaml) |
 
@@ -104,7 +113,7 @@ PASS: an image referenced by tag rejected by require-registry-and-digest
 PASS: a client outside the allowed namespaces could not reach the model
 PASS: a request without an API key was refused (401)
 PASS: Prometheus scrapes the served model, digest sha256:d539d91cfd41...
-PASS: all 11 alert rules loaded
+PASS: all 13 alert rules loaded
 PASS: live drift is measuring the 2 tickets served so far
 PASS: the keyless drill request is visible to monitoring as a 401
 PASS: Prometheus sends its alerts to Alertmanager
