@@ -320,3 +320,19 @@ class PromoteCliTests(unittest.TestCase):
             self.assertEqual(main(["promote", "--from", "staging", "--to", "prod"]), 2)   # nothing in staging yet
         self.assertIn("prod is promoted from staging, not dev", err.getvalue())
         self.assertIn("staging has no release yet", err.getvalue())
+
+
+class ProvenanceCliTests(unittest.TestCase):
+    def test_writes_the_predicate_or_refuses_a_short_sha_and_a_missing_bundle(self):
+        import json
+        import tempfile
+        from contextlib import redirect_stderr
+        from pathlib import Path
+        with tempfile.TemporaryDirectory() as d, redirect_stderr(io.StringIO()) as err:
+            out = Path(d, "p.json")
+            self.assertEqual(main(["provenance", "--kind", "server", "--commit", "b" * 40, "-o", str(out)]), 0)
+            self.assertEqual(json.loads(out.read_text())["buildDefinition"]["externalParameters"], {"kind": "server"})
+            self.assertEqual(main(["provenance", "--kind", "server", "--commit", "abc", "-o", str(out)]), 2)
+            self.assertEqual(main(["provenance", "--kind", "model", "--commit", "b" * 40, "--bundle", d,
+                                   "-o", str(out)]), 2)
+        self.assertIn("full git SHA", err.getvalue())

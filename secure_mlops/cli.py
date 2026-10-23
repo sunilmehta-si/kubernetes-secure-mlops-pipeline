@@ -105,6 +105,12 @@ def _parser() -> argparse.ArgumentParser:
                                          "one runs (dev -> staging -> prod); commit it in a pull request.")
     pm.add_argument("--from", dest="source", required=True, help="Environment whose release to promote.")
     pm.add_argument("--to", dest="target", required=True, help="The next environment.")
+    pv = sub.add_parser("provenance", help="Write the SLSA v1 provenance predicate for a published image, for "
+                                            "cosign attest.")
+    pv.add_argument("--kind", required=True, choices=["model", "server"], help="Which image.")
+    pv.add_argument("--commit", required=True, help="Full git SHA the image was built from.")
+    pv.add_argument("--bundle", help="The model bundle (smlops package output); required for --kind model.")
+    pv.add_argument("--output", "-o", required=True, help="JSON file to write.")
     ac = sub.add_parser("argocd-ci", help="Write the Argo CD project and application for the CI cluster: the committed "
                                           "ones, syncing a release pushed as an OCI artifact.")
     ac.add_argument("--source", required=True, help="oci://<cluster registry>/<repository> holding the release.")
@@ -490,6 +496,17 @@ def _cmd_promote(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_provenance(args: argparse.Namespace) -> int:
+    from .attest import ProvenanceError, predicate
+    try:
+        Path(args.output).write_text(json.dumps(predicate(args.kind, args.commit, args.bundle), indent=2) + "\n")
+    except (ProvenanceError, OSError, KeyError, ValueError) as exc:
+        print(f"smlops: {exc}", file=sys.stderr)
+        return 2
+    print(f"smlops: wrote {args.kind} image provenance to {args.output}", file=sys.stderr)
+    return 0
+
+
 def _cmd_argocd_ci(args: argparse.Namespace) -> int:
     import yaml
 
@@ -538,6 +555,8 @@ def main(argv: list[str] | None = None) -> int:
         return _cmd_render_release(args)
     if args.command == "promote":
         return _cmd_promote(args)
+    if args.command == "provenance":
+        return _cmd_provenance(args)
     if args.command == "argocd-ci":
         return _cmd_argocd_ci(args)
     if args.command == "retrain-check":
