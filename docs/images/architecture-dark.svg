@@ -109,7 +109,7 @@
 <rect x="867.4" y="204" width="158" height="48" rx="8" fill="#0d1117" stroke="#2b5a3a"/>
 <rect x="867.4" y="213" width="4" height="30" rx="2" fill="#3fb950"/>
 <text x="881.4" y="224" font-size="12.5" font-weight="600" fill="#e6edf3" text-anchor="start">Signed OCI model</text>
-<text x="881.4" y="240" font-size="10.5" font-weight="400" fill="#a3adb8" text-anchor="start">verified at admission</text>
+<text x="881.4" y="240" font-size="10.5" font-weight="400" fill="#a3adb8" text-anchor="start">provenance attested</text>
 <rect x="867.4" y="260" width="158" height="48" rx="8" fill="#0d1117" stroke="#2b5a3a"/>
 <rect x="867.4" y="269" width="4" height="30" rx="2" fill="#3fb950"/>
 <text x="881.4" y="280" font-size="12.5" font-weight="600" fill="#e6edf3" text-anchor="start">KServe endpoint</text>
@@ -135,12 +135,12 @@
 <text x="1087" y="240" font-size="10.5" font-weight="400" fill="#a3adb8" text-anchor="start">/metrics, no ticket text</text>
 <rect x="1073.0" y="260" width="158" height="48" rx="8" fill="#0d1117" stroke="#2b5a3a"/>
 <rect x="1073.0" y="269" width="4" height="30" rx="2" fill="#3fb950"/>
-<text x="1087" y="280" font-size="12.5" font-weight="600" fill="#e6edf3" text-anchor="start">Drift check</text>
-<text x="1087" y="296" font-size="10.5" font-weight="400" fill="#a3adb8" text-anchor="start">PSI, new words, accuracy</text>
+<text x="1087" y="280" font-size="12.5" font-weight="600" fill="#e6edf3" text-anchor="start">Drift + live accuracy</text>
+<text x="1087" y="296" font-size="10.5" font-weight="400" fill="#a3adb8" text-anchor="start">PSI, agents' feedback</text>
 <rect x="1073.0" y="316" width="158" height="48" rx="8" fill="#0d1117" stroke="#2b5a3a"/>
 <rect x="1073.0" y="325" width="4" height="30" rx="2" fill="#3fb950"/>
-<text x="1087" y="336" font-size="12.5" font-weight="600" fill="#e6edf3" text-anchor="start">Live drift + alerts</text>
-<text x="1087" y="352" font-size="10.5" font-weight="400" fill="#a3adb8" text-anchor="start">Prometheus, Grafana</text>
+<text x="1087" y="336" font-size="12.5" font-weight="600" fill="#e6edf3" text-anchor="start">Alerts + retraining</text>
+<text x="1087" y="352" font-size="10.5" font-weight="400" fill="#a3adb8" text-anchor="start">Prometheus, Grafana, relay</text>
 <line x1="1075" y1="392" x2="1229" y2="392" stroke="#23472f"/>
 <text x="1075" y="408" font-size="9.5" font-weight="700" fill="#7d8590" text-anchor="start" letter-spacing="0.8">ALSO COMMON</text>
 <text x="1075" y="426" font-size="11.5" font-weight="500" fill="#7d8590" text-anchor="start" font-style="italic">whylogs</text>

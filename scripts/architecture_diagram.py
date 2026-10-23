@@ -59,14 +59,14 @@ STAGES = [
         ("Model card", "from the run's records", "built"),
     ], ("MSE · RMSE", "for regression models")),
     ("Deploy", ("Serve it on", "Kubernetes, safely"), [
-        ("Signed OCI model", "verified at admission", "built"),
+        ("Signed OCI model", "provenance attested", "built"),
         ("KServe endpoint", "by digest, restricted pods", "built"),
         ("GitOps delivery", "Helm chart, 3 envs, Argo CD", "built"),
     ], ("Seldon · BentoML", "SageMaker")),
     ("Monitor", ("Watch data and", "predictions in production"), [
         ("Metrics + audit log", "/metrics, no ticket text", "built"),
-        ("Drift check", "PSI, new words, accuracy", "built"),
-        ("Live drift + alerts", "Prometheus, Grafana", "built"),
+        ("Drift + live accuracy", "PSI, agents' feedback", "built"),
+        ("Alerts + retraining", "Prometheus, Grafana, relay", "built"),
     ], ("whylogs", "Evidently")),
 ]
 CI = ["Tests on 3.12 + 3.13", "Kubeflow runs", "Trivy CVE gate", "Governance drills", "Kyverno + promtool",
