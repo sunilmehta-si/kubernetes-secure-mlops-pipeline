@@ -233,6 +233,23 @@ class FeedbackTests(unittest.TestCase):
                 self.assertEqual(response.status_code, status)
         self.assertEqual(self.send(body).status_code, 200)                   # still countable afterwards
 
+    def test_live_accuracy_and_feedback_outcomes_are_exported(self):
+        from secure_mlops.serve.feedback import LiveAccuracy
+        live = LiveAccuracy(baseline=0.9, window=4, min_labels=2)
+        client = TestClient(create_app(self.served, KEYS, accuracy=live), headers=AUTH)
+        r = client.post("/v1/models/ticket-router:predict", headers={"X-Request-ID": "fb-2"},
+                        json={"instances": [{"text": "parcel never arrived"}, {"text": "refund my charge"}]})
+        first = r.json()["predictions"][0]["team"]
+        wrong = "security" if first != "security" else "account"
+        client.post("/v1/models/ticket-router:feedback", json={"request_id": "fb-2", "teams": [first, wrong]})
+        client.post("/v1/models/ticket-router:feedback", json={"request_id": "fb-2", "teams": [first, wrong]})
+        text = client.get("/metrics").text
+        self.assertIn("smlops_live_labelled_tickets 2.0", text)
+        self.assertRegex(text, r"smlops_live_accuracy (0\.5|1\.0)")
+        self.assertRegex(text, r"smlops_live_accuracy_drop (0\.4|-0\.1)")
+        self.assertIn('smlops_feedback_requests_total{outcome="counted"} 1.0', text)
+        self.assertIn('smlops_feedback_requests_total{outcome="repeated"} 1.0', text)
+
     def test_the_audit_line_records_the_count_never_the_teams_or_text(self):
         with self.assertLogs("smlops.audit", level="INFO") as logs:
             self.send({"request_id": "fb-1", "teams": ["shipping", "billing"]})

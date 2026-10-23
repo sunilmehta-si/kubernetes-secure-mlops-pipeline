@@ -79,6 +79,22 @@ class _DriftGauges:
                 yield GaugeMetricFamily(name, doc, value=value)
 
 
+class _AccuracyGauges:
+    """Live accuracy from agents' feedback, at scrape time; unknown values (too few labels) are left out."""
+    GAUGES = {"labelled": ("smlops_live_labelled_tickets", "Tickets with an agent-confirmed team in the window"),
+              "accuracy": ("smlops_live_accuracy", "Share of labelled tickets the model routed correctly"),
+              "accuracy_drop": ("smlops_live_accuracy_drop", "Held-out accuracy minus live accuracy")}
+
+    def __init__(self, accuracy: LiveAccuracy):
+        self.accuracy = accuracy
+
+    def collect(self):
+        for key, value in self.accuracy.snapshot().items():
+            if value is not None:
+                name, doc = self.GAUGES[key]
+                yield GaugeMetricFamily(name, doc, value=value)
+
+
 def default_drift(served: ServedModel) -> LiveDrift:
     reference = served.reference or {}
     return LiveDrift(reference.get("teams"), model_vocabulary(served.model),
@@ -105,6 +121,9 @@ def create_app(served: ServedModel, api_keys: dict[str, str], limiter: TicketLim
     Gauge("smlops_model_info", "The model being served (always 1)", ["name", "version", "digest"],
           registry=metrics).labels(served.name, served.version, served.digest).set(1)
     metrics.register(_DriftGauges(drift))
+    metrics.register(_AccuracyGauges(accuracy))
+    feedback_requests = Metric("smlops_feedback_requests", "Feedback requests by outcome", ["outcome"],
+                               registry=metrics)
 
     @app.middleware("http")
     async def limit_body(request: Request, call_next):
@@ -184,11 +203,15 @@ def create_app(served: ServedModel, api_keys: dict[str, str], limiter: TicketLim
         known(name)
         unknown = sorted(set(request.teams) - known_teams)
         if unknown:
+            feedback_requests.labels("unknown-team").inc()
             raise HTTPException(status_code=422, detail=f"not a team this model routes to: {', '.join(unknown)}")
         try:
             pairs = predictions.confirm(request.request_id, client, request.teams)
         except FeedbackError as exc:
+            feedback_requests.labels({403: "other-client", 404: "unknown-request", 409: "repeated",
+                                      422: "wrong-count"}[exc.status]).inc()
             raise HTTPException(status_code=exc.status, detail=str(exc)) from None
+        feedback_requests.labels("counted").inc()
         accuracy.observe(pairs)
         correct = sum(p == c for p, c in pairs)
         AUDIT.info(json.dumps({"event": "feedback", "request_id": request.request_id, "client": client,
