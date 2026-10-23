@@ -24,12 +24,40 @@ signature verification.
 | `smlops_predict_latency_seconds` | Time to answer, as a histogram |
 | `smlops_tickets_routed_total{team}` | Tickets routed per predicted team |
 | `smlops_model_info{name,version,digest}` | Which model is serving, by signed digest |
+| `smlops_live_labelled_tickets` | Tickets with an agent-confirmed team in the feedback window |
+| `smlops_live_accuracy`, `smlops_live_accuracy_drop` | Accuracy on confirmed tickets, and how far below the model's signed held-out accuracy it is |
+| `smlops_live_recall{team}` | Per team, the share of its confirmed tickets the model routed there |
+| `smlops_feedback_requests_total{outcome}` | Feedback counted, or refused and why |
 
 **Why a ratio and not a rate.** The vectorizer ignores rare words, so even held-out tickets from the training
 distribution score about 6% unknown words. A fixed threshold calibrated on raw words (the batch check's 1.5%) would
 alert on every clean minute. Measured on the generator, the ratio to the model's own baseline is 1.04 for held-out
 tickets, 1.12 at 30% shifted traffic, 1.21 at 50% and 1.51 fully shifted, so warnings start at 1.15 and alerts at
 1.30 ([`configs/drift.yaml`](../configs/drift.yaml)). The baseline is stored in the signed profile.
+
+## Feedback: is it still right?
+
+Drift says traffic changed; only labels say whether the model got worse. Support agents see which team really owns
+each ticket, and the support tool sends that back: `POST /v1/models/ticket-router:feedback` with the request id of
+the prediction and the confirmed team for each of its tickets ([`serve/feedback.py`](../secure_mlops/serve/feedback.py)).
+
+Feedback is the input to the next training run, so it is guarded like one:
+
+- It needs the same API key as predictions, and only the client that asked for a prediction may confirm it
+  (403 otherwise). A client cannot pad or poison the accuracy of tickets it never sent.
+- Each prediction is confirmed once (409 the second time), with one known team per ticket (422 otherwise), from a
+  bounded log of recent predictions that forgets after a week.
+- It spends the client's ticket budget, so it cannot flood the endpoint either.
+- The audit line records the count and how many were correct, never the teams or the ticket text.
+
+The server keeps a window of 500 confirmed tickets and reports accuracy once it holds 100, with the drop below the
+model's own held-out accuracy (signed into the model with its reference profile) and recall per team, since one
+team's regression can hide inside an average that looks fine. TicketRouterAccuracyDropped fires, and starts
+retraining, when live accuracy is more than 0.03 below the held-out bar for 30 minutes: the same limit
+`smlops drift` uses for labelled batches. TicketRouterNoFeedback warns when a day passes without any.
+
+`smlops audit-summary` reads the predictor's audit log and shows, per client, the tickets sent and how many agents
+confirmed correct, and per model digest the requests answered: the first thing to check after an accuracy alert.
 
 ## Alerts
 
@@ -79,7 +107,7 @@ drills. The latest run:
 
 ```text
 PASS: Prometheus scrapes the served model, digest sha256:d539d91cfd41...
-PASS: all 11 alert rules loaded
+PASS: all 13 alert rules loaded
 PASS: live drift is measuring the 2 tickets served so far
 PASS: the keyless drill request is visible to monitoring as a 401
 PASS: Prometheus sends its alerts to Alertmanager
@@ -132,7 +160,9 @@ The relay, `smlops alert-relay` ([`relay.py`](../secure_mlops/relay.py)), is the
   it would send.
 
 The cluster workflow drills the path on every push: a drift alert put into Alertmanager must reach the relay and
-produce a dispatch, and an ordinary alert must not.
+produce a dispatch, and an ordinary alert must not. It also drills feedback: a prediction's teams confirmed and
+counted, the same feedback refused a second time, the confirmed tickets visible in Prometheus and in the audit
+summary.
 
 ## Rollback and retirement
 
