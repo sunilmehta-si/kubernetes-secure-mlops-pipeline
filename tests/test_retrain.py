@@ -56,3 +56,21 @@ class AlertTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class AlertRulesStartRetrainingTests(unittest.TestCase):
+    def test_exactly_the_retrain_alerts_in_alerts_yaml_start_retraining(self):
+        import yaml
+
+        from secure_mlops.relay import forwarded
+        root = Path(__file__).resolve().parents[1]
+        rules = [r for g in yaml.safe_load((root / "deploy/monitoring/alerts.yaml").read_text())["groups"]
+                 for r in g["rules"]]
+        self.assertGreaterEqual(sum(r["labels"].get("action") == "retrain" for r in rules), 3)
+        for rule in rules:
+            payload = {"alerts": [{"status": "firing", "labels": {"alertname": rule["alert"], **rule["labels"]},
+                                   "annotations": {"summary": "s"}}]}
+            starts = rule["labels"].get("action") == "retrain"
+            with self.subTest(alert=rule["alert"]):
+                self.assertEqual(bool(retrain_reasons(payload)), starts)       # the workflow's own check
+                self.assertEqual(bool(forwarded(payload)), starts)             # what the relay sends on
