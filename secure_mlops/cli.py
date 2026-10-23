@@ -105,6 +105,9 @@ def _parser() -> argparse.ArgumentParser:
                                          "one runs (dev -> staging -> prod); commit it in a pull request.")
     pm.add_argument("--from", dest="source", required=True, help="Environment whose release to promote.")
     pm.add_argument("--to", dest="target", required=True, help="The next environment.")
+    au = sub.add_parser("audit-summary", help="Summarise the server's audit log per client and model, for the "
+                                               "questions after an accuracy alert.")
+    au.add_argument("log", help="Audit log file (kubectl logs of the predictor), or '-' for stdin.")
     pv = sub.add_parser("provenance", help="Write the SLSA v1 provenance predicate for a published image, for "
                                             "cosign attest.")
     pv.add_argument("--kind", required=True, choices=["model", "server"], help="Which image.")
@@ -496,6 +499,17 @@ def _cmd_promote(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_audit_summary(args: argparse.Namespace) -> int:
+    from .audit import markdown, summarize
+    try:
+        lines = sys.stdin.read().splitlines() if args.log == "-" else Path(args.log).read_text().splitlines()
+    except OSError as exc:
+        print(f"smlops: {exc}", file=sys.stderr)
+        return 2
+    print(markdown(summarize(lines)), end="")
+    return 0
+
+
 def _cmd_provenance(args: argparse.Namespace) -> int:
     from .attest import ProvenanceError, predicate
     try:
@@ -555,6 +569,8 @@ def main(argv: list[str] | None = None) -> int:
         return _cmd_render_release(args)
     if args.command == "promote":
         return _cmd_promote(args)
+    if args.command == "audit-summary":
+        return _cmd_audit_summary(args)
     if args.command == "provenance":
         return _cmd_provenance(args)
     if args.command == "argocd-ci":

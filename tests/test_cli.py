@@ -336,3 +336,18 @@ class ProvenanceCliTests(unittest.TestCase):
             self.assertEqual(main(["provenance", "--kind", "model", "--commit", "b" * 40, "--bundle", d,
                                    "-o", str(out)]), 2)
         self.assertIn("full git SHA", err.getvalue())
+
+
+class AuditSummaryCliTests(unittest.TestCase):
+    def test_prints_the_tables_or_refuses_a_missing_file(self):
+        import json
+        import tempfile
+        from contextlib import redirect_stderr
+        from pathlib import Path
+        with tempfile.TemporaryDirectory() as d, redirect_stdout(io.StringIO()) as out, redirect_stderr(io.StringIO()):
+            log = Path(d, "audit.log")
+            log.write_text(json.dumps({"event": "predict", "client": "support-tool", "tickets": 2,
+                                       "digest": "sha256:aa"}) + "\n")
+            self.assertEqual(main(["audit-summary", str(log)]), 0)
+            self.assertEqual(main(["audit-summary", str(Path(d, "missing.log"))]), 2)
+        self.assertIn("| support-tool | 1 | 2 | 0 | - |", out.getvalue())
