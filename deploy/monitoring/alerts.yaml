@@ -38,7 +38,7 @@ groups:
         labels: {severity: critical, gate: G7, action: retrain}
         annotations:
           summary: "Agents corrected enough tickets to put live accuracy {{ $value | printf \"%.3f\" }} below the model's held-out accuracy"
-          runbook: "Real harm, not just drift: retraining starts; check the corrections in the audit log for a pattern."
+          runbook: "Real harm, not just drift: retraining starts. kubectl -n serving logs -l serving.kserve.io/inferenceservice=ticket-router -c kserve-container | smlops audit-summary - shows whose corrections drive it."
       - alert: TicketRouterNoFeedback
         expr: sum(increase(smlops_feedback_requests_total{outcome="counted"}[1d])) == 0
         for: 1h
