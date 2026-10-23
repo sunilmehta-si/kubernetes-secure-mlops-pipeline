@@ -131,7 +131,8 @@ def create_app(served: ServedModel, api_keys: dict[str, str], limiter: TicketLim
     metrics.register(_AccuracyGauges(accuracy))
     feedback_requests = Metric("smlops_feedback_requests", "Feedback requests by outcome", ["outcome"],
                                registry=metrics)
-    for outcome in ("counted", "unknown-team", "other-client", "unknown-request", "repeated", "wrong-count"):
+    for outcome in ("counted", "unknown-team", "other-client", "unknown-request", "repeated", "wrong-count",
+                    "rate-limited"):
         feedback_requests.labels(outcome)            # exported as 0 from the start, so "no feedback" can alert
 
     @app.middleware("http")
@@ -210,6 +211,11 @@ def create_app(served: ServedModel, api_keys: dict[str, str], limiter: TicketLim
             raise HTTPException(status_code=401, detail="a valid API key is required",
                                 headers={"WWW-Authenticate": "Bearer"})
         known(name)
+        allowed, wait = limiter.take(client, len(request.teams))     # feedback spends the same ticket budget
+        if not allowed:
+            feedback_requests.labels("rate-limited").inc()
+            raise HTTPException(status_code=429, detail="rate limit reached",
+                                headers={"Retry-After": str(max(wait, 1))})
         unknown = sorted(set(request.teams) - known_teams)
         if unknown:
             feedback_requests.labels("unknown-team").inc()

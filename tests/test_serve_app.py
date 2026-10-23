@@ -251,6 +251,16 @@ class FeedbackTests(unittest.TestCase):
         self.assertIn('smlops_feedback_requests_total{outcome="repeated"} 1.0', text)
         self.assertIn('smlops_feedback_requests_total{outcome="other-client"} 0.0', text)   # exported from the start
 
+    def test_feedback_spends_the_clients_ticket_budget(self):
+        from secure_mlops.serve.ratelimit import TicketLimiter
+        client = TestClient(create_app(self.served, KEYS, limiter=TicketLimiter(per_minute=60, burst=3)),
+                            headers=AUTH)
+        client.post("/v1/models/ticket-router:predict", headers={"X-Request-ID": "fb-3"},
+                    json={"instances": [{"text": "parcel never arrived"}, {"text": "refund my charge"}]})
+        r = client.post("/v1/models/ticket-router:feedback", json={"request_id": "fb-3", "teams": ["shipping", "billing"]})
+        self.assertEqual(r.status_code, 429)                                 # 2 predicted + 2 confirmed > 3
+        self.assertIn("Retry-After", r.headers)
+
     def test_the_audit_line_records_the_count_never_the_teams_or_text(self):
         with self.assertLogs("smlops.audit", level="INFO") as logs:
             self.send({"request_id": "fb-1", "teams": ["shipping", "billing"]})
