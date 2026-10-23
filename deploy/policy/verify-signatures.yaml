@@ -7,6 +7,7 @@
 # Gate G5: each image must also carry a SLSA v1 provenance attestation, signed with the same key, saying it came
 # from this repository's publish step (scripts/publish-model.sh, smlops provenance). A signature says who published
 # an image; the attestation says what it was built from, and an image signed by hand without it is rejected.
+# Model images also need their CycloneDX ML-BOM attested: what the model contains, with its datasets by fingerprint.
 apiVersion: kyverno.io/v1
 kind: ClusterPolicy
 metadata:
@@ -61,3 +62,25 @@ spec:
                     - key: "{{ length(buildDefinition.resolvedDependencies) }}"
                       operator: GreaterThanOrEquals
                       value: 2
+        - imageReferences: ["kind-registry:5000/ticket-router*"]       # the model images
+          failureAction: Enforce
+          required: true
+          verifyDigest: true
+          mutateDigest: false
+          attestations:
+            - type: https://cyclonedx.org/bom
+              attestors:
+                - entries:
+                    - keys:
+                        secret:
+                          name: smlops-signing-key
+                          namespace: kyverno
+                        rekor:
+                          ignoreTlog: true
+                        ctlog:
+                          ignoreSCT: true
+              conditions:
+                - all:
+                    - key: "{{ metadata.component.type }}"
+                      operator: Equals
+                      value: machine-learning-model

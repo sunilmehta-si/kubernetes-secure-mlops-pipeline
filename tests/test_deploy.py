@@ -123,7 +123,7 @@ class SignaturePolicyTests(unittest.TestCase):
         self.assertEqual((policy["spec"]["failurePolicy"], policy["spec"]["background"]), ("Fail", False))
         (rule,) = policy["spec"]["rules"]
         self.assertEqual(rule["match"]["any"][0]["resources"]["namespaces"], ["serving"])
-        (check,) = rule["verifyImages"]
+        check, _ = rule["verifyImages"]
         self.assertEqual((check["imageReferences"], check["failureAction"], check["required"], check["verifyDigest"]),
                          (["*"], "Enforce", True, True))
         key = check["attestors"][0]["entries"][0]["keys"]
@@ -132,7 +132,7 @@ class SignaturePolicyTests(unittest.TestCase):
     def test_every_serving_image_needs_provenance_from_this_publish_step(self):
         from secure_mlops.attest import BUILD_TYPE, PREDICATE_TYPE
         (policy,) = docs("deploy/policy/verify-signatures.yaml")
-        (check,) = policy["spec"]["rules"][0]["verifyImages"]
+        check, _ = policy["spec"]["rules"][0]["verifyImages"]
         (attestation,) = check["attestations"]
         self.assertEqual(attestation["type"], PREDICATE_TYPE)
         self.assertEqual(attestation["attestors"], check["attestors"])                # the same key signs both
@@ -140,6 +140,20 @@ class SignaturePolicyTests(unittest.TestCase):
         self.assertEqual((condition["key"], condition["operator"], condition["value"]),
                          ("{{ buildDefinition.buildType }}", "Equals", BUILD_TYPE))
         self.assertEqual(sources["operator"], "GreaterThanOrEquals")                   # source plus data or lock
+
+    def test_model_images_need_their_ml_bom_signed_by_the_same_key(self):
+        (policy,) = docs("deploy/policy/verify-signatures.yaml")
+        everything, models = policy["spec"]["rules"][0]["verifyImages"]
+        registry = versions()["REGISTRY"]
+        publish = (ROOT / "scripts/publish-model.sh").read_text()
+        self.assertIn('"${REGISTRY}/ticket-router:v${version}"', publish)          # where model images are pushed
+        self.assertEqual(models["imageReferences"], [f"{registry}/ticket-router*"])
+        (bom,) = models["attestations"]
+        self.assertEqual(bom["type"], "https://cyclonedx.org/bom")
+        self.assertEqual(bom["attestors"], everything["attestors"])
+        (condition,) = bom["conditions"][0]["all"]
+        self.assertEqual((condition["key"], condition["value"]), ("{{ metadata.component.type }}",
+                                                                  "machine-learning-model"))
 
 
 
