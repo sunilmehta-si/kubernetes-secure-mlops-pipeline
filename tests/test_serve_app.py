@@ -7,6 +7,7 @@ from fastapi.testclient import TestClient
 from secure_mlops.serve.app import create_app
 from secure_mlops.serve.auth import digest
 from secure_mlops.serve.bundle import load_verified
+from secure_mlops.serve.feedback import PredictionLog
 from secure_mlops.serve.live_drift import LiveDrift
 from tests.test_serve_bundle import make_bundle
 
@@ -144,6 +145,17 @@ class MetricsTests(unittest.TestCase):
         self.assertIn("smlops_live_new_word_rate 0.5", text)
         self.assertIn("smlops_live_new_word_ratio 2.0", text)
         self.assertRegex(text, r"smlops_live_psi_predicted_team \d")
+
+    def test_each_prediction_is_logged_for_its_client_under_its_request_id(self):
+        log = PredictionLog()
+        with tempfile.TemporaryDirectory() as d:
+            _, public = make_bundle(Path(d, "b"), Path(d, "keys"))
+            client = TestClient(create_app(load_verified(Path(d, "b"), public), KEYS, predictions=log), headers=AUTH)
+            r = client.post("/v1/models/ticket-router:predict", headers={"X-Request-ID": "req-7"},
+                            json={"instances": [{"text": "parcel never arrived"}, {"text": "refund my charge"}]})
+        teams = [p["team"] for p in r.json()["predictions"]]
+        self.assertEqual(log.confirm("req-7", "tester", ["shipping", "billing"]),
+                         list(zip(teams, ["shipping", "billing"])))
 
 
 class AuthEnforcementTests(unittest.TestCase):

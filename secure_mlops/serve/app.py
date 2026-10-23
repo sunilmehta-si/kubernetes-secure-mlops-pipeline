@@ -26,6 +26,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from .auth import authenticate
 from .bundle import ServedModel
+from .feedback import LiveAccuracy, PredictionLog
 from .live_drift import LiveDrift, model_vocabulary
 from .ratelimit import TicketLimiter
 
@@ -78,12 +79,16 @@ def default_drift(served: ServedModel) -> LiveDrift:
 
 
 def create_app(served: ServedModel, api_keys: dict[str, str], limiter: TicketLimiter | None = None,
-               drift: LiveDrift | None = None) -> FastAPI:
+               drift: LiveDrift | None = None, predictions: PredictionLog | None = None,
+               accuracy: LiveAccuracy | None = None) -> FastAPI:
     """api_keys: {sha256 of key: client id}; every prediction must present one of the keys. limiter: tickets per
     client; defaults to TicketLimiter() (600 per minute, bursts of 120). drift: the live drift window; defaults to
-    one built from the model's signed reference profile."""
+    one built from the model's signed reference profile. predictions and accuracy: the log feedback confirms
+    against, and the live accuracy window measured against the profile's held-out accuracy."""
     limiter = limiter or TicketLimiter()
     drift = drift or default_drift(served)
+    predictions = predictions or PredictionLog()
+    accuracy = accuracy or LiveAccuracy((served.reference or {}).get("accuracy"))
     app = FastAPI(title=f"{served.name} v{served.version}", docs_url=None, redoc_url=None, openapi_url=None)
     metrics = CollectorRegistry()           # per app: what Prometheus scrapes from /metrics
     requests = Metric("smlops_predict_requests", "Prediction requests by HTTP status", ["status"], registry=metrics)
@@ -151,6 +156,7 @@ def create_app(served: ServedModel, api_keys: dict[str, str], limiter: TicketLim
         for team, n in Counter(map(str, teams)).items():
             tickets.labels(team).inc(n)
         drift.observe(frame["text"], teams)
+        predictions.record(request_id, client, [str(t) for t in teams])     # for the agents' feedback later
         response.headers["X-Request-ID"] = request_id
         response.headers["X-Model-Digest"] = served.digest
         AUDIT.info(json.dumps({"event": "predict", "request_id": request_id, "client": client, "model": served.name,
