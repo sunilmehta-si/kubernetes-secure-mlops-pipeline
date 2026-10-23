@@ -22,10 +22,12 @@ class AlertRuleTests(unittest.TestCase):
         self.assertEqual(threshold("TicketRouterTeamMixDrifted"), policy.psi_alert)
         self.assertEqual(threshold("TicketRouterNewVocabularyRising"), policy.live_new_word_ratio_warn)
         self.assertEqual(threshold("TicketRouterNewVocabulary"), policy.live_new_word_ratio_alert)
+        self.assertEqual(threshold("TicketRouterAccuracyDropped"), policy.max_accuracy_drop)   # same as batch
 
     def test_only_critical_drift_starts_retraining(self):
         retrain = sorted(name for name, r in RULES.items() if r["labels"].get("action") == "retrain")
-        self.assertEqual(retrain, ["TicketRouterNewVocabulary", "TicketRouterTeamMixDrifted"])
+        self.assertEqual(retrain, ["TicketRouterAccuracyDropped", "TicketRouterNewVocabulary",
+                                   "TicketRouterTeamMixDrifted"])
         self.assertTrue(all(RULES[name]["labels"]["severity"] == "critical" for name in retrain))
 
     def test_every_metric_an_alert_reads_is_exported_by_the_server(self):

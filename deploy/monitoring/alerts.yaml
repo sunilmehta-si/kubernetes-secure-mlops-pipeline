@@ -32,6 +32,13 @@ groups:
         annotations:
           summary: "Tickets use {{ $value | printf \"%.2f\" }}x the model's usual share of unknown words"
           runbook: "Retraining starts on this alert; the new model must still pass the evaluation gate."
+      - alert: TicketRouterAccuracyDropped
+        expr: max without (instance, pod) (smlops_live_accuracy_drop) > 0.03
+        for: 30m
+        labels: {severity: critical, gate: G7, action: retrain}
+        annotations:
+          summary: "Agents corrected enough tickets to put live accuracy {{ $value | printf \"%.3f\" }} below the model's held-out accuracy"
+          runbook: "Real harm, not just drift: retraining starts; check the corrections in the audit log for a pattern."
       - alert: TicketRouterRetrainTriggerFailing
         expr: sum(increase(smlops_relay_retrain_requests_total{outcome="failed"}[30m])) > 0
         for: 1m

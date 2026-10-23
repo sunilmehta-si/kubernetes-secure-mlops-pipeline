@@ -60,6 +60,21 @@ tests:
               summary: "Tickets use 1.20x the model's usual share of unknown words"
               runbook: "New products or phrasing; collect labelled tickets for the next training run."
 
+  - name: live accuracy below the held-out bar for half an hour starts retraining
+    interval: 1m
+    input_series:
+      - series: 'smlops_live_accuracy_drop{pod="router-a"}'
+        values: '0.01x10 0.06x40'
+    alert_rule_test:
+      - {eval_time: 30m, alertname: TicketRouterAccuracyDropped, exp_alerts: []}
+      - eval_time: 45m
+        alertname: TicketRouterAccuracyDropped
+        exp_alerts:
+          - exp_labels: {severity: critical, gate: G7, action: retrain}
+            exp_annotations:
+              summary: "Agents corrected enough tickets to put live accuracy 0.060 below the model's held-out accuracy"
+              runbook: "Real harm, not just drift: retraining starts; check the corrections in the audit log for a pattern."
+
   - name: a retraining trigger that fails is itself an alert
     interval: 1m
     input_series:
