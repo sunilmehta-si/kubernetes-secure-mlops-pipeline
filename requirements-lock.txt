@@ -52,7 +52,7 @@ google-crc32c==1.9.0
 google-resumable-media==2.11.0
 googleapis-common-protos==1.75.5
 graphene==3.4.3
-graphql-core==3.2.13
+graphql-core==3.3.0
 graphql-relay==3.2.0
 gunicorn==26.2.0
 h11==0.16.0
