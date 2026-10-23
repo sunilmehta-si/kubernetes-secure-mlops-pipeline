@@ -474,7 +474,7 @@
     },
     {
       "type": "row",
-      "title": "Is anyone abusing the endpoint",
+      "title": "Is it still routing tickets correctly",
       "collapsed": false,
       "gridPos": {
         "x": 0,
@@ -487,6 +487,120 @@
     },
     {
       "type": "timeseries",
+      "title": "Live accuracy below the held-out bar",
+      "description": "The model's held-out accuracy (signed into it) minus its accuracy on tickets agents confirmed. Red starts retraining: real harm, not just drift.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 36,
+        "w": 16,
+        "h": 7
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "max(smlops_live_accuracy_drop)",
+          "legendFormat": "drop",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#1a7f37",
+                "value": null
+              },
+              {
+                "color": "#cf222e",
+                "value": 0.03
+              }
+            ]
+          },
+          "custom": {
+            "thresholdsStyle": {
+              "mode": "line+area"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {},
+      "id": 13
+    },
+    {
+      "type": "stat",
+      "title": "Tickets agents confirmed",
+      "description": "Accuracy is judged once the window holds 100 confirmed tickets.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "x": 16,
+        "y": 36,
+        "w": 8,
+        "h": 7
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "min(smlops_live_labelled_tickets)",
+          "legendFormat": "",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#1a7f37",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "id": 14
+    },
+    {
+      "type": "row",
+      "title": "Is anyone abusing the endpoint",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 43,
+        "w": 24,
+        "h": 1
+      },
+      "panels": [],
+      "id": 15
+    },
+    {
+      "type": "timeseries",
       "title": "Rejected keys and exhausted budgets",
       "description": "Requests a minute. The audit log names the client of every request that presented a valid key.",
       "datasource": {
@@ -495,7 +609,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 36,
+        "y": 44,
         "w": 24,
         "h": 7
       },
@@ -535,7 +649,7 @@
         "overrides": []
       },
       "options": {},
-      "id": 13
+      "id": 16
     }
   ]
 }

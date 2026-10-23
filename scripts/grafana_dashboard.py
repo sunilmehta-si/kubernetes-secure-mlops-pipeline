@@ -3,9 +3,10 @@
     python scripts/grafana_dashboard.py     # writes deploy/monitoring/dashboards/ticket-router.json
 
 The rows follow the questions an on-call engineer asks: which model is serving, is it healthy, is traffic still
-like the training data, and is anyone abusing the endpoint. Drift panels draw the same thresholds the alerts use
-(read from configs/drift.yaml), so a line crossing red on the dashboard is exactly an alert firing. Tests fail if
-the committed JSON drifts from this script or reads a metric the server does not export.
+like the training data, is it still routing tickets correctly, and is anyone abusing the endpoint. Drift and
+accuracy panels draw the same thresholds the alerts use (read from configs/drift.yaml), so a line crossing red on
+the dashboard is exactly an alert firing. Tests fail if the committed JSON drifts from this script or reads a metric
+the server does not export.
 """
 from __future__ import annotations
 
@@ -86,11 +87,20 @@ def dashboard() -> dict:
                description="What the alert relay did with drift alerts in the past hour: dispatched starts a "
                            "retraining run, suppressed falls inside its cooldown, failed means retraining did not "
                            "start and TicketRouterRetrainTriggerFailing fires."),
-        _row("Is anyone abusing the endpoint", 35),
+        _row("Is it still routing tickets correctly", 35),
+        _panel("timeseries", "Live accuracy below the held-out bar", [
+            ("max(smlops_live_accuracy_drop)", "drop")], (0, 36, 16, 7), unit="percentunit",
+               thresholds=_steps(None, p.max_accuracy_drop),
+               description="The model's held-out accuracy (signed into it) minus its accuracy on tickets agents "
+                           "confirmed. Red starts retraining: real harm, not just drift."),
+        _panel("stat", "Tickets agents confirmed", [("min(smlops_live_labelled_tickets)", "")], (16, 36, 8, 7),
+               thresholds=_steps(), description="Accuracy is judged once the window holds 100 confirmed tickets.",
+               reduceOptions={"calcs": ["lastNotNull"]}),
+        _row("Is anyone abusing the endpoint", 43),
         _panel("timeseries", "Rejected keys and exhausted budgets", [
             ('sum(rate(smlops_predict_requests_total{status="401"}[5m])) * 60', "no valid key"),
             ('sum(rate(smlops_predict_requests_total{status=~"413|429"}[5m])) * 60', "over budget")],
-               (0, 36, 24, 7), unit="short", description="Requests a minute. The audit log names the client of "
+               (0, 44, 24, 7), unit="short", description="Requests a minute. The audit log names the client of "
                                                          "every request that presented a valid key."),
     ]
     for i, panel in enumerate(panels, 1):
