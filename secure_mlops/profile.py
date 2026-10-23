@@ -4,7 +4,8 @@ Stored as MLflow model metadata, so it sits in the model's MLmodel file and is c
 server compares live traffic with the profile of exactly the model it serves, and the profile cannot be swapped
 without breaking verification. It holds the share of tickets per team in training, and the model's own new-word rate
 on held-out tickets: the vectorizer drops rare words, so even training-like text has some, and live traffic is judged
-by how far it rises above this baseline rather than against zero.
+by how far it rises above this baseline rather than against zero. It also holds the model's accuracy on those
+held-out tickets, the bar that live accuracy from agents' confirmed teams is held to.
 """
 from __future__ import annotations
 
@@ -22,6 +23,9 @@ def reference_profile(train_frame: pd.DataFrame, model=None, heldout: pd.DataFra
     if model is not None and heldout is not None:
         from .serve.live_drift import model_vocabulary, new_word_rate
         profile["new_word_rate"] = round(new_word_rate(heldout["text"], model_vocabulary(model)), 6)
+        # Accuracy on the same held-out tickets: the bar live accuracy, from agents' confirmed teams, is held to.
+        predicted = model.predict(heldout.drop(columns=["label"]))
+        profile["accuracy"] = round(float((predicted == heldout["label"].to_numpy()).mean()), 6)
     return profile
 
 
