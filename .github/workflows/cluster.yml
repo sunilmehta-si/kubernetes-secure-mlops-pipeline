@@ -80,6 +80,10 @@ jobs:
         run: |
           scripts/check-monitoring.sh "$WORK" | tee "$WORK/monitoring.txt"
           { echo "### Monitoring"; echo '```'; cat "$WORK/monitoring.txt"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+      - name: Drill feedback
+        run: |
+          scripts/drill-feedback.sh "$WORK" | tee "$WORK/feedback.txt"
+          { echo "### Feedback drills"; echo '```'; cat "$WORK/feedback.txt"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
       - name: Drill GitOps
         run: |
           scripts/drill-gitops.sh "$WORK" | tee "$WORK/gitops.txt"
