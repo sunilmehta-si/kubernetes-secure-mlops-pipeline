@@ -24,6 +24,11 @@ deploy/gitops/
 
 Staging has no overrides on purpose: anything set there would make staging prove less about prod.
 
+With two replicas or more (prod), the chart also renders a PodDisruptionBudget that keeps one predictor up through
+node drains and upgrades, and spreads replicas across nodes (preferred, never refused). With one replica it renders
+neither: a budget there would block every drain instead of protecting anything. The projects allow the budget, so
+the fence is the same five kinds in every environment.
+
 ## Why these choices
 
 - **Folders, not branches.** Each environment is a directory on `main`. A branch per environment drifts, needs
