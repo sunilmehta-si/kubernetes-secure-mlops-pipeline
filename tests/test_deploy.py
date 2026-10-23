@@ -129,6 +129,18 @@ class SignaturePolicyTests(unittest.TestCase):
         key = check["attestors"][0]["entries"][0]["keys"]
         self.assertEqual(key["secret"], {"name": "smlops-signing-key", "namespace": "kyverno"})
 
+    def test_every_serving_image_needs_provenance_from_this_publish_step(self):
+        from secure_mlops.attest import BUILD_TYPE, PREDICATE_TYPE
+        (policy,) = docs("deploy/policy/verify-signatures.yaml")
+        (check,) = policy["spec"]["rules"][0]["verifyImages"]
+        (attestation,) = check["attestations"]
+        self.assertEqual(attestation["type"], PREDICATE_TYPE)
+        self.assertEqual(attestation["attestors"], check["attestors"])                # the same key signs both
+        (condition, sources) = attestation["conditions"][0]["all"]
+        self.assertEqual((condition["key"], condition["operator"], condition["value"]),
+                         ("{{ buildDefinition.buildType }}", "Equals", BUILD_TYPE))
+        self.assertEqual(sources["operator"], "GreaterThanOrEquals")                   # source plus data or lock
+
 
 
 class DigestPolicyTests(unittest.TestCase):

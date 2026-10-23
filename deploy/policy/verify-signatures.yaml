@@ -4,6 +4,9 @@
 # kyverno/smlops-signing-key (key cosign.pub), created by scripts/install-platform.sh; the transparency log is not
 # used for this local key, so no public record is written. Admission fails closed: if Kyverno cannot verify, the
 # pod is rejected.
+# Gate G5: each image must also carry a SLSA v1 provenance attestation, signed with the same key, saying it came
+# from this repository's publish step (scripts/publish-model.sh, smlops provenance). A signature says who published
+# an image; the attestation says what it was built from, and an image signed by hand without it is rejected.
 apiVersion: kyverno.io/v1
 kind: ClusterPolicy
 metadata:
@@ -38,3 +41,23 @@ spec:
                       ignoreTlog: true
                     ctlog:
                       ignoreSCT: true
+          attestations:
+            - type: https://slsa.dev/provenance/v1
+              attestors:
+                - entries:
+                    - keys:
+                        secret:
+                          name: smlops-signing-key
+                          namespace: kyverno
+                        rekor:
+                          ignoreTlog: true
+                        ctlog:
+                          ignoreSCT: true
+              conditions:
+                - all:
+                    - key: "{{ buildDefinition.buildType }}"
+                      operator: Equals
+                      value: https://github.com/sunilmehta-si/kubernetes-secure-mlops-pipeline/publish-model@v1
+                    - key: "{{ length(buildDefinition.resolvedDependencies) }}"
+                      operator: GreaterThanOrEquals
+                      value: 2
