@@ -4,6 +4,7 @@
     GET  /metrics                      Prometheus: requests, latency, teams, model identity and live drift
     GET  /v1/models/{name}             readiness and identity of the model being served
     POST /v1/models/{name}:predict     {"instances": [{"text": "..."}]} -> {"predictions": [{"team", "confidence"}]}
+    POST /v1/models/{name}:feedback    {"request_id": "...", "teams": ["..."]}: the teams agents confirmed, in order
 
 The app is built around an already verified ServedModel, so it cannot exist without one. Every response names the
 model version and the digest of the signed files that produced it.
@@ -26,7 +27,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from .auth import authenticate
 from .bundle import ServedModel
-from .feedback import LiveAccuracy, PredictionLog
+from .feedback import FeedbackError, LiveAccuracy, PredictionLog
 from .live_drift import LiveDrift, model_vocabulary
 from .ratelimit import TicketLimiter
 
@@ -48,6 +49,12 @@ class Instance(BaseModel):
 class PredictRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     instances: list[Instance] = Field(min_length=1, max_length=MAX_INSTANCES)
+
+
+class FeedbackRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    request_id: str = Field(pattern=REQUEST_ID.pattern)
+    teams: list[str] = Field(min_length=1, max_length=MAX_INSTANCES)
 
 
 def _bearer(request: Request) -> str | None:
@@ -165,5 +172,28 @@ def create_app(served: ServedModel, api_keys: dict[str, str], limiter: TicketLim
                                "latency_ms": round((time.perf_counter() - started) * 1000, 2)}, sort_keys=True))
         return {"predictions": [{"team": str(t), "confidence": round(float(c), 4)} for t, c in zip(teams, confidence)],
                 "model": identity()}
+
+    known_teams = set(map(str, getattr(served.model, "classes_", []))) or set((served.reference or {}).get("teams", {}))
+
+    @app.post("/v1/models/{name}:feedback")
+    def feedback(name: str, request: FeedbackRequest, raw: Request) -> dict:
+        client = authenticate(api_keys, _bearer(raw))
+        if client is None:
+            raise HTTPException(status_code=401, detail="a valid API key is required",
+                                headers={"WWW-Authenticate": "Bearer"})
+        known(name)
+        unknown = sorted(set(request.teams) - known_teams)
+        if unknown:
+            raise HTTPException(status_code=422, detail=f"not a team this model routes to: {', '.join(unknown)}")
+        try:
+            pairs = predictions.confirm(request.request_id, client, request.teams)
+        except FeedbackError as exc:
+            raise HTTPException(status_code=exc.status, detail=str(exc)) from None
+        accuracy.observe(pairs)
+        correct = sum(p == c for p, c in pairs)
+        AUDIT.info(json.dumps({"event": "feedback", "request_id": request.request_id, "client": client,
+                               "model": served.name, "version": served.version, "digest": served.digest,
+                               "tickets": len(pairs), "correct": correct}, sort_keys=True))
+        return {"counted": len(pairs), "correct": correct}
 
     return app

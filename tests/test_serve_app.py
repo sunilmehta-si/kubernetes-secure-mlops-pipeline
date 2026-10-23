@@ -1,3 +1,4 @@
+import json
 import tempfile
 import unittest
 from pathlib import Path
@@ -187,3 +188,54 @@ class AuthEnforcementTests(unittest.TestCase):
         anonymous = TestClient(self.app)
         self.assertEqual(anonymous.get("/healthz").status_code, 200)
         self.assertEqual(anonymous.get("/metrics").status_code, 200)
+
+
+class FeedbackTests(unittest.TestCase):
+    OTHER = "smk_other-key"
+
+    @classmethod
+    def setUpClass(cls):
+        cls.dir = tempfile.TemporaryDirectory()
+        _, public = make_bundle(Path(cls.dir.name, "b"), Path(cls.dir.name, "keys"))
+        cls.served = load_verified(Path(cls.dir.name, "b"), public)
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.dir.cleanup()
+
+    def setUp(self):
+        keys = {**KEYS, digest(self.OTHER): "other-client"}
+        self.client = TestClient(create_app(self.served, keys), headers=AUTH)
+        self.client.post("/v1/models/ticket-router:predict", headers={"X-Request-ID": "fb-1"},
+                         json={"instances": [{"text": "parcel never arrived"}, {"text": "refund my charge"}]})
+
+    def send(self, body, headers=None, name="ticket-router"):
+        return self.client.post(f"/v1/models/{name}:feedback", json=body, headers=headers or {})
+
+    def test_confirmed_teams_are_counted_once(self):
+        r = self.send({"request_id": "fb-1", "teams": ["shipping", "billing"]})
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.json()["counted"], 2)
+        self.assertEqual(self.send({"request_id": "fb-1", "teams": ["shipping", "billing"]}).status_code, 409)
+
+    def test_feedback_that_cannot_be_trusted_is_refused(self):
+        body = {"request_id": "fb-1", "teams": ["shipping", "billing"]}
+        for case, response, status in (
+                ("no key", self.send(body, {"Authorization": ""}), 401),
+                ("another client", self.send(body, {"Authorization": f"Bearer {self.OTHER}"}), 403),
+                ("unknown request", self.send({**body, "request_id": "fb-404"}), 404),
+                ("wrong model", self.send(body, name="other-model"), 404),
+                ("unknown team", self.send({**body, "teams": ["shipping", "marketing"]}), 422),
+                ("wrong count", self.send({**body, "teams": ["shipping"]}), 422),
+                ("unsafe id", self.send({**body, "request_id": "../etc"}), 422),
+                ("extra field", self.send({**body, "note": "x"}), 422)):
+            with self.subTest(case=case):
+                self.assertEqual(response.status_code, status)
+        self.assertEqual(self.send(body).status_code, 200)                   # still countable afterwards
+
+    def test_the_audit_line_records_the_count_never_the_teams_or_text(self):
+        with self.assertLogs("smlops.audit", level="INFO") as logs:
+            self.send({"request_id": "fb-1", "teams": ["shipping", "billing"]})
+        line = json.loads(logs.records[-1].getMessage())
+        self.assertEqual((line["event"], line["client"], line["tickets"]), ("feedback", "tester", 2))
+        self.assertNotIn("parcel", logs.output[-1])
