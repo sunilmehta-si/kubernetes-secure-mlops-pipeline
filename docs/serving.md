@@ -94,7 +94,7 @@ The [`cluster` workflow](../.github/workflows/cluster.yml) runs these steps on e
 rejections: an unsigned image, an image referenced by tag, a client outside the allowed namespaces (curl's own "no
 connection", never a kubectl error), and a request without an API key (401). Every step runs with `pipefail`: an
 earlier version piped the drill into `tee`, which hid a failing drill behind a green run until the monitoring
-check exposed it. The latest run, all nineteen checks:
+check exposed it. The latest run, all twenty checks:
 
 ```text
 Argo CD synced release release-39557059626 into serving
@@ -114,6 +114,7 @@ PASS: Prometheus scrapes the relay, so a failing retraining trigger alerts
 PASS: agents' feedback on a prediction was counted (2 tickets)
 PASS: the same feedback a second time was refused (409), so no ticket counts twice
 PASS: Prometheus sees the agent-confirmed tickets in live accuracy
+PASS: the audit log shows the support tool's confirmed tickets, without any ticket text
 PASS: the endpoint runs the dev release of chart ticket-router-0.1.1, synced under project ml-serving-dev
 PASS: a hand edit to the endpoint was reverted to the release by Argo CD
 PASS: a release adding a ClusterRole and a Secret was refused by the project; neither was created

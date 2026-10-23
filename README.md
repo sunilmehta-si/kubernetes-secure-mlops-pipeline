@@ -119,7 +119,7 @@ PASS: a hand edit to the endpoint was reverted to the release by Argo CD
 PASS: a release adding a ClusterRole and a Secret was refused by the project; neither was created
 ```
 
-(Nineteen checks in all; [docs/serving.md](docs/serving.md) lists every one.) Releases are rendered manifests with
+(Twenty checks in all; [docs/serving.md](docs/serving.md) lists every one.) Releases are rendered manifests with
 both images by digest (`smlops render-release`). On the CI cluster Argo CD syncs each one from the cluster
 registry under the committed project's rules; in production, promoting a model is a pull request that commits
 the same files.
