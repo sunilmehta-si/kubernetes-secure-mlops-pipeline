@@ -20,9 +20,9 @@ def rendered(env: str) -> dict:
 class EnvironmentTests(unittest.TestCase):
     def test_the_three_environments_exist_and_render(self):
         self.assertEqual(sorted(p.name for p in ENVS.iterdir() if p.is_dir()), ["dev", "prod", "staging"])
-        for env in ("dev", "staging", "prod"):
+        for env, extra in (("dev", set()), ("staging", set()), ("prod", {"PodDisruptionBudget"})):
             with self.subTest(env=env):
-                self.assertEqual(set(rendered(env)), {"InferenceService", "ServingRuntime", "ServiceAccount"})
+                self.assertEqual(set(rendered(env)), {"InferenceService", "ServingRuntime", "ServiceAccount"} | extra)
 
     def test_environments_never_set_images_and_stay_small(self):
         for path in ENVS.glob("*/values.yaml"):

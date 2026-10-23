@@ -19,8 +19,8 @@ class RenderTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             files = render(MODEL, SERVER, d)
             self.assertEqual([f.name for f in files], ["inferenceservice.yaml", "networkpolicy.yaml",
-                                                       "serviceaccount.yaml", "servingruntime.yaml",
-                                                       "kustomization.yaml"])
+                                                       "poddisruptionbudget.yaml", "serviceaccount.yaml",
+                                                       "servingruntime.yaml", "kustomization.yaml"])
             self.assertIn("--env prod", files[0].read_text().splitlines()[0])
             self.assertEqual(yaml.safe_load(Path(d, "target.yaml").read_text())["env"], "prod")   # not a resource
             isvc = docs(Path(d, "inferenceservice.yaml"))[0]

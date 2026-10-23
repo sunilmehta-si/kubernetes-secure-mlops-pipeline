@@ -1,6 +1,6 @@
 # One Argo CD project per environment (gate G6). Each fences its environment in the same way: one source repository,
 # the serving namespace only, nothing cluster-scoped (not even the namespace, which the platform owns), and only
-# the four kinds a release contains. Prod adds sync windows: changes reach it on weekday working hours only, and
+# the five kinds a release contains. Prod adds sync windows: changes reach it on weekday working hours only, and
 # a person may still sync by hand outside them to roll back.
 apiVersion: argoproj.io/v1alpha1
 kind: AppProject
@@ -20,6 +20,7 @@ spec:
     - {group: serving.kserve.io, kind: ServingRuntime}
     - {group: networking.k8s.io, kind: NetworkPolicy}
     - {group: "", kind: ServiceAccount}
+    - {group: policy, kind: PodDisruptionBudget}
   orphanedResources:
     warn: true
 ---
@@ -41,6 +42,7 @@ spec:
     - {group: serving.kserve.io, kind: ServingRuntime}
     - {group: networking.k8s.io, kind: NetworkPolicy}
     - {group: "", kind: ServiceAccount}
+    - {group: policy, kind: PodDisruptionBudget}
   orphanedResources:
     warn: true
 ---
@@ -62,6 +64,7 @@ spec:
     - {group: serving.kserve.io, kind: ServingRuntime}
     - {group: networking.k8s.io, kind: NetworkPolicy}
     - {group: "", kind: ServiceAccount}
+    - {group: policy, kind: PodDisruptionBudget}
   orphanedResources:
     warn: true
   syncWindows:

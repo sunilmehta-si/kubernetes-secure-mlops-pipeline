@@ -32,6 +32,14 @@ class ChartTests(unittest.TestCase):
             with self.subTest(message=message), self.assertRaisesRegex(HelmError, message):
                 template(CHART, values=values)
 
+    def test_a_disruption_budget_only_where_a_replica_can_be_spared(self):
+        # one replica (the defaults, dev, staging): a budget would block every drain instead of protecting anything
+        self.assertNotIn(("PodDisruptionBudget", "ticket-router"), objects(template(CHART, values=IMAGES)))
+        prod = objects(template(CHART, [ROOT / "deploy/gitops/envs/prod/values.yaml"], IMAGES))
+        pdb = prod[("PodDisruptionBudget", "ticket-router")]
+        self.assertEqual(pdb["spec"]["minAvailable"], 1)
+        self.assertEqual(pdb["spec"]["selector"]["matchLabels"], {"serving.kserve.io/inferenceservice": "ticket-router"})
+
     def test_another_helm_version_is_refused(self):
         with tempfile.TemporaryDirectory() as d:
             fake = Path(d, "helm")

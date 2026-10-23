@@ -21,6 +21,10 @@ replicas:
   min: 1
   max: 2
 
+# Rendered only when replicas.min is 2 or more: how many predictors must stay up through drains and upgrades.
+disruptionBudget:
+  minAvailable: 1
+
 # Namespaces with this label set to "true" may call the model; nothing else can connect.
 clients:
   namespaceLabel: smlops.io/model-clients

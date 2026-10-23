@@ -133,7 +133,7 @@ namespace is not part of a release: the platform owns it.
 [`deploy/gitops/argocd/`](../deploy/gitops/argocd/) has the Argo CD projects and the ApplicationSet that makes
 one Application per environment. Each syncs `deploy/gitops/rendered/<env>/` from `main`, prunes what git no longer
 has and reverts hand edits. Each environment's project allows one source repository, one destination namespace,
-nothing cluster-scoped, and only the four kinds a release contains; tests check that every rendered kind is allowed
+nothing cluster-scoped, and only the five kinds a release can contain; tests check that every rendered kind is allowed
 and nothing more.
 
 ### On the CI cluster

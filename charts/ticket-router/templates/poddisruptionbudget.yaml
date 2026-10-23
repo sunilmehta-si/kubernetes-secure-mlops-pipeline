@@ -1,0 +1,16 @@
+{{- /* With two replicas or more, keep at least one serving through node drains and upgrades. A single-replica
+       environment gets none: a budget there would block every drain instead of protecting anything. */ -}}
+{{- if ge (int .Values.replicas.min) 2 }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ .Values.model.name }}
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "ticket-router.labels" . | nindent 4 }}
+spec:
+  minAvailable: {{ .Values.disruptionBudget.minAvailable }}
+  selector:
+    matchLabels:
+      serving.kserve.io/inferenceservice: {{ .Values.model.name }}
+{{- end }}
