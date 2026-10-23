@@ -121,7 +121,7 @@ python-dateutil==2.9.0.post0
 python-dotenv==1.2.4
 PyYAML==6.0.3
 referencing==0.37.0
-requests==2.33.0
+requests==2.34.2
 requests-oauthlib==2.0.0
 requests-toolbelt==1.0.0
 rfc3161-client==1.0.9
