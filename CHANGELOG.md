@@ -1,5 +1,33 @@
 # Changelog
 
+## [0.6.0] - 2026-10-23
+
+Is it still right, and what was it built from: agents' feedback measures live accuracy against the model's own
+held-out bar, and every image carries signed provenance that admission requires.
+
+### Added
+- **Feedback endpoint** `POST /v1/models/ticket-router:feedback`: support agents' confirmed teams for a prediction,
+  by request id. Only the client that asked may confirm it, once, with known teams, within its ticket budget; the
+  audit line keeps counts, never teams or text.
+- **Live accuracy** from feedback, against the held-out accuracy now signed into each model's reference profile,
+  and live **recall per team**; `smlops_live_accuracy`, `_accuracy_drop`, `_recall{team}`, `_labelled_tickets`,
+  `smlops_feedback_requests_total{outcome}`.
+- Alerts: **TicketRouterAccuracyDropped** (more than 0.03 below the held-out bar for 30 minutes; critical, starts
+  retraining) and **TicketRouterNoFeedback** (a day without feedback); dashboard panels for accuracy, recall per
+  team and refused feedback.
+- **`smlops audit-summary`**: per client the tickets sent and how many agents confirmed correct, per model digest
+  the requests answered.
+- **Provenance attestations:** `smlops provenance` writes SLSA v1 provenance (source commit; model, version,
+  training run, signature and datasets; dependency lock), attested on both images at publish, and the ML-BOM
+  attested on the model image. Kyverno requires both, with this repository's build type.
+- Chart: a PodDisruptionBudget and topology spread for environments with two or more replicas (prod).
+- Cluster drills, now twenty checks: an image signed with the pipeline's key but without provenance is rejected;
+  feedback counted once, refused a second time, visible in Prometheus and in the audit summary.
+- A test that exactly the retrain alerts in `alerts.yaml` start retraining through the relay and the workflow.
+
+### Changed
+- Releases can contain a fifth kind, the PodDisruptionBudget; every environment's project allows it.
+
 ## [0.5.0] - 2026-10-22
 
 One Helm chart, three environments: dev, staging and prod differ only in a few lines of values, each has its own
@@ -131,6 +159,7 @@ cannot start, and a server cannot run a model whose signature does not verify.
 - Pods created before Kyverno registered its Pod webhook missed the hardening and were retried for minutes; the install
   now waits for the webhook.
 
+[0.6.0]: https://github.com/sunilmehta-si/kubernetes-secure-mlops-pipeline/releases/tag/v0.6.0
 [0.5.0]: https://github.com/sunilmehta-si/kubernetes-secure-mlops-pipeline/releases/tag/v0.5.0
 [0.4.0]: https://github.com/sunilmehta-si/kubernetes-secure-mlops-pipeline/releases/tag/v0.4.0
 [0.3.0]: https://github.com/sunilmehta-si/kubernetes-secure-mlops-pipeline/releases/tag/v0.3.0
