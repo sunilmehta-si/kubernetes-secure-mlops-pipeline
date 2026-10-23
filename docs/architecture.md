@@ -170,8 +170,9 @@ From one registered version you can trace back to exactly what produced it:
 | Model card | `model_card.md` | intended use, provenance, results and limits, written from the records above |
 | Signature | `model.sig.json` on the run (OpenSSF model signing), version tag `signature` | every file is the one that passed the gate; checked before any load |
 | ML-BOM | `mlbom.cdx.json` on the run (CycloneDX 1.6) | file hashes, datasets by fingerprint, every installed package |
-| Training profile | `smlops_reference` in the signed MLmodel metadata | the team mix and new-word baseline live drift is judged against |
+| Training profile | `smlops_reference` in the signed MLmodel metadata | the team mix, new-word baseline and held-out accuracy that live drift and live accuracy are judged against |
 | Release | the signed OCI model image and server image, by digest, in a rendered release | that what runs is what was signed |
+| Provenance | a signed SLSA v1 attestation on each image; the ML-BOM attested on the model image | what each image was built from: commit, training run, datasets, dependency lock |
 
 ## 7. CI on every change
 
@@ -188,7 +189,7 @@ flowchart LR
     PR --> H["Helm chart linted strictly<br/>in dev, staging and prod"]
     T --> RR["Committed releases equal<br/>what the chart renders"]
     PR --> C["agentic-code-review-tool<br/>review of changed lines (PRs)"]
-    M(["Push to main"]) --> K["kind cluster: deploy the chart's dev release<br/>through Argo CD; 15 admission, network,<br/>monitoring and GitOps checks"]
+    M(["Push to main"]) --> K["kind cluster: deploy the chart's dev release<br/>through Argo CD; 20 admission, network,<br/>monitoring, feedback and GitOps checks"]
     S(["Monday, by hand,<br/>or a drift alert"]) --> R["Retrain on existing + recent tickets;<br/>the gate decides"]
     DB(["Dependabot weekly:<br/>pip, actions, base image"]) --> PR
 ```
