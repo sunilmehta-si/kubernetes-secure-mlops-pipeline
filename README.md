@@ -100,13 +100,14 @@ parameters, every metric (overall, per team and per slice), the gate decision an
 
 The champion is packaged as a signed OCI image and served by KServe on a kind cluster, in CI on every push
 ([details](docs/serving.md)). Two independent checks stand between a model and traffic: Kyverno admits only images
-signed by the pipeline and pinned by digest, and the server verifies the model's own signature before it opens a port.
-The latest run:
+signed by the pipeline, pinned by digest and carrying signed provenance from this repository's publish step (what
+they were built from), and the server verifies the model's own signature before it opens a port. The latest run:
 
 ```text
 Argo CD synced release release-39557059626 into serving
 ticket-router answered: ["billing","shipping"], model 1
 PASS: an unsigned image rejected by verify-model-signatures
+PASS: an image signed by the pipeline's key but without provenance rejected by verify-model-signatures
 PASS: an image referenced by tag rejected by require-registry-and-digest
 PASS: a client outside the allowed namespaces could not reach the model
 PASS: a request without an API key was refused (401)
@@ -117,6 +118,7 @@ PASS: the keyless drill request is visible to monitoring as a 401
 PASS: a drift alert reached the relay, which would start retraining (dry run, no GitHub token here)
 PASS: a hand edit to the endpoint was reverted to the release by Argo CD
 PASS: a release adding a ClusterRole and a Secret was refused by the project; neither was created
+PASS: agents' feedback on a prediction was counted (2 tickets)
 ```
 
 (Twenty checks in all; [docs/serving.md](docs/serving.md) lists every one.) Releases are rendered manifests with
@@ -145,8 +147,14 @@ differs from what the chart renders for it.
 
 The server measures its own traffic against the training profile signed into the model: the mix of predicted teams
 (PSI) and the share of words its vectorizer has never seen, as a multiple of the model's own baseline. Prometheus
-alerts on both with the same thresholds as the batch drift check; eleven alert rules are unit-tested with promtool on
-every push, and a Grafana dashboard is generated from code. A critical drift alert goes through Alertmanager to a
+alerts on both with the same thresholds as the batch drift check; thirteen alert rules are unit-tested with promtool on
+every push, and a Grafana dashboard is generated from code.
+
+Drift says traffic changed; only labels say whether the model got worse. Support agents confirm the right team for
+tickets, and the support tool sends that back for the prediction it made. Feedback feeds the next training run, so
+it is guarded like training data: only the client that asked may confirm a prediction, each one once, within its
+ticket budget. The server reports live accuracy and recall per team against the held-out accuracy signed into the
+model, and an accuracy drop starts retraining like critical drift does. A critical drift alert goes through Alertmanager to a
 token-checked relay that starts the retraining workflow (as does the weekly schedule); the run trains on existing
 plus recent tickets, and the challenger still has to beat the champion on recent traffic before a person approves
 it. [docs/monitoring.md](docs/monitoring.md) has the details.
