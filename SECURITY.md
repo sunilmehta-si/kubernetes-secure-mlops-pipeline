@@ -33,7 +33,11 @@ threat model, including ways to:
 - install a dependency version other than the one in `requirements-lock.txt`;
 - make the chart render a weaker workload in any environment (root, privilege escalation, a writable root
   filesystem, egress, an image by tag), or commit a release that differs from what the chart renders;
-- move a release into prod without it having run in staging, or with different digests from staging.
+- move a release into prod without it having run in staging, or with different digests from staging;
+- confirm a prediction your client did not ask for, count a ticket twice, or otherwise skew live accuracy through
+  the feedback endpoint (the input to the next training run);
+- get an image admitted without provenance from this repository's publish step, or a model image without its
+  ML-BOM, even with the signing key.
 
 ## Keys and credentials in this project
 
