@@ -102,11 +102,11 @@
 <text x="355.5" y="418" font-size="9.5" font-weight="700" fill="#8a887f" text-anchor="start" letter-spacing="0.6">CHECKS</text>
 <text x="429.5" y="418" font-size="12" font-weight="500" fill="#0b0b0b" text-anchor="start">signed, provenance, CVEs</text>
 <text x="355.5" y="440" font-size="9.5" font-weight="700" fill="#8a887f" text-anchor="start" letter-spacing="0.6">EVIDENCE</text>
-<text x="429.5" y="440" font-size="12" font-weight="500" fill="#0b0b0b" text-anchor="start">signature, ML-BOM</text>
+<text x="429.5" y="440" font-size="12" font-weight="500" fill="#0b0b0b" text-anchor="start">signature, provenance</text>
 <text x="355.5" y="462" font-size="9.5" font-weight="700" fill="#8a887f" text-anchor="start" letter-spacing="0.6">OWNER</text>
 <text x="429.5" y="462" font-size="12" font-weight="500" fill="#0b0b0b" text-anchor="start">platform security</text>
 <text x="355.5" y="484" font-size="9.5" font-weight="700" fill="#8a887f" text-anchor="start" letter-spacing="0.6">ENFORCED</text>
-<text x="429.5" y="484" font-size="12" font-weight="500" fill="#0b0b0b" text-anchor="start">model signing; Trivy</text>
+<text x="429.5" y="484" font-size="12" font-weight="500" fill="#0b0b0b" text-anchor="start">attestations; Trivy</text>
 <rect x="650" y="328" width="284.5" height="176" rx="12" fill="#f0f8f2" stroke="#b9dcc4"/>
 <rect x="664" y="342" width="34" height="22" rx="6" fill="#1a7f37"/>
 <text x="681" y="357.5" font-size="12" font-weight="700" fill="#fbfbfa" text-anchor="middle">G6</text>
