@@ -22,12 +22,12 @@ flowchart LR
         G -- pass --> R["MLflow registry<br/>champion alias moves"]
         G -- fail --> N["Registered,<br/>not promoted"]
     end
-    subgraph planned["Planned"]
+    subgraph serving["Serving"]
         direction LR
-        P["Package<br/>OCI ModelKit + ML-BOM"] --> S["Sign<br/>OpenSSF model signing"]
+        P["Package<br/>OCI model image + ML-BOM"] --> S["Sign<br/>model signing, cosign, SLSA provenance"]
         S --> A["GitOps promotion<br/>Argo CD"]
-        A --> V{"Admission<br/>verify signature"}
-        V -- verified --> K["KServe canary<br/>Argo Rollouts"]
+        A --> V{"smlops verify-image, then Kyverno<br/>signature, provenance, ML-BOM, digest"}
+        V -- verified --> K["KServe, scaling on CPU<br/>load drill: p95 and errors<br/>against the serving objectives"]
         V -- tampered --> X["Rejected"]
         K --> M["Monitoring<br/>Prometheus + drift"]
     end
