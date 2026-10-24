@@ -83,6 +83,15 @@ through the rules with `promtool test rules`: sustained drift fires, a ten-minut
 decides, and every summary renders with the right value. CI runs it on every push with a pinned, checksummed
 Prometheus release.
 
+## The load drill, as the server saw it
+
+`scripts/drill-load.sh` sends 300 requests at the endpoint from the support namespace (`smlops load`), which judges
+them as a client would. It then asks Prometheus for the server's own 95th percentile over the same two minutes
+(`histogram_quantile(0.95, sum by (le) (rate(smlops_predict_latency_seconds_bucket[2m])))`) and holds that to the
+same `p95_ms` from [`configs/serving.yaml`](../configs/serving.yaml). The two views differ by the network and the
+server's queue; if only the client's view misses, the cluster is the problem, not the model. `TicketRouterSlow`
+fires on the server's view of live traffic at exactly this threshold.
+
 ## Dashboard
 
 [`deploy/monitoring/dashboards/ticket-router.json`](../deploy/monitoring/dashboards/ticket-router.json) is generated
