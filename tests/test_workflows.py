@@ -34,6 +34,15 @@ class WorkflowTests(unittest.TestCase):
                     with self.subTest(workflow=path.name, job=name, step=step.get("name", step.get("run", ""))[:40]):
                         self.assertNotRegex(step.get("run", ""), r"\$\{\{\s*(github\.event|inputs)\.")
 
+    def test_every_drill_script_runs_on_the_cluster_workflow(self):
+        # a drill that exists but is not wired in proves nothing; the load drill was added this way
+        cluster = (ROOT / ".github/workflows/cluster.yml").read_text()
+        drills = sorted((ROOT / "scripts").glob("drill-*.sh"))
+        self.assertGreaterEqual(len(drills), 4)
+        for script in drills:
+            with self.subTest(drill=script.name):
+                self.assertIn(f"scripts/{script.name}", cluster)
+
     def test_retraining_cannot_deploy_or_promote_on_its_own(self):
         flow = yaml.safe_load((ROOT / ".github/workflows/retrain.yml").read_text())
         self.assertEqual(flow["permissions"], {"contents": "read"})
