@@ -97,6 +97,11 @@ class LoadTests(unittest.TestCase):
         with self.assertRaises(LoadError):
             run(self.url, "k", requests_total=0, concurrency=1)
 
+    def test_bounds_are_checked_before_any_request_is_sent(self):
+        for kwargs in ({"concurrency": 0}, {"tickets_per_request": 0}, {"tickets_per_request": 65}):
+            with self.subTest(**kwargs), self.assertRaisesRegex(LoadError, "between 1 and 64"):
+                run("http://127.0.0.1:9/never-reached", "k", requests_total=5, **{"concurrency": 1, **kwargs})
+
 
 if __name__ == "__main__":
     unittest.main()
