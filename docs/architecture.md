@@ -189,7 +189,7 @@ flowchart LR
     PR --> H["Helm chart linted strictly<br/>in dev, staging and prod"]
     T --> RR["Committed releases equal<br/>what the chart renders"]
     PR --> C["agentic-code-review-tool<br/>review of changed lines (PRs)"]
-    M(["Push to main"]) --> K["kind cluster: deploy the chart's dev release<br/>through Argo CD; 20 admission, network,<br/>monitoring, feedback and GitOps checks"]
+    M(["Push to main"]) --> K["kind cluster: deploy the chart's dev release<br/>through Argo CD; 24 admission, network, monitoring,<br/>feedback, load and GitOps checks"]
     S(["Monday, by hand,<br/>or a drift alert"]) --> R["Retrain on existing + recent tickets;<br/>the gate decides"]
     DB(["Dependabot weekly:<br/>pip, actions, base image"]) --> PR
 ```
