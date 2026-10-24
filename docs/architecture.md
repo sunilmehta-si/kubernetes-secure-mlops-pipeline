@@ -179,7 +179,7 @@ From one registered version you can trace back to exactly what produced it:
 ```mermaid
 flowchart LR
     PR(["Push or pull request"]) --> T["Unit and end-to-end tests<br/>Python 3.12 and 3.13<br/>incl. two full KFP local runs"]
-    T --> L["Nothing installed<br/>outside the lock"]
+    T --> L["uv lock --check, then<br/>uv sync --frozen: exactly the lock"]
     PR --> I["Build pipeline image<br/>base pinned by digest"]
     I --> U["Run the CLI inside it<br/>as non-root user 10001"]
     U --> V["Trivy: fail on fixable<br/>HIGH or CRITICAL CVEs"]
