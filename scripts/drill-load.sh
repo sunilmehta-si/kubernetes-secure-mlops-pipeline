@@ -15,19 +15,33 @@ url="http://ticket-router-predictor.serving.svc.cluster.local/v1/models/ticket-r
 requests="${LOAD_REQUESTS:-300}"
 failed=0
 
-# The load tool is `smlops load` from the server image, run in the support namespace. The API key goes in on stdin,
-# never as an argument. The objectives file travels with the image (configs/ is in it).
+# The load tool is `smlops load` from the server image, run in the support namespace. The API key reaches it as a
+# file from a Secret, never as an argument or in the pod spec; the objectives come from a ConfigMap. The pod runs to
+# completion and its log is read afterwards: `kubectl run -i` attaches to a pod that has already finished when the
+# run takes a second, and the output is lost (the first run of this drill failed exactly that way).
 kubectl -n support create configmap smlops-serving-objectives --from-file=serving.yaml=configs/serving.yaml \
   --dry-run=client -o yaml | kubectl apply -f - >/dev/null
-sed 's/^Authorization: Bearer //' "$work/support-tool.header" \
-  | kubectl -n support run "load-$(date +%s)" --rm -i --quiet --restart=Never --image "$SERVER_IMAGE" \
-      --overrides='{"spec":{"containers":[{"name":"load","image":"'"$SERVER_IMAGE"'","stdin":true,"args":["load","--url","'"$url"'","--requests","'"$requests"'","--concurrency","8","--objectives","/etc/smlops/serving.yaml","-o","/dev/stderr"],"volumeMounts":[{"name":"objectives","mountPath":"/etc/smlops"}],"securityContext":{"allowPrivilegeEscalation":false,"capabilities":{"drop":["ALL"]},"runAsNonRoot":true,"seccompProfile":{"type":"RuntimeDefault"}}}],"volumes":[{"name":"objectives","configMap":{"name":"smlops-serving-objectives"}}]}}' \
-      > "$work/load.md" 2> "$work/load.json" && rc=0 || rc=$?
+sed 's/^Authorization: Bearer //' "$work/support-tool.header" | tr -d '\n' \
+  | kubectl -n support create secret generic smlops-load-key --from-file=key=/dev/stdin --dry-run=client -o yaml \
+  | kubectl apply -f - >/dev/null
+pod="load-$(date +%s)"
+kubectl -n support run "$pod" --restart=Never --image "$SERVER_IMAGE" --overrides='{"spec":{"containers":[{"name":"load","image":"'"$SERVER_IMAGE"'","args":["load","--url","'"$url"'","--api-key-file","/etc/smlops/key","--requests","'"$requests"'","--concurrency","8","--objectives","/etc/smlops/serving.yaml"],"volumeMounts":[{"name":"smlops","mountPath":"/etc/smlops","readOnly":true}],"securityContext":{"allowPrivilegeEscalation":false,"capabilities":{"drop":["ALL"]},"runAsNonRoot":true,"seccompProfile":{"type":"RuntimeDefault"}}}],"volumes":[{"name":"smlops","projected":{"sources":[{"configMap":{"name":"smlops-serving-objectives"}},{"secret":{"name":"smlops-load-key"}}]}}]}}' >/dev/null
+rc=""
+for i in $(seq 1 36); do
+  phase="$(kubectl -n support get pod "$pod" -o jsonpath='{.status.phase}' 2>/dev/null || true)"
+  case "$phase" in Succeeded|Failed)
+    rc="$(kubectl -n support get pod "$pod" -o jsonpath='{.status.containerStatuses[0].state.terminated.exitCode}')"; break;; esac
+  sleep 5
+done
+kubectl -n support logs "$pod" > "$work/load.md" 2>/dev/null || true
+kubectl -n support delete pod "$pod" secret smlops-load-key --wait=false >/dev/null 2>&1 || true
 cat "$work/load.md"
 if [ "$rc" = 0 ]; then
   echo "PASS: ${requests} requests from inside the cluster met the serving objectives (client view)"
+elif [ -z "$rc" ]; then
+  echo "FAIL: the load run did not finish in three minutes"; failed=1
 else
-  echo "FAIL: the load run missed the serving objectives or did not finish (exit $rc)"; failed=1
+  echo "FAIL: the load run missed the serving objectives (exit $rc)"; failed=1
 fi
 
 # The server's own view of the same requests, from Prometheus.
