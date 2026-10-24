@@ -58,6 +58,11 @@ class CompiledPipelineTests(unittest.TestCase):
                          "pipelines/ticket-router-training.yaml is stale: run smlops pipeline compile")
         yaml.safe_load(fresh)                                           # valid YAML, as Kubeflow will parse it
 
+    def test_components_install_nothing_at_run_time(self):
+        # kfp's default component command pip-installs kfp before the step runs. The project image already holds
+        # the locked kfp, and an environment built from the lock has no pip: the CI run found every step failing.
+        self.assertNotIn("pip install", (ROOT / "pipelines/ticket-router-training.yaml").read_text())
+
 
 class LocalRunTests(unittest.TestCase):
     def test_pipeline_runs_end_to_end_and_gates_the_second_model(self):

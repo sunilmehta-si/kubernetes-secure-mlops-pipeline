@@ -27,7 +27,7 @@ def _default(name: str) -> str:
     return json.dumps(yaml.safe_load(path.read_text()), sort_keys=True) if path.exists() else "{}"
 
 
-@dsl.component(base_image=IMAGE)
+@dsl.component(base_image=IMAGE, install_kfp_package=False)
 def prepare_data(n: int, seed: int, drift: float, data: dsl.Output[dsl.Dataset]):
     """Generate tickets, check them against the data contract, and write fingerprinted splits."""
     from secure_mlops.data import DataSpec
@@ -37,7 +37,7 @@ def prepare_data(n: int, seed: int, drift: float, data: dsl.Output[dsl.Dataset])
     data.metadata.update({"fingerprint_test": manifest["fingerprints"]["test"], "tickets": n})
 
 
-@dsl.component(base_image=IMAGE)
+@dsl.component(base_image=IMAGE, install_kfp_package=False)
 def train_model(data: dsl.Input[dsl.Dataset], train_config: str, model_name: str, model: dsl.Output[dsl.Model]):
     """Train the classifier and hand it on in MLflow's model format."""
     from secure_mlops.config import parse
@@ -48,7 +48,7 @@ def train_model(data: dsl.Input[dsl.Dataset], train_config: str, model_name: str
     model.metadata.update({"params_hash": config.params_hash()})
 
 
-@dsl.component(base_image=IMAGE)
+@dsl.component(base_image=IMAGE, install_kfp_package=False)
 def evaluate_and_gate(data: dsl.Input[dsl.Dataset], model: dsl.Input[dsl.Model], gate_policy: str, model_name: str,
                       tracking_uri: str, metrics: dsl.Output[dsl.Metrics], report: dsl.Output[dsl.Markdown],
                       decision: dsl.Output[dsl.Artifact]) -> bool:
@@ -73,7 +73,7 @@ def evaluate_and_gate(data: dsl.Input[dsl.Dataset], model: dsl.Input[dsl.Model],
     return bool(result["passed"])
 
 
-@dsl.component(base_image=IMAGE)
+@dsl.component(base_image=IMAGE, install_kfp_package=False)
 def publish_model(data: dsl.Input[dsl.Dataset], model: dsl.Input[dsl.Model], decision: dsl.Input[dsl.Artifact],
                   train_config: str, model_name: str, tracking_uri: str, card: dsl.Output[dsl.Markdown]) -> str:
     """Track and register every model; promote it to champion only if the gate passed. Returns the version."""
