@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # Deploy the published model and call it the way a client would.
+#   0. verify both images as admission will (signature, provenance, ML-BOM), so a bad image never becomes a release
 #   1. render the release with `smlops render-release`, exactly as a GitOps promotion commits it, push it to the
 #      cluster registry as an OCI artifact, and let Argo CD sync it under the committed project's rules (admission
 #      checks run when Argo CD applies it). Nothing here applies the release itself.
@@ -27,6 +28,8 @@ fi
 hashes="$work/api-keys.txt"
 kubectl -n serving create secret generic smlops-api-keys --from-file "api-keys.txt=${hashes}" \
   --dry-run=client -o yaml | kubectl apply -f -
+smlops verify-image --model-image "$MODEL_IMAGE" --server-image "$SERVER_IMAGE" --cosign-key "$work/keys/cosign.pub" \
+  --model-version "$(jq -r .version "$work/bundle/release.json")" --plain-http
 smlops render-release --env dev --model-image "$MODEL_IMAGE" --server-image "$SERVER_IMAGE" -o "$work/release"
 tag="release-${GITHUB_RUN_ID:-$(date +%s)}"
 (cd "$work/release" && oras push --plain-http "${REGISTRY}/smlops/release:${tag}" . >/dev/null)
