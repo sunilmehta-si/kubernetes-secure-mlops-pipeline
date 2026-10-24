@@ -2,6 +2,7 @@
 # Try to get around the deploy-time controls; every attempt must fail, or this script fails.
 #   1. an unsigned image in serving        -> rejected by verify-model-signatures (G6, T7)
 #   1b. an image signed with the pipeline's key but without provenance -> rejected by the same policy (G5)
+#   1c. `smlops verify-image`, the pre-release check, refuses both of those images too
 #   2. a signed image referenced by tag    -> rejected by require-registry-and-digest
 #   3. a client outside the allowed namespaces calls the model -> blocked by the network policy
 #   4. an allowed client without an API key                    -> 401 from the server (T9)
@@ -64,6 +65,16 @@ elif grep -q "verify-model-signatures" <<<"$out" && grep -qi "attestation" <<<"$
 else
   echo "FAIL: the signed-only image was rejected, but not for missing provenance: $out"; failed=1
 fi
+
+# 1c. the pre-release check must agree with admission on both images
+for pair in "unsigned:$unsigned" "signed without provenance:$signed_only"; do
+  what="${pair%%:*}"; image="${pair#*:}"
+  if smlops verify-image --model-image "$image" --cosign-key "$work/keys/cosign.pub" --plain-http >/dev/null 2>&1; then
+    echo "FAIL: smlops verify-image accepted an $what image"; failed=1
+  else
+    echo "PASS: smlops verify-image refused the $what image before any release was rendered"
+  fi
+done
 
 # 2. signed image, but by tag: what runs could change after approval
 pod drill-by-tag "${MODEL_IMAGE%@*}:v1" | expect_denied "an image referenced by tag" "require-registry-and-digest"
