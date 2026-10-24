@@ -44,7 +44,7 @@ class ProvenanceTests(unittest.TestCase):
         p = predicate("server", COMMIT, env={}, now=NOW)
         (source, lock) = p["buildDefinition"]["resolvedDependencies"]
         self.assertEqual(source["digest"], {"gitCommit": COMMIT})
-        self.assertEqual(lock["uri"], "smlops:requirements-lock.txt")
+        self.assertEqual(lock["uri"], "smlops:uv.lock")
         self.assertEqual(p["runDetails"], {"builder": {"id": "local"},
                                            "metadata": {"startedOn": "2026-10-23T09:00:00+00:00"}})
 

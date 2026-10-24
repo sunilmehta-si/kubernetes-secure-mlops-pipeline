@@ -4,7 +4,7 @@ cosign attests to with the pipeline's key, and that admission control requires.
 A signature says who published an image; provenance says what it was built from. For the model image: the source
 commit, the model's name, registry version and training run, its signature file, and the datasets it was trained
 and tested on by content fingerprint (from its ML-BOM). For the server image: the source commit and the dependency
-lock. The build type names this repository's publish step, so the admission policy can require images that came
+lock (uv.lock). The build type names this repository's publish step, so the admission policy can require images that came
 from it and not merely images signed by a key.
 """
 from __future__ import annotations
@@ -66,8 +66,7 @@ def predicate(kind: str, commit: str, bundle: str | Path | None = None, env: dic
     elif kind == "server":
         external = {"kind": "server"}
         internal = {}
-        resolved = [source, {"uri": "smlops:requirements-lock.txt",
-                             "digest": {"sha256": _sha256(ROOT / "requirements-lock.txt")}}]
+        resolved = [source, {"uri": "smlops:uv.lock", "digest": {"sha256": _sha256(ROOT / "uv.lock")}}]
     else:
         raise ProvenanceError(f"kind must be model or server, got {kind!r}")
     builder, invocation = _builder(env)
