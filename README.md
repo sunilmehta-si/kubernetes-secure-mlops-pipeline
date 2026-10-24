@@ -101,7 +101,10 @@ parameters, every metric (overall, per team and per slice), the gate decision an
 The champion is packaged as a signed OCI image and served by KServe on a kind cluster, in CI on every push
 ([details](docs/serving.md)). Two independent checks stand between a model and traffic: Kyverno admits only images
 signed by the pipeline, pinned by digest and carrying signed provenance from this repository's publish step (what
-they were built from), and the server verifies the model's own signature before it opens a port. The latest run:
+they were built from), and the server verifies the model's own signature before it opens a port. Before a release
+is even rendered, `smlops verify-image` makes admission's checks from wherever the release is made; once the model
+serves, 300 requests from the support namespace must meet the serving objectives (p95 under 250 ms, under 1% errors)
+as the client measures them and as the server does. The latest run:
 
 ```text
 Argo CD synced release release-39557059626 into serving
