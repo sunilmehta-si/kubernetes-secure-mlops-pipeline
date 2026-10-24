@@ -17,6 +17,8 @@ spec:
     serviceAccountName: model-server
     minReplicas: {{ .Values.replicas.min }}
     maxReplicas: {{ .Values.replicas.max }}
+    scaleMetric: cpu
+    scaleTarget: {{ .Values.autoscaling.targetCpuUtilization }}
     {{- if ge (int .Values.replicas.min) 2 }}
     # Prefer replicas on different nodes, so losing one node does not take the endpoint down. ScheduleAnyway: a
     # cluster with fewer nodes still runs every replica.

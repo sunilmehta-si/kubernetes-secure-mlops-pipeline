@@ -40,6 +40,12 @@ class ChartTests(unittest.TestCase):
         self.assertEqual(pdb["spec"]["minAvailable"], 1)
         self.assertEqual(pdb["spec"]["selector"]["matchLabels"], {"serving.kserve.io/inferenceservice": "ticket-router"})
 
+    def test_the_predictor_scales_on_cpu_between_min_and_max(self):
+        pred = objects(template(CHART, values=IMAGES))[("InferenceService", "ticket-router")]["spec"]["predictor"]
+        self.assertEqual((pred["scaleMetric"], pred["scaleTarget"]), ("cpu", 70))
+        with self.assertRaisesRegex(HelmError, "autoscaling"):
+            template(CHART, values={**IMAGES, "autoscaling.targetCpuUtilization": "150"})
+
     def test_prod_replicas_prefer_different_nodes_without_refusing_to_run(self):
         prod = objects(template(CHART, [ROOT / "deploy/gitops/envs/prod/values.yaml"], IMAGES))
         (spread,) = prod[("InferenceService", "ticket-router")]["spec"]["predictor"]["topologySpreadConstraints"]

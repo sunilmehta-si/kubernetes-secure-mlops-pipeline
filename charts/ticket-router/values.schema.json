@@ -11,7 +11,8 @@
     "replicas",
     "clients",
     "disruptionBudget",
-    "spread"
+    "spread",
+    "autoscaling"
   ],
   "definitions": {
     "digestRef": {
@@ -159,6 +160,20 @@
         "topologyKey": {
           "type": "string",
           "minLength": 1
+        }
+      }
+    },
+    "autoscaling": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "targetCpuUtilization"
+      ],
+      "properties": {
+        "targetCpuUtilization": {
+          "type": "integer",
+          "minimum": 10,
+          "maximum": 100
         }
       }
     }

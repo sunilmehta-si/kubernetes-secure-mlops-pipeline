@@ -21,6 +21,10 @@ replicas:
   min: 1
   max: 2
 
+# KServe scales the predictor between replicas.min and replicas.max on CPU use (percent of the request).
+autoscaling:
+  targetCpuUtilization: 70
+
 # Rendered only when replicas.min is 2 or more: how many predictors must stay up through drains and upgrades.
 disruptionBudget:
   minAvailable: 1
