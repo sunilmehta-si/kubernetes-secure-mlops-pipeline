@@ -117,6 +117,14 @@ def _parser() -> argparse.ArgumentParser:
     ld.add_argument("--tickets", type=int, default=2, help="Tickets per request, 1-64 (default: 2).")
     ld.add_argument("--objectives", default="configs/serving.yaml", help="Serving objectives (default: configs/serving.yaml).")
     ld.add_argument("--output", "-o", help="Write the JSON report here as well.")
+    vi = sub.add_parser("verify-image", help="Verify published images as admission will: signature, SLSA provenance "
+                                              "from this repository's publish step, and the model image's ML-BOM.")
+    vi.add_argument("--model-image", help="Model image by digest.")
+    vi.add_argument("--server-image", help="Server image by digest.")
+    vi.add_argument("--cosign-key", required=True, help="The pipeline's cosign public key.")
+    vi.add_argument("--model-name", default="ticket-router", help="Model the provenance must name (default: ticket-router).")
+    vi.add_argument("--model-version", help="Registry version the provenance must name (default: not checked).")
+    vi.add_argument("--plain-http", action="store_true", help="The registry speaks plain HTTP (a local kind registry).")
     pv = sub.add_parser("provenance", help="Write the SLSA v1 provenance predicate for a published image, for "
                                             "cosign attest.")
     pv.add_argument("--kind", required=True, choices=["model", "server"], help="Which image.")
@@ -537,6 +545,27 @@ def _cmd_load(args: argparse.Namespace) -> int:
     return 0 if verdict["passed"] else 1
 
 
+def _cmd_verify_image(args: argparse.Namespace) -> int:
+    from .images import ImageError, verify_image
+    if not args.model_image and not args.server_image:
+        print("smlops: give --model-image, --server-image or both", file=sys.stderr)
+        return 2
+    try:
+        if args.server_image:
+            r = verify_image(args.server_image, args.cosign_key, "server", plain_http=args.plain_http)
+            print(f"smlops: server image verified: signed, provenance from this repository (commit {r['source']})",
+                  file=sys.stderr)
+        if args.model_image:
+            r = verify_image(args.model_image, args.cosign_key, "model", model=args.model_name,
+                             version=args.model_version, plain_http=args.plain_http)
+            print(f"smlops: model image verified: signed, provenance for {r['model']} v{r['version']}, ML-BOM attested",
+                  file=sys.stderr)
+    except ImageError as exc:
+        print(f"smlops: NOT VERIFIED: {exc}", file=sys.stderr)
+        return 1
+    return 0
+
+
 def _cmd_provenance(args: argparse.Namespace) -> int:
     from .attest import ProvenanceError, predicate
     try:
@@ -600,6 +629,8 @@ def main(argv: list[str] | None = None) -> int:
         return _cmd_audit_summary(args)
     if args.command == "load":
         return _cmd_load(args)
+    if args.command == "verify-image":
+        return _cmd_verify_image(args)
     if args.command == "provenance":
         return _cmd_provenance(args)
     if args.command == "argocd-ci":

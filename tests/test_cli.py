@@ -353,6 +353,14 @@ class AuditSummaryCliTests(unittest.TestCase):
         self.assertIn("| support-tool | 1 | 2 | 0 | - |", out.getvalue())
 
 
+class VerifyImageCliTests(unittest.TestCase):
+    def test_needs_at_least_one_image(self):
+        from contextlib import redirect_stderr
+        with redirect_stderr(io.StringIO()) as err:
+            self.assertEqual(main(["verify-image", "--cosign-key", "k.pub"]), 2)
+        self.assertIn("give --model-image, --server-image or both", err.getvalue())
+
+
 class LoadCliTests(unittest.TestCase):
     def test_refuses_to_run_without_a_key_or_with_unknown_objectives(self):
         import tempfile
