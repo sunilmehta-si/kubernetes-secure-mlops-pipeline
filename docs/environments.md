@@ -24,6 +24,11 @@ deploy/gitops/
 
 Staging has no overrides on purpose: anything set there would make staging prove less about prod.
 
+Within its replica bounds, every environment scales the predictor on CPU utilisation
+(`autoscaling.targetCpuUtilization`, 70% by default, bounded by the chart's schema). Dev's 1 to 1 leaves nothing to
+scale, deliberately: the CI cluster holds one replica to the serving objectives, so the number says what one replica
+can do.
+
 With two replicas or more (prod), the chart also renders a PodDisruptionBudget that keeps one predictor up through
 node drains and upgrades, and spreads replicas across nodes (preferred, never refused). With one replica it renders
 neither: a budget there would block every drain instead of protecting anything. The projects allow the budget, so
