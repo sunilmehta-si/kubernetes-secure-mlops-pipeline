@@ -85,6 +85,10 @@ jobs:
           scripts/drill-feedback.sh "$WORK" | tee "$WORK/feedback.txt"
           { echo "### Feedback drills"; echo '```'; cat "$WORK/feedback.txt"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
       - name: Drill GitOps
+      - name: Drill load against the serving objectives
+        run: |
+          scripts/drill-load.sh "$WORK" | tee "$WORK/load.txt"
+          { echo "### Load"; cat "$WORK/load.md"; echo '```'; grep -E "^(PASS|FAIL):" "$WORK/load.txt"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
         run: |
           scripts/drill-gitops.sh "$WORK" | tee "$WORK/gitops.txt"
           { echo "### GitOps drills"; echo '```'; cat "$WORK/gitops.txt"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
