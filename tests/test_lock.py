@@ -48,6 +48,13 @@ class LockTests(unittest.TestCase):
                             self.assertIn("--frozen", line, line.strip())
         self.assertFalse((ROOT / "requirements-lock.txt").exists())
 
+    def test_the_image_and_ci_install_with_the_same_uv(self):
+        versions = dict(line.split("=", 1) for line in (ROOT / "deploy/versions.env").read_text().splitlines()
+                        if "=" in line and not line.startswith("#"))
+        self.assertRegex((ROOT / "Dockerfile").read_text(),
+                         rf"ghcr.io/astral-sh/uv:{re.escape(versions['UV_VERSION'])}@sha256:[0-9a-f]{{64}} ")
+        self.assertIn("${UV_VERSION}", (ROOT / ".github/actions/setup-uv/action.yml").read_text())
+
     def test_the_lock_matches_pyproject(self):
         """What CI runs as `uv lock --check`; skipped where uv is not installed."""
         import shutil
