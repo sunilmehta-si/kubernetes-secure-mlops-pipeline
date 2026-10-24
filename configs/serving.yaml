@@ -1,0 +1,7 @@
+# Serving objectives for the ticket-router endpoint, as a client sees them end to end (gate G7). The evaluation
+# gate's max_latency_p95_ms (configs/gate.yaml) is the model's own inference time on one machine; these cover the
+# whole request path on the cluster: network, the server's checks, the model. `smlops load` holds a run to them,
+# and the cluster workflow does so on every push, so a slower server or a heavier model fails CI before production.
+p95_ms: 250                  # 95th percentile request latency for small batches (1-2 tickets)
+max_error_rate: 0.01         # share of requests answered with a 5xx or not answered at all
+min_requests: 200            # fewer than this and the percentiles mean little; smlops load refuses to judge
