@@ -27,6 +27,6 @@
 /.github/                          @sunilmehta-si
 /Dockerfile                        @sunilmehta-si
 /pyproject.toml                    @sunilmehta-si
-/requirements-lock.txt             @sunilmehta-si
+/uv.lock                           @sunilmehta-si
 /scripts/                          @sunilmehta-si
 /SECURITY.md                       @sunilmehta-si

@@ -24,7 +24,7 @@ class CodeownersTests(unittest.TestCase):
                      "Dockerfile", "pyproject.toml", "secure_mlops/data.py",
                      "deploy/gitops/rendered/prod/inferenceservice.yaml", "deploy/policy/verify-signatures.yaml",
                      "deploy/monitoring/alerts.yaml", "secure_mlops/gitops.py", "secure_mlops/serve/auth.py",
-                     "secure_mlops/relay.py", "deploy/monitoring/alertmanager.yml", "requirements-lock.txt",
+                     "secure_mlops/relay.py", "deploy/monitoring/alertmanager.yml", "uv.lock",
                      "configs/models/ticket-router.yaml", "scripts/install-argocd.sh",
                      "charts/ticket-router/values.yaml", "deploy/gitops/envs/prod/values.yaml"):
             with self.subTest(path=path):
