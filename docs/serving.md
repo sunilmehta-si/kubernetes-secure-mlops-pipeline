@@ -10,6 +10,7 @@ smlops package --public-key ...    the verified champion is exported as a bundle
 docker build / push                the model image and the server image go to the cluster registry
 cosign sign (by digest)            both images are signed; no public transparency-log entry for a local key
 cosign attest                      both get signed SLSA provenance (smlops provenance); the model image its ML-BOM
+smlops verify-image                the same checks admission makes, run before any release is rendered
 smlops render-release              the release: serving manifests with both images by digest (GitOps commits these)
 kubectl apply -k / Argo CD sync    Kyverno checks signatures, attestations and digests before any pod is created
 smlops serve                       the server verifies the model's own signature again before opening a port
@@ -90,8 +91,8 @@ scripts/deploy-model.sh .work                               # through Argo CD, a
 scripts/drill-admission.sh .work
 scripts/check-monitoring.sh .work
 scripts/drill-feedback.sh .work
-scripts/drill-gitops.sh .work
 scripts/drill-load.sh .work
+scripts/drill-gitops.sh .work
 ```
 
 Every script that runs kubectl first checks that the current context is `kind-smlops` and refuses otherwise, so
@@ -104,12 +105,14 @@ The [`cluster` workflow](../.github/workflows/cluster.yml) runs these steps on e
 rejections: an unsigned image, an image referenced by tag, a client outside the allowed namespaces (curl's own "no
 connection", never a kubectl error), and a request without an API key (401). Every step runs with `pipefail`: an
 earlier version piped the drill into `tee`, which hid a failing drill behind a green run until the monitoring
-check exposed it. The latest run, all twenty checks:
+check exposed it. The latest run, all twenty-four checks:
 
 ```text
 Argo CD synced release release-39557059626 into serving
 PASS: an unsigned image rejected by verify-model-signatures
 PASS: an image signed by the pipeline's key but without provenance rejected by verify-model-signatures
+PASS: smlops verify-image refused the unsigned image before any release was rendered
+PASS: smlops verify-image refused the signed without provenance image before any release was rendered
 PASS: an image referenced by tag rejected by require-registry-and-digest
 PASS: a client outside the allowed namespaces could not reach the model
 PASS: a request without an API key was refused (401)
@@ -151,15 +154,15 @@ The cluster workflow runs it from a pod in the support namespace on every push, 
 for the same minutes from Prometheus, so the client's and the server's measurements have to agree. The latency
 alert and the dashboard's red line use the same 250 ms, and tests keep all three equal.
 
-digests (`smlops promote`). [docs/environments.md](environments.md) has the layout, the reasons and the steps.
-
-The renderer accepts only images from the cluster registry pinned by digest, the same rule Kyverno enforces. The
 ## Delivery with GitOps
 
 A release is the set of files `smlops render-release --env <env>` writes: the
 [ticket-router chart](../charts/ticket-router/) rendered with that environment's values and both images by digest,
 plus a kustomization that records them. The cluster workflow deploys exactly these files for dev, and promotion is
 a pull request that commits them to `deploy/gitops/rendered/<env>/`, one environment at a time with the same
+digests (`smlops promote`). [docs/environments.md](environments.md) has the layout, the reasons and the steps.
+
+The renderer accepts only images from the cluster registry pinned by digest, the same rule Kyverno enforces. The
 namespace is not part of a release: the platform owns it.
 
 [`deploy/gitops/argocd/`](../deploy/gitops/argocd/) has the Argo CD projects and the ApplicationSet that makes

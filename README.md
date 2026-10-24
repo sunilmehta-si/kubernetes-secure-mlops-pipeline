@@ -121,7 +121,7 @@ PASS: a release adding a ClusterRole and a Secret was refused by the project; ne
 PASS: agents' feedback on a prediction was counted (2 tickets)
 ```
 
-(Twenty checks in all; [docs/serving.md](docs/serving.md) lists every one.) Releases are rendered manifests with
+(Twenty-four checks in all; [docs/serving.md](docs/serving.md) lists every one.) Releases are rendered manifests with
 both images by digest (`smlops render-release`). On the CI cluster Argo CD syncs each one from the cluster
 registry under the committed project's rules; in production, promoting a model is a pull request that commits
 the same files.
