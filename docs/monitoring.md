@@ -73,7 +73,7 @@ thresholds are the ones in `configs/drift.yaml`, and a test keeps them equal, so
 | TicketRouterRetrainTriggerFailing | The alert relay failed to start retraining at least once in 30 minutes | critical |
 | TicketRouterDown | No model reporting for 5 minutes (a server that cannot verify its model never starts) | critical |
 | TicketRouterErrors | Over 2% of requests fail for 10 minutes | critical |
-| TicketRouterSlow | 95th percentile latency above 0.5 s for 10 minutes | warning |
+| TicketRouterSlow | 95th percentile latency above the 250 ms serving objective (`configs/serving.yaml`) for 10 minutes | warning |
 | TicketRouterMixedVersions | Two model digests serving together for 30 minutes: a stuck rollout | warning |
 | TicketRouterRejectedKeys | Over 10 requests a minute without a valid key (threat T9) | warning |
 | TicketRouterRateLimited | Over 30 requests a minute over a client's budget (threat T9) | warning |
