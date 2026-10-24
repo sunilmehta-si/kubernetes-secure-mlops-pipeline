@@ -15,6 +15,8 @@ url="http://ticket-router-predictor.serving.svc.cluster.local/v1/models/ticket-r
 requests="${LOAD_REQUESTS:-300}"
 failed=0
 
+# The run is paced at 4 requests a second (8 tickets, under the client's 600 a minute) so it measures the server
+# and not the client's ticket budget; the first run sent everything at once, was 77% 429s and still looked green.
 # The load tool is `smlops load` from the server image, run in the support namespace. The API key reaches it as a
 # file from a Secret, never as an argument or in the pod spec; the objectives come from a ConfigMap. The pod runs to
 # completion and its log is read afterwards: `kubectl run -i` attaches to a pod that has already finished when the
@@ -25,7 +27,7 @@ sed 's/^Authorization: Bearer //' "$work/support-tool.header" | tr -d '\n' \
   | kubectl -n support create secret generic smlops-load-key --from-file=key=/dev/stdin --dry-run=client -o yaml \
   | kubectl apply -f - >/dev/null
 pod="load-$(date +%s)"
-kubectl -n support run "$pod" --restart=Never --image "$SERVER_IMAGE" --overrides='{"spec":{"containers":[{"name":"load","image":"'"$SERVER_IMAGE"'","args":["load","--url","'"$url"'","--api-key-file","/etc/smlops/key","--requests","'"$requests"'","--concurrency","8","--objectives","/etc/smlops/serving.yaml"],"volumeMounts":[{"name":"smlops","mountPath":"/etc/smlops","readOnly":true}],"securityContext":{"allowPrivilegeEscalation":false,"capabilities":{"drop":["ALL"]},"runAsNonRoot":true,"seccompProfile":{"type":"RuntimeDefault"}}}],"volumes":[{"name":"smlops","projected":{"sources":[{"configMap":{"name":"smlops-serving-objectives"}},{"secret":{"name":"smlops-load-key"}}]}}]}}' >/dev/null
+kubectl -n support run "$pod" --restart=Never --image "$SERVER_IMAGE" --overrides='{"spec":{"containers":[{"name":"load","image":"'"$SERVER_IMAGE"'","args":["load","--url","'"$url"'","--api-key-file","/etc/smlops/key","--requests","'"$requests"'","--concurrency","8","--rate","4","--objectives","/etc/smlops/serving.yaml"],"volumeMounts":[{"name":"smlops","mountPath":"/etc/smlops","readOnly":true}],"securityContext":{"allowPrivilegeEscalation":false,"capabilities":{"drop":["ALL"]},"runAsNonRoot":true,"seccompProfile":{"type":"RuntimeDefault"}}}],"volumes":[{"name":"smlops","projected":{"sources":[{"configMap":{"name":"smlops-serving-objectives"}},{"secret":{"name":"smlops-load-key"}}]}}]}}' >/dev/null
 rc=""
 for i in $(seq 1 36); do
   phase="$(kubectl -n support get pod "$pod" -o jsonpath='{.status.phase}' 2>/dev/null || true)"
@@ -40,6 +42,8 @@ if [ "$rc" = 0 ]; then
   echo "PASS: ${requests} requests from inside the cluster met the serving objectives (client view)"
 elif [ -z "$rc" ]; then
   echo "FAIL: the load run did not finish in three minutes"; failed=1
+elif [ "$rc" = 2 ]; then
+  echo "FAIL: the load run could not be judged: $(tail -1 "$work/load.md")"; failed=1
 else
   echo "FAIL: the load run missed the serving objectives (exit $rc)"; failed=1
 fi
