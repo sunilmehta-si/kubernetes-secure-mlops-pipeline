@@ -107,6 +107,28 @@ tests:
               summary: "The alert relay could not start retraining 1 times in 30 minutes"
               runbook: "kubectl -n monitoring logs deploy/alert-relay; check the GitHub token and that GitHub is reachable."
 
+  - name: a slow 95th percentile breaks the serving objective after ten minutes
+    interval: 1m
+    input_series:
+      # one bucket layout: 10 requests a minute, all under 100 ms at first, then all between 250 ms and 500 ms
+      - series: 'smlops_predict_latency_seconds_bucket{le="0.1"}'
+        values: '0+10x10 100+0x30'
+      - series: 'smlops_predict_latency_seconds_bucket{le="0.25"}'
+        values: '0+10x10 100+0x30'
+      - series: 'smlops_predict_latency_seconds_bucket{le="0.5"}'
+        values: '0+10x10 100+10x30'
+      - series: 'smlops_predict_latency_seconds_bucket{le="+Inf"}'
+        values: '0+10x10 100+10x30'
+    alert_rule_test:
+      - {eval_time: 10m, alertname: TicketRouterSlow, exp_alerts: []}
+      - eval_time: 30m
+        alertname: TicketRouterSlow
+        exp_alerts:
+          - exp_labels: {severity: warning}
+            exp_annotations:
+              summary: "95th percentile prediction latency is 487.5ms, above the 250ms serving objective"
+              runbook: "configs/serving.yaml sets the objective; smlops load reproduces the measurement from a client."
+
   - name: no server reporting is an outage
     interval: 1m
     input_series:

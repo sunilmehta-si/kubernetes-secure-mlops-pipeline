@@ -1,5 +1,6 @@
 # Prometheus alerts for the ticket router, on the metrics its server exports at /metrics.
-# Drift thresholds are the ones in configs/drift.yaml (a test keeps them equal), so batch and live checks agree.
+# Drift thresholds are the ones in configs/drift.yaml and the latency threshold is configs/serving.yaml's p95
+# objective (tests keep them equal), so the batch checks, the load drill and the alerts all agree.
 # Unit tests: deploy/monitoring/tests/alerts-test.yaml (`promtool test rules`, run in CI).
 groups:
   - name: ticket-router-drift          # gate G7, threat T10: is traffic still like the training data?
@@ -72,11 +73,12 @@ groups:
         annotations:
           summary: "{{ $value | humanizePercentage }} of prediction requests fail"
       - alert: TicketRouterSlow
-        expr: histogram_quantile(0.95, sum by (le) (rate(smlops_predict_latency_seconds_bucket[5m]))) > 0.5
+        expr: histogram_quantile(0.95, sum by (le) (rate(smlops_predict_latency_seconds_bucket[5m]))) > 0.25
         for: 10m
         labels: {severity: warning}
         annotations:
-          summary: "95th percentile prediction latency is {{ $value | humanizeDuration }}"
+          summary: "95th percentile prediction latency is {{ $value | humanizeDuration }}, above the 250ms serving objective"
+          runbook: "configs/serving.yaml sets the objective; smlops load reproduces the measurement from a client."
       - alert: TicketRouterMixedVersions
         expr: count(count by (digest) (smlops_model_info)) > 1
         for: 30m

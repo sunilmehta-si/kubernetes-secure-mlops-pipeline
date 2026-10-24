@@ -24,6 +24,11 @@ class AlertRuleTests(unittest.TestCase):
         self.assertEqual(threshold("TicketRouterNewVocabulary"), policy.live_new_word_ratio_alert)
         self.assertEqual(threshold("TicketRouterAccuracyDropped"), policy.max_accuracy_drop)   # same as batch
 
+    def test_the_latency_alert_is_the_serving_objective(self):
+        from secure_mlops.load import load_objectives
+        slo = load_objectives(ROOT / "configs/serving.yaml")
+        self.assertEqual(threshold("TicketRouterSlow"), slo.p95_ms / 1000)
+
     def test_only_critical_drift_starts_retraining(self):
         retrain = sorted(name for name, r in RULES.items() if r["labels"].get("action") == "retrain")
         self.assertEqual(retrain, ["TicketRouterAccuracyDropped", "TicketRouterNewVocabulary",
