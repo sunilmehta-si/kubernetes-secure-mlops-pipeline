@@ -1,7 +1,7 @@
 # Weekly dependency updates. Every update runs the full CI: tests, the image build and its vulnerability scan.
 version: 2
 updates:
-  - package-ecosystem: pip
+  - package-ecosystem: uv          # updates pyproject.toml and uv.lock together, with a real resolver
     directory: /
     schedule:
       interval: weekly
