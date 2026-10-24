@@ -1,5 +1,35 @@
 # Changelog
 
+## [0.7.0] - 2026-10-24
+
+What clients may expect, proven before the fact: serving objectives measured from inside the cluster on every
+push, images verified as admission will before any release is rendered, and dependencies locked by a resolver so
+updates arrive already resolved.
+
+### Added
+- **Serving objectives** in `configs/serving.yaml` (p95 under 250 ms, at most 1% of requests failing, judged over
+  at least 200 requests) and `smlops load`, which sends concurrent prediction requests with a client's key,
+  reports p50/p95/p99, throughput and the error rate, and exits 1 when the objectives are missed. The cluster
+  workflow runs it from a pod in the support namespace, then reads the server's own p95 for the same minutes from
+  Prometheus: the client's and the server's measurements have to agree. The latency alert and the dashboard's red
+  line are the same objective, and tests keep the three equal.
+- **`smlops verify-image`**: the checks admission makes (signature, SLSA provenance from this repository's publish
+  step for the right kind, model and version, and the model image's ML-BOM), runnable from a laptop or a pipeline.
+  `deploy-model.sh` runs it on both images before rendering a release, and the admission drill shows it refusing
+  the unsigned and the signed-without-provenance images.
+- **Chart 0.3.0**: the predictor scales on CPU utilisation between its min and max replicas
+  (`autoscaling.targetCpuUtilization`, 70% by default, bounded by the schema).
+- Twenty-four cluster checks on every push (was twenty).
+
+### Changed
+- **Dependencies are locked with uv.** `uv.lock` replaces the flat `requirements-lock.txt`: CI refuses a stale lock
+  (`uv lock --check`), and CI, the server image and the cluster install exactly the lock (`uv sync --frozen`). The
+  urllib3 CVE fix is a resolver override, `requests` is pinned as kfp pins it, and uv itself is pinned by version
+  and checksum in `deploy/versions.env`. Dependabot now updates the lock as a whole; each of its five single-line
+  bumps had broken the install because another package forbade the new version.
+- Server provenance names `uv.lock` and its digest as the dependency lock the image was built from.
+- `TicketRouterSlow` fires at the 250 ms serving objective instead of an unrelated 0.5 s.
+
 ## [0.6.0] - 2026-10-23
 
 Is it still right, and what was it built from: agents' feedback measures live accuracy against the model's own
