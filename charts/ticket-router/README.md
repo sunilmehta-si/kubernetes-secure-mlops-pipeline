@@ -27,6 +27,7 @@ Defaults are the production shape. Environments override only what must differ, 
 | `server.burst` | `120` | Most tickets a client may send at once |
 | `server.resources` | 100m/512Mi requests, 1 CPU/1Gi limits | Server container resources; limits are required |
 | `replicas.min` | `1` | Fewest predictor replicas; prod sets 2 |
+| `autoscaling.targetCpuUtilization` | `70` | CPU use (percent of the request) at which KServe adds a replica, up to `replicas.max` |
 | `replicas.max` | `2` | Most predictor replicas; must not be below `replicas.min` |
 | `disruptionBudget.minAvailable` | `1` | Predictors kept up through drains; only rendered when `replicas.min` is 2 or more |
 | `spread.topologyKey` | `kubernetes.io/hostname` | What replicas prefer to spread across; only rendered when `replicas.min` is 2 or more |
