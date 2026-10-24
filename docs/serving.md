@@ -70,7 +70,7 @@ Hold the local server to the serving objectives from another terminal, with the 
 stdin, never as an argument):
 
 ```bash
-echo "$key" | smlops load --url http://localhost:8080/v1/models/ticket-router:predict --requests 300 --concurrency 8
+echo "$key" | smlops load --url http://localhost:8080/v1/models/ticket-router:predict --requests 300 --concurrency 8 --rate 4
 ```
 
 ## Before a release
@@ -123,7 +123,8 @@ earlier version piped the drill into `tee`, which hid a failing drill behind a g
 check exposed it. The latest run, all twenty-four checks:
 
 ```text
-Argo CD synced release release-39557059626 into serving
+Argo CD synced release release-40088520433 into serving
+ticket-router answered: ["billing","shipping"], model 1
 PASS: an unsigned image rejected by verify-model-signatures
 PASS: an image signed by the pipeline's key but without provenance rejected by verify-model-signatures
 PASS: smlops verify-image refused the unsigned image before any release was rendered
@@ -131,7 +132,7 @@ PASS: smlops verify-image refused the signed without provenance image before any
 PASS: an image referenced by tag rejected by require-registry-and-digest
 PASS: a client outside the allowed namespaces could not reach the model
 PASS: a request without an API key was refused (401)
-PASS: Prometheus scrapes the served model, digest sha256:d539d91cfd41...
+PASS: Prometheus scrapes the served model, digest sha256:c8cbb55c61c2...
 PASS: all 13 alert rules loaded
 PASS: live drift is measuring the 2 tickets served so far
 PASS: the keyless drill request is visible to monitoring as a 401
@@ -144,7 +145,7 @@ PASS: the same feedback a second time was refused (409), so no ticket counts twi
 PASS: Prometheus sees the agent-confirmed tickets in live accuracy
 PASS: the audit log shows the support tool's confirmed tickets, without any ticket text
 PASS: 300 requests from inside the cluster met the serving objectives (client view)
-PASS: the server's own p95 over the run was 41.3 ms, within the 250 ms objective (Prometheus view)
+PASS: the server's own p95 over the run was 46.2 ms, within the 250 ms objective (Prometheus view)
 PASS: the endpoint runs the dev release of chart ticket-router-0.3.0, synced under project ml-serving-dev
 PASS: a hand edit to the endpoint was reverted to the release by Argo CD
 PASS: a release adding a ClusterRole and a Secret was refused by the project; neither was created
@@ -162,8 +163,13 @@ error rate, and exits 1 when the objectives are missed:
 
 ```bash
 smlops load --url http://.../v1/models/ticket-router:predict --api-key-file keys/support-tool.key \
-  --requests 300 --concurrency 8
+  --requests 300 --concurrency 8 --rate 4
 ```
+
+`--rate` keeps the run inside the client's ticket budget (600 a minute, burst 120, in the chart's defaults). A
+throttled request (429) means the run measured the rate limiter and not the server, so `smlops load` refuses to
+judge it rather than pass it: the first cluster run of the drill sent everything at once, got 429 on 232 of 300
+requests, and looked green.
 
 The cluster workflow runs it from a pod in the support namespace on every push, then reads the server's own p95
 for the same minutes from Prometheus, so the client's and the server's measurements have to agree. The latency

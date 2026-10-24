@@ -107,21 +107,22 @@ serves, 300 requests from the support namespace must meet the serving objectives
 as the client measures them and as the server does. The latest run:
 
 ```text
-Argo CD synced release release-39557059626 into serving
+Argo CD synced release release-40088520433 into serving
 ticket-router answered: ["billing","shipping"], model 1
 PASS: an unsigned image rejected by verify-model-signatures
 PASS: an image signed by the pipeline's key but without provenance rejected by verify-model-signatures
-PASS: an image referenced by tag rejected by require-registry-and-digest
+PASS: smlops verify-image refused the unsigned image before any release was rendered
+PASS: smlops verify-image refused the signed without provenance image before any release was rendered
 PASS: a client outside the allowed namespaces could not reach the model
 PASS: a request without an API key was refused (401)
-PASS: Prometheus scrapes the served model, digest sha256:d539d91cfd41...
+PASS: Prometheus scrapes the served model, digest sha256:c8cbb55c61c2...
 PASS: all 13 alert rules loaded
 PASS: live drift is measuring the 2 tickets served so far
-PASS: the keyless drill request is visible to monitoring as a 401
 PASS: a drift alert reached the relay, which would start retraining (dry run, no GitHub token here)
-PASS: a hand edit to the endpoint was reverted to the release by Argo CD
-PASS: a release adding a ClusterRole and a Secret was refused by the project; neither was created
 PASS: agents' feedback on a prediction was counted (2 tickets)
+PASS: 300 requests from inside the cluster met the serving objectives (client view)
+PASS: the server's own p95 over the run was 46.2 ms, within the 250 ms objective (Prometheus view)
+PASS: the endpoint runs the dev release of chart ticket-router-0.3.0, synced under project ml-serving-dev
 ```
 
 (Twenty-four checks in all; [docs/serving.md](docs/serving.md) lists every one.) Releases are rendered manifests with
