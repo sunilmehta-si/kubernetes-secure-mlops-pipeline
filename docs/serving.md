@@ -91,6 +91,7 @@ scripts/drill-admission.sh .work
 scripts/check-monitoring.sh .work
 scripts/drill-feedback.sh .work
 scripts/drill-gitops.sh .work
+scripts/drill-load.sh .work
 ```
 
 Every script that runs kubectl first checks that the current context is `kind-smlops` and refuses otherwise, so
@@ -124,17 +125,13 @@ PASS: agents' feedback on a prediction was counted (2 tickets)
 PASS: the same feedback a second time was refused (409), so no ticket counts twice
 PASS: Prometheus sees the agent-confirmed tickets in live accuracy
 PASS: the audit log shows the support tool's confirmed tickets, without any ticket text
-PASS: the endpoint runs the dev release of chart ticket-router-0.2.0, synced under project ml-serving-dev
+PASS: 300 requests from inside the cluster met the serving objectives (client view)
+PASS: the server's own p95 over the run was 41.3 ms, within the 250 ms objective (Prometheus view)
+PASS: the endpoint runs the dev release of chart ticket-router-0.3.0, synced under project ml-serving-dev
 PASS: a hand edit to the endpoint was reverted to the release by Argo CD
 PASS: a release adding a ClusterRole and a Secret was refused by the project; neither was created
 ```
 
-## Delivery with GitOps
-
-A release is the set of files `smlops render-release --env <env>` writes: the
-[ticket-router chart](../charts/ticket-router/) rendered with that environment's values and both images by digest,
-plus a kustomization that records them. The cluster workflow deploys exactly these files for dev, and promotion is
-a pull request that commits them to `deploy/gitops/rendered/<env>/`, one environment at a time with the same
 ## Serving objectives
 
 [`configs/serving.yaml`](../configs/serving.yaml) states what clients may expect end to end: p95 latency under
@@ -157,6 +154,12 @@ alert and the dashboard's red line use the same 250 ms, and tests keep all three
 digests (`smlops promote`). [docs/environments.md](environments.md) has the layout, the reasons and the steps.
 
 The renderer accepts only images from the cluster registry pinned by digest, the same rule Kyverno enforces. The
+## Delivery with GitOps
+
+A release is the set of files `smlops render-release --env <env>` writes: the
+[ticket-router chart](../charts/ticket-router/) rendered with that environment's values and both images by digest,
+plus a kustomization that records them. The cluster workflow deploys exactly these files for dev, and promotion is
+a pull request that commits them to `deploy/gitops/rendered/<env>/`, one environment at a time with the same
 namespace is not part of a release: the platform owns it.
 
 [`deploy/gitops/argocd/`](../deploy/gitops/argocd/) has the Argo CD projects and the ApplicationSet that makes
