@@ -115,6 +115,8 @@ def _parser() -> argparse.ArgumentParser:
     ld.add_argument("--requests", type=int, default=300, help="Requests to send (default: 300).")
     ld.add_argument("--concurrency", type=int, default=8, help="Requests in flight at once (default: 8).")
     ld.add_argument("--tickets", type=int, default=2, help="Tickets per request, 1-64 (default: 2).")
+    ld.add_argument("--rate", type=float, help="Requests a second across all workers, to stay inside the client's "
+                                             "ticket budget (default: as fast as the workers go).")
     ld.add_argument("--objectives", default="configs/serving.yaml", help="Serving objectives (default: configs/serving.yaml).")
     ld.add_argument("--output", "-o", help="Write the JSON report here as well.")
     vi = sub.add_parser("verify-image", help="Verify published images as admission will: signature, SLSA provenance "
@@ -534,7 +536,7 @@ def _cmd_load(args: argparse.Namespace) -> int:
         key = (Path(args.api_key_file).read_text() if args.api_key_file else sys.stdin.read()).strip()
         if not key:
             raise LoadError("no API key: give --api-key-file or pass the key on stdin")
-        report = run(args.url, key, args.requests, args.concurrency, args.tickets)
+        report = run(args.url, key, args.requests, args.concurrency, args.tickets, rate=args.rate)
         verdict = judge(report, objectives)
     except (LoadError, OSError) as exc:
         print(f"smlops: {exc}", file=sys.stderr)

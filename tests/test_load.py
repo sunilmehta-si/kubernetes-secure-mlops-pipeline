@@ -14,6 +14,7 @@ ROOT = Path(__file__).resolve().parents[1]
 class FakeEndpoint(BaseHTTPRequestHandler):
     slow_every = 0          # every nth request sleeps 50 ms
     fail_every = 0          # every nth request answers 500
+    throttle_every = 0      # every nth request answers 429, as the server's ticket budget does
     seen = 0
     lock = threading.Lock()
 
@@ -29,6 +30,8 @@ class FakeEndpoint(BaseHTTPRequestHandler):
             time.sleep(0.05)
         if FakeEndpoint.fail_every and i % FakeEndpoint.fail_every == 0:
             return self._answer(500, {"detail": "boom"})
+        if FakeEndpoint.throttle_every and i % FakeEndpoint.throttle_every == 0:
+            return self._answer(429, {"detail": "rate limit reached"})
         self._answer(200, {"predictions": [{"team": "billing", "confidence": 0.9} for _ in body["instances"]]})
 
     def _answer(self, status, payload):
@@ -56,7 +59,7 @@ class LoadTests(unittest.TestCase):
         cls.server.shutdown()
 
     def setUp(self):
-        FakeEndpoint.slow_every = FakeEndpoint.fail_every = FakeEndpoint.seen = 0
+        FakeEndpoint.slow_every = FakeEndpoint.fail_every = FakeEndpoint.throttle_every = FakeEndpoint.seen = 0
 
     def test_measures_every_request_and_passes_a_healthy_endpoint(self):
         report = run(self.url, "smk_test", requests_total=60, concurrency=6)
@@ -96,6 +99,22 @@ class LoadTests(unittest.TestCase):
                 load_objectives(Path(d, "s.yaml"))
         with self.assertRaises(LoadError):
             run(self.url, "k", requests_total=0, concurrency=1)
+
+    def test_a_throttled_run_is_refused_not_passed(self):
+        FakeEndpoint.throttle_every = 2
+        report = run(self.url, "smk_test", requests_total=20, concurrency=4)
+        self.assertEqual((report["status_counts"]["429"], report["errors"]), (10, 0))   # not errors, not a pass
+        with self.assertRaisesRegex(LoadError, "10 of 20 requests were throttled"):
+            judge(report, ServingObjectives(min_requests=10))
+
+    def test_pacing_spreads_the_run_over_time(self):
+        started = time.perf_counter()
+        report = run(self.url, "smk_test", requests_total=10, concurrency=4, rate=50)
+        self.assertGreaterEqual(time.perf_counter() - started, 0.18)          # 10 requests at 50/s
+        self.assertEqual(report["rate"], 50)
+        self.assertIn("paced at 50 a second", markdown(report, judge(report, ServingObjectives(min_requests=10))))
+        with self.assertRaisesRegex(LoadError, "rate must be positive"):
+            run(self.url, "smk_test", requests_total=5, concurrency=1, rate=0)
 
     def test_bounds_are_checked_before_any_request_is_sent(self):
         for kwargs in ({"concurrency": 0}, {"tickets_per_request": 0}, {"tickets_per_request": 65}):
