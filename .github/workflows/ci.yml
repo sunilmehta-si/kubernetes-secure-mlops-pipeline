@@ -42,13 +42,12 @@ jobs:
           echo "86584a54def73570558f66f5111cc53dfed56689637ae32c1201205d494f54fb  $RUNNER_TEMP/$name" | sha256sum -c -
           mkdir -p "$RUNNER_TEMP/bin" && tar -xzf "$RUNNER_TEMP/$name" -C "$RUNNER_TEMP/bin" --strip-components=1 linux-amd64/helm
           echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
-      - run: pip install -c requirements-lock.txt -e ".[test]"
-      - name: Nothing outside the lock is installed
+      - uses: ./.github/actions/setup-uv
+      - name: Install exactly the lock
         run: |
-          pip freeze --exclude kubernetes-secure-mlops-pipeline | tr '[:upper:]' '[:lower:]' | sort > "$RUNNER_TEMP/installed.txt"
-          grep -v '^#' requirements-lock.txt | grep . | tr '[:upper:]' '[:lower:]' | sort > "$RUNNER_TEMP/locked.txt"
-          comm -23 "$RUNNER_TEMP/installed.txt" "$RUNNER_TEMP/locked.txt" | tee "$RUNNER_TEMP/extra.txt"
-          if [ -s "$RUNNER_TEMP/extra.txt" ]; then echo "installed but not in requirements-lock.txt (above)"; exit 1; fi
+          uv lock --check                                  # uv.lock matches pyproject.toml
+          uv sync --frozen --extra test --python "$(which python)"
+          echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
       - run: python -W error::SyntaxWarning -m unittest discover -s tests -t . -v
 
   image:
@@ -88,7 +87,8 @@ jobs:
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.12"
-      - run: pip install -c requirements-lock.txt -e .
+      - uses: ./.github/actions/setup-uv
+      - run: uv sync --frozen --python "$(which python)" && echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
       - name: Sign, verify and request promotion
         run: |
           smlops keys generate -o "$RUNNER_TEMP/keys"
