@@ -135,6 +135,25 @@ A release is the set of files `smlops render-release --env <env>` writes: the
 [ticket-router chart](../charts/ticket-router/) rendered with that environment's values and both images by digest,
 plus a kustomization that records them. The cluster workflow deploys exactly these files for dev, and promotion is
 a pull request that commits them to `deploy/gitops/rendered/<env>/`, one environment at a time with the same
+## Serving objectives
+
+[`configs/serving.yaml`](../configs/serving.yaml) states what clients may expect end to end: p95 latency under
+250 ms for small batches and at most 1% of requests failing. The evaluation gate's `max_latency_p95_ms` is a
+different number on purpose: the model's own inference time on one machine, before the network, the server's
+checks and the cluster add theirs.
+
+`smlops load` sends concurrent prediction requests with a client's key, reports p50/p95/p99, throughput and the
+error rate, and exits 1 when the objectives are missed:
+
+```bash
+smlops load --url http://.../v1/models/ticket-router:predict --api-key-file keys/support-tool.key \
+  --requests 300 --concurrency 8
+```
+
+The cluster workflow runs it from a pod in the support namespace on every push, then reads the server's own p95
+for the same minutes from Prometheus, so the client's and the server's measurements have to agree. The latency
+alert and the dashboard's red line use the same 250 ms, and tests keep all three equal.
+
 digests (`smlops promote`). [docs/environments.md](environments.md) has the layout, the reasons and the steps.
 
 The renderer accepts only images from the cluster registry pinned by digest, the same rule Kyverno enforces. The
