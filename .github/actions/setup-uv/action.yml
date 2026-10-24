@@ -1,0 +1,14 @@
+name: Set up uv
+description: Install the uv release pinned in deploy/versions.env, checked against its published SHA-256, and put it on PATH.
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      run: |
+        . deploy/versions.env
+        name="uv-x86_64-unknown-linux-gnu.tar.gz"
+        curl -sSfL -o "$RUNNER_TEMP/$name" "https://github.com/astral-sh/uv/releases/download/${UV_VERSION}/$name"
+        echo "${UV_SHA256_LINUX_X86_64}  $RUNNER_TEMP/$name" | sha256sum -c -
+        mkdir -p "$RUNNER_TEMP/uv" && tar -xzf "$RUNNER_TEMP/$name" -C "$RUNNER_TEMP/uv" --strip-components=1
+        echo "$RUNNER_TEMP/uv" >> "$GITHUB_PATH"
+        "$RUNNER_TEMP/uv/uv" --version
