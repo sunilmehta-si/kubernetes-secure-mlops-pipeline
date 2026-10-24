@@ -53,7 +53,7 @@ Python 3.12 or newer. Everything runs on a laptop CPU in about a minute.
 
 ```bash
 git clone https://github.com/sunilmehta-si/kubernetes-secure-mlops-pipeline && cd kubernetes-secure-mlops-pipeline
-pip install -e .
+pip install -e .                        # or `uv sync`, which installs exactly what CI and the image run (uv.lock)
 
 smlops data generate -o data            # 3000 tickets, checked against the data contract, fingerprinted splits
 smlops train --data data                # validate, train, judge against the champion, register; exit 1 if blocked
@@ -188,7 +188,11 @@ Problems this project's checks found in itself while it was being built:
   the drills pass only on curl's own result, never on a kubectl error.
 - **A dependency broke every fresh install overnight.** sigstore 4.5.1 stopped pulling in pyOpenSSL, which
   model-signing imports without declaring. Only direct dependencies were pinned; now every transitive package is
-  locked, and CI fails if anything outside the lock gets installed.
+  locked (`uv.lock`), CI, the image and the cluster install exactly the lock, and CI fails if the lock no longer
+  matches `pyproject.toml`.
+- **The first lock fought the dependency bot.** A flat `pip freeze` lock let Dependabot bump transitive packages one
+  at a time, and every one of its five pull requests broke the install, because another package forbade the new
+  version. The lock is now resolver-managed, so updates arrive already resolved.
 - **Retraining on recent data alone made a worse model.** Trained only on shifted tickets, a challenger lost 6.6
   points of account recall and the gate blocked it. Retraining now uses existing plus recent tickets, and scored
   0.964 against the champion's 0.942 on the same recent traffic.
