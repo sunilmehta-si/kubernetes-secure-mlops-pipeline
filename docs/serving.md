@@ -66,6 +66,21 @@ The bundle layout is what KServe mounts at `/mnt/models` from the model image:
 | Audit log: one JSON line per request with the calling client, never the ticket text | `smlops.audit` logger |
 | Prometheus metrics: requests by status, latency, tickets by team, model identity, live drift | `/metrics` |
 
+Hold the local server to the serving objectives from another terminal, with the key printed above (it goes in on
+stdin, never as an argument):
+
+```bash
+echo "$key" | smlops load --url http://localhost:8080/v1/models/ticket-router:predict --requests 300 --concurrency 8
+```
+
+## Before a release
+
+`scripts/deploy-model.sh` runs `smlops verify-image` on both images before it renders anything: the signature, the
+SLSA provenance from this repository's publish step (kind, model and version), and the model image's ML-BOM, with
+the same public key admission uses. A release that would be refused at admission is therefore never written, and
+the check runs wherever releases are made, a laptop included. The admission drill shows it refusing the unsigned
+image and the one signed without provenance.
+
 ## What the cluster enforces
 
 | Control | File |
