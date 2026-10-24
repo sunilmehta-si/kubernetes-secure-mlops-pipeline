@@ -145,7 +145,7 @@
     {
       "type": "timeseries",
       "title": "Latency",
-      "description": "",
+      "description": "Red is the serving objective: p95 under 250 ms (configs/serving.yaml).",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -197,7 +197,7 @@
               },
               {
                 "color": "#cf222e",
-                "value": 0.5
+                "value": 0.25
               }
             ]
           },

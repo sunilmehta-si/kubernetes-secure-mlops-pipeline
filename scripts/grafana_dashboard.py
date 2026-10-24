@@ -17,6 +17,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from secure_mlops.drift import load_policy  # noqa: E402
+from secure_mlops.load import load_objectives  # noqa: E402
 
 OUT = ROOT / "deploy" / "monitoring" / "dashboards" / "ticket-router.json"
 DATASOURCE = {"type": "prometheus", "uid": "${datasource}"}
@@ -52,6 +53,7 @@ def _row(title: str, y: int) -> dict:
 
 def dashboard() -> dict:
     p = load_policy(ROOT / "configs" / "drift.yaml")
+    slo = load_objectives(ROOT / "configs" / "serving.yaml")
     requests = "sum by (status) (rate(smlops_predict_requests_total[5m]))"
     panels = [
         _row("Which model is serving", 0),
@@ -63,7 +65,8 @@ def dashboard() -> dict:
         _panel("timeseries", "Requests by status", [(requests, "{{status}}")], (0, 6, 12, 7), unit="reqps"),
         _panel("timeseries", "Latency", [
             (f"histogram_quantile({q}, sum by (le) (rate(smlops_predict_latency_seconds_bucket[5m])))", f"p{q * 100:g}")
-            for q in (0.5, 0.95, 0.99)], (12, 6, 12, 7), unit="s", thresholds=_steps(None, 0.5)),
+            for q in (0.5, 0.95, 0.99)], (12, 6, 12, 7), unit="s", thresholds=_steps(None, slo.p95_ms / 1000),
+               description=f"Red is the serving objective: p95 under {slo.p95_ms:g} ms (configs/serving.yaml)."),
         _panel("timeseries", "Tickets routed by team", [
             ("sum by (team) (rate(smlops_tickets_routed_total[5m])) * 60", "{{team}}")], (0, 13, 24, 7),
                unit="short", description="Tickets a minute per predicted team."),

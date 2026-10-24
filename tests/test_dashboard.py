@@ -39,6 +39,8 @@ class DashboardTests(unittest.TestCase):
         self.assertEqual(steps("Predicted team mix vs training (PSI)"), [policy.psi_warn, policy.psi_alert])
         self.assertEqual(steps("Unknown words vs the model's baseline"),
                          [policy.live_new_word_ratio_warn, policy.live_new_word_ratio_alert])
+        from secure_mlops.load import load_objectives
+        self.assertEqual(steps("Latency"), [load_objectives(ROOT / "configs/serving.yaml").p95_ms / 1000])
 
     def test_panels_are_unique_and_use_the_chosen_datasource(self):
         board = json.loads(COMMITTED.read_text())
