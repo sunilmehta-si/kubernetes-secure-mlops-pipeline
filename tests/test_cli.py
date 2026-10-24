@@ -351,3 +351,22 @@ class AuditSummaryCliTests(unittest.TestCase):
             self.assertEqual(main(["audit-summary", str(log)]), 0)
             self.assertEqual(main(["audit-summary", str(Path(d, "missing.log"))]), 2)
         self.assertIn("| support-tool | 1 | 2 | 0 | - |", out.getvalue())
+
+
+class LoadCliTests(unittest.TestCase):
+    def test_refuses_to_run_without_a_key_or_with_unknown_objectives(self):
+        import tempfile
+        from contextlib import redirect_stderr
+        from pathlib import Path
+        from unittest import mock
+        with tempfile.TemporaryDirectory() as d, redirect_stderr(io.StringIO()) as err:
+            empty = Path(d, "key"); empty.write_text("\n")
+            self.assertEqual(main(["load", "--url", "http://127.0.0.1:9/x", "--api-key-file", str(empty)]), 2)
+            bad = Path(d, "s.yaml"); bad.write_text("p95_ms: 1\nextra: 2\n")
+            key = Path(d, "k"); key.write_text("smk_x")
+            self.assertEqual(main(["load", "--url", "http://127.0.0.1:9/x", "--api-key-file", str(key),
+                                   "--objectives", str(bad)]), 2)
+            with mock.patch("sys.stdin", io.StringIO("")):
+                self.assertEqual(main(["load", "--url", "http://127.0.0.1:9/x"]), 2)
+        self.assertIn("no API key", err.getvalue())
+        self.assertIn("unknown serving objective", err.getvalue())

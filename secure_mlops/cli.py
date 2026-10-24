@@ -108,6 +108,15 @@ def _parser() -> argparse.ArgumentParser:
     au = sub.add_parser("audit-summary", help="Summarise the server's audit log per client and model, for the "
                                                "questions after an accuracy alert.")
     au.add_argument("log", help="Audit log file (kubectl logs of the predictor), or '-' for stdin.")
+    ld = sub.add_parser("load", help="Send prediction requests to an endpoint and hold the latencies and errors to "
+                                       "the serving objectives (configs/serving.yaml); exit 1 if they are missed.")
+    ld.add_argument("--url", required=True, help="The :predict URL.")
+    ld.add_argument("--api-key-file", help="File holding the client's API key (default: read the key from stdin).")
+    ld.add_argument("--requests", type=int, default=300, help="Requests to send (default: 300).")
+    ld.add_argument("--concurrency", type=int, default=8, help="Requests in flight at once (default: 8).")
+    ld.add_argument("--tickets", type=int, default=2, help="Tickets per request, 1-64 (default: 2).")
+    ld.add_argument("--objectives", default="configs/serving.yaml", help="Serving objectives (default: configs/serving.yaml).")
+    ld.add_argument("--output", "-o", help="Write the JSON report here as well.")
     pv = sub.add_parser("provenance", help="Write the SLSA v1 provenance predicate for a published image, for "
                                             "cosign attest.")
     pv.add_argument("--kind", required=True, choices=["model", "server"], help="Which image.")
@@ -510,6 +519,24 @@ def _cmd_audit_summary(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_load(args: argparse.Namespace) -> int:
+    from .load import LoadError, judge, load_objectives, markdown, run
+    try:
+        objectives = load_objectives(args.objectives)
+        key = (Path(args.api_key_file).read_text() if args.api_key_file else sys.stdin.read()).strip()
+        if not key:
+            raise LoadError("no API key: give --api-key-file or pass the key on stdin")
+        report = run(args.url, key, args.requests, args.concurrency, args.tickets)
+        verdict = judge(report, objectives)
+    except (LoadError, OSError) as exc:
+        print(f"smlops: {exc}", file=sys.stderr)
+        return 2
+    if args.output:
+        Path(args.output).write_text(json.dumps({**report, "verdict": verdict}, indent=2) + "\n")
+    print(markdown(report, verdict), end="")
+    return 0 if verdict["passed"] else 1
+
+
 def _cmd_provenance(args: argparse.Namespace) -> int:
     from .attest import ProvenanceError, predicate
     try:
@@ -571,6 +598,8 @@ def main(argv: list[str] | None = None) -> int:
         return _cmd_promote(args)
     if args.command == "audit-summary":
         return _cmd_audit_summary(args)
+    if args.command == "load":
+        return _cmd_load(args)
     if args.command == "provenance":
         return _cmd_provenance(args)
     if args.command == "argocd-ci":
