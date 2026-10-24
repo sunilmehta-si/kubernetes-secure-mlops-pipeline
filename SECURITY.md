@@ -54,6 +54,13 @@ threat model, including ways to:
 Out of scope: vulnerabilities in third-party dependencies with no demonstrated impact on this project (report those
 upstream; Dependabot and the image scan track them here), and the synthetic training data.
 
+## Verifying a published image yourself
+
+`smlops verify-image --model-image <ref@sha256:...> --server-image <ref@sha256:...> --cosign-key cosign.pub` makes the
+checks the cluster's admission makes, with the pipeline's public key: the signature, the SLSA provenance from this
+repository's publish step (for the right kind of image, model and version), and the model image's ML-BOM. It exits 1
+with `NOT VERIFIED` and the reason. `deploy-model.sh` runs it before any release is rendered.
+
 ## How this project is secured
 
 The threat model, the controls for each threat and their status are in
