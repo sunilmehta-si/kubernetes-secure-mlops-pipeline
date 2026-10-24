@@ -10,14 +10,15 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     SMLOPS_RISK_DIR=/app/configs/models
 
 WORKDIR /app
-COPY pyproject.toml requirements-lock.txt README.md LICENSE ./
+# uv installs exactly what uv.lock says; the uv binary comes from its image, pinned by digest.
+COPY --from=ghcr.io/astral-sh/uv:0.13.0@sha256:cdc6093146eb3ff6a40107b38f008b789e050e77ad87865e381d9917da55a168 /uv /usr/local/bin/uv
+COPY pyproject.toml uv.lock README.md LICENSE ./
 COPY secure_mlops ./secure_mlops
 COPY configs ./configs
-# kfp 2.17.0 pins urllib3==2.7.0, which has two HIGH CVEs (CVE-2026-97687, CVE-2026-97689) fixed in 2.8.0.
-# Override it after installing; the full test suite, including KFP executor runs, passes on 2.8.0.
-# Remove this line once kfp relaxes the pin.
-RUN pip install -c requirements-lock.txt . && pip install "urllib3==2.8.0" \
+# The urllib3 CVE override (kfp pins 2.7.0) lives in pyproject.toml under [tool.uv], so it is part of the lock.
+RUN uv sync --frozen --no-dev --no-editable --compile-bytecode \
     && useradd --uid 10001 --create-home --shell /usr/sbin/nologin pipeline
+ENV PATH="/app/.venv/bin:$PATH"
 
 USER 10001:10001
 WORKDIR /home/pipeline
