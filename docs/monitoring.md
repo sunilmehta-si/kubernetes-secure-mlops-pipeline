@@ -123,7 +123,7 @@ PASS: Prometheus sends its alerts to Alertmanager
 PASS: a drift alert reached the relay, which would start retraining (dry run, no GitHub token here)
 PASS: an alert without action=retrain did not start retraining
 PASS: Prometheus scrapes the relay, so a failing retraining trigger alerts
-Prometheus v3.15.0; alerts firing: none
+Prometheus v3.15.1; alerts firing: none
 ```
 
 ## Retraining
