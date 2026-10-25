@@ -85,7 +85,7 @@ spec:
         seccompProfile: {type: RuntimeDefault}
       containers:
         - name: relay
-          image: ${SERVER_IMAGE}
+          image: ${SERVER_IMAGE}  # acr:ignore[ACR-K8S-005] the signed server image by digest, substituted by scripts/install-monitoring.sh
           args: ["alert-relay", "--api-keys", "/etc/relay/api-keys.txt", "--dry-run", "--port", "9095"]
           env:
             - {name: MLFLOW_DISABLE_AGENT_HINT, value: "1"}

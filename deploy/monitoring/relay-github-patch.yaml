@@ -14,7 +14,7 @@ spec:
   template:
     spec:
       containers:
-        - name: relay
+        - name: relay  # acr:ignore[ACR-K8S-007] acr:ignore[ACR-K8S-009] a strategic merge patch: limits and the non-root user come from alerting.yaml, which it patches
           args: ["alert-relay", "--api-keys", "/etc/relay/api-keys.txt",
                  "--repo", "sunilmehta-si/kubernetes-secure-mlops-pipeline",
                  "--github-token-file", "/etc/relay/github/token", "--port", "9095"]
