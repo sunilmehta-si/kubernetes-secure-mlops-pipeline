@@ -353,6 +353,24 @@ class AuditSummaryCliTests(unittest.TestCase):
         self.assertIn("| support-tool | 1 | 2 | 0 | - |", out.getvalue())
 
 
+class VersionsCliTests(unittest.TestCase):
+    def test_reports_and_strict_exit_from_a_fake_upstream(self):
+        import tempfile
+        from contextlib import redirect_stderr, redirect_stdout
+        from pathlib import Path
+        from unittest import mock
+
+        from secure_mlops import versions
+        latest = dict.fromkeys(versions.COMPONENTS.values(), "v9.9.9")
+        with tempfile.TemporaryDirectory() as d, redirect_stdout(io.StringIO()) as out, redirect_stderr(io.StringIO()) as err, \
+                mock.patch.object(versions, "github_latest", lambda repo: latest[repo]):
+            self.assertEqual(main(["versions", "-o", str(Path(d, "v.md"))]), 0)
+            self.assertIn("behind upstream", Path(d, "v.md").read_text())
+            self.assertEqual(main(["versions", "--strict"]), 1)
+        self.assertIn("| HELM_VERSION", out.getvalue())
+        self.assertIn("pin(s) behind upstream", err.getvalue())
+
+
 class VerifyImageCliTests(unittest.TestCase):
     def test_needs_at_least_one_image(self):
         from contextlib import redirect_stderr

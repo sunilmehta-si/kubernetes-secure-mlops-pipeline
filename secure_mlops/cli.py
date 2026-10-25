@@ -127,6 +127,10 @@ def _parser() -> argparse.ArgumentParser:
     vi.add_argument("--model-name", default="ticket-router", help="Model the provenance must name (default: ticket-router).")
     vi.add_argument("--model-version", help="Registry version the provenance must name (default: not checked).")
     vi.add_argument("--plain-http", action="store_true", help="The registry speaks plain HTTP (a local kind registry).")
+    vs = sub.add_parser("versions", help="Compare deploy/versions.env with the latest releases upstream; --strict "
+                                          "exits 1 when a pin is behind.")
+    vs.add_argument("--strict", action="store_true", help="Exit 1 if any pinned component is behind its latest release.")
+    vs.add_argument("--output", "-o", help="Write the Markdown report here as well (a CI job summary, say).")
     pv = sub.add_parser("provenance", help="Write the SLSA v1 provenance predicate for a published image, for "
                                             "cosign attest.")
     pv.add_argument("--kind", required=True, choices=["model", "server"], help="Which image.")
@@ -568,6 +572,24 @@ def _cmd_verify_image(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_versions(args: argparse.Namespace) -> int:
+    from .versions import VersionsError, load_pins, markdown, report
+    try:
+        rows = report(load_pins())
+    except VersionsError as exc:
+        print(f"smlops: {exc}", file=sys.stderr)
+        return 2
+    text = markdown(rows)
+    if args.output:
+        Path(args.output).write_text(text)
+    print(text, end="")
+    behind = [r for r in rows if r.behind]
+    if behind:
+        print(f"smlops: {len(behind)} pin(s) behind upstream: " + ", ".join(f"{r.component} {r.pinned} -> {r.latest}" for r in behind),
+              file=sys.stderr)
+    return 1 if args.strict and behind else 0
+
+
 def _cmd_provenance(args: argparse.Namespace) -> int:
     from .attest import ProvenanceError, predicate
     try:
@@ -633,6 +655,8 @@ def main(argv: list[str] | None = None) -> int:
         return _cmd_load(args)
     if args.command == "verify-image":
         return _cmd_verify_image(args)
+    if args.command == "versions":
+        return _cmd_versions(args)
     if args.command == "provenance":
         return _cmd_provenance(args)
     if args.command == "argocd-ci":
