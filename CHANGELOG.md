@@ -2,6 +2,18 @@
 
 ## [Unreleased]
 
+### Added
+- `smlops versions`: every pin in `deploy/versions.env` against the latest release upstream, as a table in the CI
+  job summary (`--strict` exits 1 when a pin is behind). Reports, never fails: a bump is a change to the cluster.
+- CI job `dependencies`: osv-scanner (pinned, checksummed) scans `uv.lock` on every run and fails it on a known
+  vulnerability, before any image is built.
+
+### Changed
+- Platform pins moved to the current patch releases, each verified by the cluster run: Helm v4.3.1, Kyverno v1.19.2,
+  Argo CD v3.5.6, Prometheus v3.15.1, oras v1.3.6, cosign v3.1.4.
+- The three acr findings on the monitoring manifests carry their reasons as suppressions: a digest substituted at
+  install time, and a strategic-merge patch that inherits limits and the user from the deployment it patches.
+
 ### Security
 - uv 0.13.5 (was 0.13.0) in `deploy/versions.env` and the server image: uv's bundled CA store trusted an emSign root
   whose intermediate CA keys were compromised (GHSA-hq85-5cpj-mr62, critical, fixed in 0.13.4). The checksum and the
