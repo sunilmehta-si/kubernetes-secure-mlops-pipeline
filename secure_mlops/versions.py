@@ -93,7 +93,9 @@ def compare(pinned: str, latest: str) -> str:
     return ("major", "minor", "patch")[next(i for i in range(3) if new[i] != pin[i])]
 
 
-def report(pins: dict[str, str], fetch: Fetch = github_latest) -> list[Row]:
+def report(pins: dict[str, str], fetch: Fetch | None = None) -> list[Row]:
+    # Resolved at call time, not at import: a test that replaces github_latest on the module must not reach the network.
+    fetch = fetch or github_latest
     rows = []
     for component, repo in COMPONENTS.items():
         if component not in pins:
