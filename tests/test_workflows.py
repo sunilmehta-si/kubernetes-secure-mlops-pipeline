@@ -1,3 +1,4 @@
+import re
 import unittest
 from pathlib import Path
 
@@ -48,6 +49,24 @@ class WorkflowTests(unittest.TestCase):
         steps = "\n".join(step.get("run", "") for step in ci["jobs"]["dependencies"]["steps"])
         self.assertIn("OSV_SCANNER_SHA256_LINUX_AMD64}  $RUNNER_TEMP/osv-scanner\" | sha256sum -c", steps)
         self.assertIn("scan --lockfile uv.lock", steps)
+
+    def test_every_download_checksum_comes_from_versions_env(self):
+        # A literal checksum next to a ${VERSION} download goes stale the moment the version is bumped in
+        # versions.env, which is how a bump broke two jobs once. The checksum lives beside the version now.
+        from secure_mlops.versions import load_pins
+        pins = load_pins(ROOT / "deploy/versions.env")
+        checks = 0
+        for path in WORKFLOWS:
+            for line in path.read_text().splitlines():
+                if "sha256sum -c" not in line:
+                    continue
+                checks += 1
+                with self.subTest(workflow=path.name, line=line.strip()[:60]):
+                    self.assertNotRegex(line, r"[0-9a-f]{64}", "literal checksum in a workflow")
+                    var = re.search(r"\$\{([A-Z0-9_]+SHA256[A-Z0-9_]*)\}", line)
+                    self.assertIsNotNone(var, "the checksum must come from deploy/versions.env")
+                    self.assertIn(var.group(1), pins)
+        self.assertGreaterEqual(checks, 6)
 
     def test_retraining_cannot_deploy_or_promote_on_its_own(self):
         flow = yaml.safe_load((ROOT / ".github/workflows/retrain.yml").read_text())

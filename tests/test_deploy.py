@@ -24,12 +24,15 @@ class VersionTests(unittest.TestCase):
                                   "KYVERNO_VERSION", "ZOT_VERSION", "COSIGN_VERSION", "PROMETHEUS_VERSION", "ALERTMANAGER_VERSION", "ARGOCD_VERSION",
                                   "ORAS_VERSION", "HELM_VERSION", "UV_VERSION", "UV_SHA256_LINUX_X86_64",
                                   "OSV_SCANNER_VERSION", "OSV_SCANNER_SHA256_LINUX_AMD64",
+                                  "HELM_SHA256_LINUX_AMD64", "KYVERNO_CLI_SHA256_LINUX_X86_64", "PROMETHEUS_SHA256_LINUX_AMD64",
+                                  "ALERTMANAGER_SHA256_LINUX_AMD64", "ORAS_SHA256_LINUX_AMD64",
                                   "REGISTRY",
                                   "KIND_CONTEXT"})
         self.assertEqual(v.pop("REGISTRY"), "kind-registry:5000")
         self.assertEqual(v.pop("KIND_CONTEXT"), "kind-smlops")                       # kind-<name in kind.yaml>
         self.assertRegex(v.pop("UV_SHA256_LINUX_X86_64"), r"^[0-9a-f]{64}$")
-        self.assertRegex(v.pop("OSV_SCANNER_SHA256_LINUX_AMD64"), r"^[0-9a-f]{64}$")
+        for key in [k for k in v if "_SHA256_" in k]:
+            self.assertRegex(v.pop(key), r"^[0-9a-f]{64}$", key)
         self.assertRegex(v.pop("UV_VERSION"), r"^\d+\.\d+\.\d+$")                   # uv has no v prefix
         policy = (ROOT / "deploy/policy/require-digests.yaml").read_text()
         self.assertIn('"kind-registry:5000/*@sha256:*"', policy)                     # policy and scripts agree

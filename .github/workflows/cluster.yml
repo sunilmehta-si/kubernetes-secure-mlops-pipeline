@@ -60,11 +60,11 @@ jobs:
           . deploy/versions.env
           name="helm-${HELM_VERSION}-linux-amd64.tar.gz"
           curl -sSfL -o "$RUNNER_TEMP/$name" "https://get.helm.sh/$name"
-          echo "86584a54def73570558f66f5111cc53dfed56689637ae32c1201205d494f54fb  $RUNNER_TEMP/$name" | sha256sum -c -
+          echo "${HELM_SHA256_LINUX_AMD64}  $RUNNER_TEMP/$name" | sha256sum -c -
           mkdir -p "$RUNNER_TEMP/bin" && tar -xzf "$RUNNER_TEMP/$name" -C "$RUNNER_TEMP/bin" --strip-components=1 linux-amd64/helm
           name="oras_${ORAS_VERSION#v}_linux_amd64.tar.gz"
           curl -sSfL -o "$RUNNER_TEMP/$name" "https://github.com/oras-project/oras/releases/download/${ORAS_VERSION}/$name"
-          echo "66fb0ad7206f3f6fa77ed5b552049d364ccf4b50b1684554f731f76302b52ca0  $RUNNER_TEMP/$name" | sha256sum -c -
+          echo "${ORAS_SHA256_LINUX_AMD64}  $RUNNER_TEMP/$name" | sha256sum -c -
           mkdir -p "$RUNNER_TEMP/bin" && tar -xzf "$RUNNER_TEMP/$name" -C "$RUNNER_TEMP/bin" oras
           echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
           scripts/install-argocd.sh
