@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [0.7.1] - 2026-10-25
 
 ### Added
 - `smlops versions`: every pin in `deploy/versions.env` against the latest release upstream, as a table in the CI
