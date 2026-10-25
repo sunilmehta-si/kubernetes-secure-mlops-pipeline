@@ -127,6 +127,24 @@ jobs:
           "$RUNNER_TEMP/osv-scanner" scan --lockfile uv.lock --format table | tee "$RUNNER_TEMP/osv.txt"
           { echo "### Dependencies (osv-scanner on uv.lock)"; echo '```'; cat "$RUNNER_TEMP/osv.txt"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
 
+  versions:
+    # Every pin in deploy/versions.env against the latest release upstream, printed into the job summary. It reports
+    # and never fails: a bump is a change to the cluster, and the cluster workflow is what proves one.
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+      - uses: ./.github/actions/setup-uv
+      - run: uv sync --frozen --python "$(which python)" && echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
+      - run: smlops versions -o "$RUNNER_TEMP/versions.md" && cat "$RUNNER_TEMP/versions.md" >> "$GITHUB_STEP_SUMMARY"
+
   policies:
     # Admission policies tested offline with the Kyverno CLI, downloaded at a pinned version and checked by checksum.
     runs-on: ubuntu-latest
