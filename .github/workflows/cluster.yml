@@ -64,7 +64,7 @@ jobs:
           mkdir -p "$RUNNER_TEMP/bin" && tar -xzf "$RUNNER_TEMP/$name" -C "$RUNNER_TEMP/bin" --strip-components=1 linux-amd64/helm
           name="oras_${ORAS_VERSION#v}_linux_amd64.tar.gz"
           curl -sSfL -o "$RUNNER_TEMP/$name" "https://github.com/oras-project/oras/releases/download/${ORAS_VERSION}/$name"
-          echo "f27adb935022d94df8dc77719c322dda592c78a0d57a6f7dcdd8d900b248c454  $RUNNER_TEMP/$name" | sha256sum -c -
+          echo "66fb0ad7206f3f6fa77ed5b552049d364ccf4b50b1684554f731f76302b52ca0  $RUNNER_TEMP/$name" | sha256sum -c -
           mkdir -p "$RUNNER_TEMP/bin" && tar -xzf "$RUNNER_TEMP/$name" -C "$RUNNER_TEMP/bin" oras
           echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
           scripts/install-argocd.sh
