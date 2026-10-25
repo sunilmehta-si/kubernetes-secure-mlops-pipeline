@@ -13,6 +13,7 @@ cd "$(dirname "$0")/.."
 
 case "$ARGOCD_VERSION" in    # SHA-256 of core-install.yaml per pinned version; add a line when bumping it
   v3.5.4) expected=7f6e38f3d1826c2ab92b22c04160dec3778563b84bdafd3f262c2353edf34602 ;;
+  v3.5.6) expected=d3d9d3555ad77eb4b6d27b1ec0d2af7978a91537e84d54631f983c227f0a3d31 ;;
   *) expected="" ;;
 esac
 # The same image from a second registry, by digest, for when the first refuses us: public.ecr.aws limits anonymous
