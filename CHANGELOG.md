@@ -1,5 +1,12 @@
 # Changelog
 
+## [Unreleased]
+
+### Security
+- uv 0.13.5 (was 0.13.0) in `deploy/versions.env` and the server image: uv's bundled CA store trusted an emSign root
+  whose intermediate CA keys were compromised (GHSA-hq85-5cpj-mr62, critical, fixed in 0.13.4). The checksum and the
+  image digest are pinned to the new release; `certifi` in `uv.lock` already carries the matching fix (2026.10.23).
+
 ## [0.7.0] - 2026-10-24
 
 What clients may expect, proven before the fact: serving objectives measured from inside the cluster on every
