@@ -107,6 +107,26 @@ jobs:
           fi
           cat shifted.md >> "$GITHUB_STEP_SUMMARY"
 
+  dependencies:
+    # Every package in uv.lock checked against the OSV database. The lock is what CI, the image and the cluster
+    # install, so a known vulnerability in it fails the run before an image is built.
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install osv-scanner
+        run: |
+          . deploy/versions.env
+          curl -sSfL -o "$RUNNER_TEMP/osv-scanner" "https://github.com/google/osv-scanner/releases/download/${OSV_SCANNER_VERSION}/osv-scanner_linux_amd64"
+          echo "${OSV_SCANNER_SHA256_LINUX_AMD64}  $RUNNER_TEMP/osv-scanner" | sha256sum -c -
+          chmod +x "$RUNNER_TEMP/osv-scanner"
+      - name: Scan the lock
+        run: |
+          "$RUNNER_TEMP/osv-scanner" scan --lockfile uv.lock --format table | tee "$RUNNER_TEMP/osv.txt"
+          { echo "### Dependencies (osv-scanner on uv.lock)"; echo '```'; cat "$RUNNER_TEMP/osv.txt"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+
   policies:
     # Admission policies tested offline with the Kyverno CLI, downloaded at a pinned version and checked by checksum.
     runs-on: ubuntu-latest

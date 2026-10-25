@@ -23,11 +23,13 @@ class VersionTests(unittest.TestCase):
         self.assertEqual(set(v), {"KIND_VERSION", "KIND_NODE_IMAGE", "CERT_MANAGER_VERSION", "KSERVE_VERSION",
                                   "KYVERNO_VERSION", "ZOT_VERSION", "COSIGN_VERSION", "PROMETHEUS_VERSION", "ALERTMANAGER_VERSION", "ARGOCD_VERSION",
                                   "ORAS_VERSION", "HELM_VERSION", "UV_VERSION", "UV_SHA256_LINUX_X86_64",
+                                  "OSV_SCANNER_VERSION", "OSV_SCANNER_SHA256_LINUX_AMD64",
                                   "REGISTRY",
                                   "KIND_CONTEXT"})
         self.assertEqual(v.pop("REGISTRY"), "kind-registry:5000")
         self.assertEqual(v.pop("KIND_CONTEXT"), "kind-smlops")                       # kind-<name in kind.yaml>
         self.assertRegex(v.pop("UV_SHA256_LINUX_X86_64"), r"^[0-9a-f]{64}$")
+        self.assertRegex(v.pop("OSV_SCANNER_SHA256_LINUX_AMD64"), r"^[0-9a-f]{64}$")
         self.assertRegex(v.pop("UV_VERSION"), r"^\d+\.\d+\.\d+$")                   # uv has no v prefix
         policy = (ROOT / "deploy/policy/require-digests.yaml").read_text()
         self.assertIn('"kind-registry:5000/*@sha256:*"', policy)                     # policy and scripts agree

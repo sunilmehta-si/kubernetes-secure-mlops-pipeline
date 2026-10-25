@@ -43,6 +43,12 @@ class WorkflowTests(unittest.TestCase):
             with self.subTest(drill=script.name):
                 self.assertIn(f"scripts/{script.name}", cluster)
 
+    def test_ci_scans_the_lock_with_a_checksummed_osv_scanner(self):
+        ci = yaml.safe_load((ROOT / ".github/workflows/ci.yml").read_text())
+        steps = "\n".join(step.get("run", "") for step in ci["jobs"]["dependencies"]["steps"])
+        self.assertIn("OSV_SCANNER_SHA256_LINUX_AMD64}  $RUNNER_TEMP/osv-scanner\" | sha256sum -c", steps)
+        self.assertIn("scan --lockfile uv.lock", steps)
+
     def test_retraining_cannot_deploy_or_promote_on_its_own(self):
         flow = yaml.safe_load((ROOT / ".github/workflows/retrain.yml").read_text())
         self.assertEqual(flow["permissions"], {"contents": "read"})
