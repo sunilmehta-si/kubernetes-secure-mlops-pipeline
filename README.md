@@ -194,6 +194,9 @@ Problems this project's checks found in itself while it was being built:
   model-signing imports without declaring. Only direct dependencies were pinned; now every transitive package is
   locked (`uv.lock`), CI, the image and the cluster install exactly the lock, and CI fails if the lock no longer
   matches `pyproject.toml`.
+- **Pinning everything also pins the vulnerabilities.** The week the emSign root CA keys were found compromised, the
+  pinned uv still bundled that root, and the lock would have kept it for as long as nobody looked. Now `osv-scanner`
+  checks the lock on every run and `smlops versions` prints every platform pin against upstream's latest release.
 - **The first lock fought the dependency bot.** A flat `pip freeze` lock let Dependabot bump transitive packages one
   at a time, and every one of its five pull requests broke the install, because another package forbade the new
   version. The lock is now resolver-managed, so updates arrive already resolved.

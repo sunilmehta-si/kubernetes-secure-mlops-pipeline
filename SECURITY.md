@@ -61,6 +61,16 @@ checks the cluster's admission makes, with the pipeline's public key: the signat
 repository's publish step (for the right kind of image, model and version), and the model image's ML-BOM. It exits 1
 with `NOT VERIFIED` and the reason. `deploy-model.sh` runs it before any release is rendered.
 
+## Staying patched
+
+Two checks run on every CI run so that a fix published upstream does not sit unused. `osv-scanner` scans `uv.lock`,
+the exact set of packages CI, the image and the cluster install, against the OSV database and fails the run on a
+known vulnerability. `smlops versions` compares every platform pin in `deploy/versions.env` (KServe, Kyverno, Argo
+CD, Prometheus, cert-manager, cosign, Helm, uv and the rest) with the latest release upstream and prints the table
+into the job summary; it reports rather than fails, because a bump changes the cluster and the cluster workflow is
+what proves one. The week this was added, the feed showed uv's bundled CA store trusting a compromised root
+(GHSA-hq85-5cpj-mr62) and certifi carrying the same root; both were fixed here the same day.
+
 ## How this project is secured
 
 The threat model, the controls for each threat and their status are in

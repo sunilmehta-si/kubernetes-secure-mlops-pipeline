@@ -183,6 +183,8 @@ flowchart LR
     PR --> I["Build pipeline image<br/>base pinned by digest"]
     I --> U["Run the CLI inside it<br/>as non-root user 10001"]
     U --> V["Trivy: fail on fixable<br/>HIGH or CRITICAL CVEs"]
+    PR --> O["osv-scanner on uv.lock:<br/>no known vulnerability"]
+    PR --> VD["smlops versions: every pin<br/>vs the latest release upstream"]
     PR --> D["Governance drills<br/>signing, tampering, drift"]
     PR --> P["Kyverno CLI<br/>policy tests"]
     PR --> A["promtool and amtool<br/>alert and routing tests"]
