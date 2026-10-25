@@ -120,7 +120,7 @@ jobs:
           . deploy/versions.env
           name="kyverno-cli_${KYVERNO_VERSION}_linux_x86_64.tar.gz"
           curl -sSfL -o "$RUNNER_TEMP/$name" "https://github.com/kyverno/kyverno/releases/download/${KYVERNO_VERSION}/$name"
-          echo "b38228f367fc0fdc2b08f4c83ea50ac5f16c60ff8d62d76a66157c33c47b70ae  $RUNNER_TEMP/$name" | sha256sum -c -
+          echo "357eaf1df8bc24ddd5a73979fadeaae6a032e8710f11af264229756e4956bf4a  $RUNNER_TEMP/$name" | sha256sum -c -
           tar -xzf "$RUNNER_TEMP/$name" -C "$RUNNER_TEMP" kyverno
       - run: $RUNNER_TEMP/kyverno test deploy/policy/tests
 
