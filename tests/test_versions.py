@@ -1,4 +1,5 @@
 import unittest
+from datetime import date
 from pathlib import Path
 
 from secure_mlops import versions
@@ -38,3 +39,26 @@ class VersionsTests(unittest.TestCase):
             raise versions.VersionsError(f"{repo}: boom")
         with self.assertRaises(versions.VersionsError):
             versions.report({"HELM_VERSION": "v4.3.1"}, fetch=fetch)
+
+    def test_a_newer_release_waits_two_weeks_before_it_counts(self):
+        upstream = {"cert-manager/cert-manager": versions.Release("v1.21.3", date(2026, 10, 23)),
+                    "astral-sh/uv": versions.Release("0.13.6", date(2026, 10, 27)),
+                    "kyverno/kyverno": versions.Release("v1.19.2", date(2026, 9, 30))}
+        pins = {"CERT_MANAGER_VERSION": "v1.20.4", "UV_VERSION": "0.13.5", "KYVERNO_VERSION": "v1.19.1"}
+        rows = {r.component: r for r in versions.report(pins, fetch=upstream.get, today=date(2026, 10, 27))}
+        self.assertTrue(rows["CERT_MANAGER_VERSION"].too_new)
+        self.assertEqual(rows["CERT_MANAGER_VERSION"].adoptable_on, date(2026, 11, 6))
+        self.assertTrue(rows["UV_VERSION"].too_new)
+        self.assertFalse(rows["KYVERNO_VERSION"].too_new)                              # 27 days old: adopt it
+        text = versions.markdown(list(rows.values()))
+        self.assertIn("3 of 3 behind upstream, 2 of them too new to adopt yet", text)
+        self.assertIn("| v1.20.4 | v1.21.3 | minor behind; published 2026-10-23, adoptable from 2026-11-06 |", text)
+        self.assertIn("| v1.19.1 | v1.19.2 | **patch behind** |", text)
+        later = {r.component: r for r in versions.report(pins, fetch=upstream.get, today=date(2026, 11, 6))}
+        self.assertFalse(later["CERT_MANAGER_VERSION"].too_new)                        # the day it turns 14 days old
+
+    def test_a_release_without_a_date_is_never_held_back(self):
+        rows = versions.report({"HELM_VERSION": "v4.3.0"}, fetch=lambda repo: "v4.3.1", today=date(2026, 10, 27))
+        self.assertTrue(rows[0].behind)
+        self.assertFalse(rows[0].too_new)
+

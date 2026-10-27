@@ -5,6 +5,10 @@ price is that nothing moves at all unless someone looks: a patch release that cl
 person notices. `smlops versions` is that look, run on every CI run and printed into the job summary: each pin,
 the latest release upstream, and how far behind it is. It reports; the decision to bump stays with a person,
 because a bump is a change to the cluster that the cluster workflow has to prove.
+
+A release is adopted only once it is MIN_RELEASE_AGE_DAYS old. A compromised or broken release is usually found and
+withdrawn within days of publication, so a pin that waits two weeks does not take it; the report says when each
+newer release becomes adoptable, and `--strict` fails only on the ones that already are.
 """
 from __future__ import annotations
 
@@ -14,6 +18,7 @@ import re
 import urllib.request
 from collections.abc import Callable
 from dataclasses import dataclass
+from datetime import date, datetime, timedelta
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -36,8 +41,17 @@ COMPONENTS = {
     "OSV_SCANNER_VERSION": "google/osv-scanner",
 }
 SEMVER = re.compile(r"^v?(\d+)\.(\d+)\.(\d+)$")
+MIN_RELEASE_AGE_DAYS = 14
 
-Fetch = Callable[[str], str]
+
+@dataclass(frozen=True)
+class Release:
+    tag: str
+    published: date | None = None
+
+
+# Returns the latest release, or just its tag when the publication date is not known.
+Fetch = Callable[[str], "Release | str"]
 
 
 class VersionsError(RuntimeError):
@@ -52,10 +66,21 @@ class Row:
     latest: str
     # "current", or the largest part that moved: "major", "minor" or "patch"
     status: str
+    published: date | None = None
+    checked_on: date | None = None
 
     @property
     def behind(self) -> bool:
         return self.status != "current"
+
+    @property
+    def adoptable_on(self) -> date | None:
+        return self.published + timedelta(days=MIN_RELEASE_AGE_DAYS) if self.published else None
+
+    @property
+    def too_new(self) -> bool:
+        """Behind, but the newer release is younger than MIN_RELEASE_AGE_DAYS."""
+        return self.behind and self.adoptable_on is not None and (self.checked_on or date.today()) < self.adoptable_on
 
 
 def load_pins(path: Path = VERSIONS) -> dict[str, str]:
@@ -68,9 +93,9 @@ def load_pins(path: Path = VERSIONS) -> dict[str, str]:
     return pins
 
 
-def github_latest(repo: str) -> str:
-    """The tag of the repository's latest (non-prerelease) release, through the API; GH_TOKEN or GITHUB_TOKEN raises
-    the anonymous rate limit when set."""
+def github_latest(repo: str) -> Release:
+    """The repository's latest (non-prerelease) release and its publication date, through the API; GH_TOKEN or
+    GITHUB_TOKEN raises the anonymous rate limit when set."""
     request = urllib.request.Request(f"https://api.github.com/repos/{repo}/releases/latest",
                                      headers={"Accept": "application/vnd.github+json", "User-Agent": "smlops-versions"})
     token = os.environ.get("GH_TOKEN") or os.environ.get("GITHUB_TOKEN")
@@ -78,7 +103,9 @@ def github_latest(repo: str) -> str:
         request.add_header("Authorization", f"Bearer {token}")
     try:
         with urllib.request.urlopen(request, timeout=20) as response:
-            return str(json.load(response)["tag_name"])
+            data = json.load(response)
+        published = data.get("published_at")
+        return Release(str(data["tag_name"]), datetime.fromisoformat(published.replace("Z", "+00:00")).date() if published else None)
     except (OSError, ValueError, KeyError) as exc:
         raise VersionsError(f"{repo}: could not read the latest release: {exc}") from exc
 
@@ -93,24 +120,38 @@ def compare(pinned: str, latest: str) -> str:
     return ("major", "minor", "patch")[next(i for i in range(3) if new[i] != pin[i])]
 
 
-def report(pins: dict[str, str], fetch: Fetch | None = None) -> list[Row]:
+def report(pins: dict[str, str], fetch: Fetch | None = None, today: date | None = None) -> list[Row]:
     # Resolved at call time, not at import: a test that replaces github_latest on the module must not reach the network.
     fetch = fetch or github_latest
+    today = today or date.today()
     rows = []
     for component, repo in COMPONENTS.items():
         if component not in pins:
             continue
         latest = fetch(repo)
-        rows.append(Row(component, repo, pins[component], latest, compare(pins[component], latest)))
+        release = latest if isinstance(latest, Release) else Release(str(latest))
+        rows.append(Row(component, repo, pins[component], release.tag, compare(pins[component], release.tag),
+                        release.published, today))
     return rows
 
 
 def markdown(rows: list[Row]) -> str:
     behind = [r for r in rows if r.behind]
-    lines = [f"## Pinned versions: {len(behind)} of {len(rows)} behind upstream" if behind else
-             f"## Pinned versions: all {len(rows)} current", "",
-             "| Component | Pinned | Latest release | Status |", "|---|---|---|---|"]
+    waiting = [r for r in behind if r.too_new]
+    title = (f"## Pinned versions: {len(behind)} of {len(rows)} behind upstream" if behind else
+             f"## Pinned versions: all {len(rows)} current")
+    if waiting:
+        title += f", {len(waiting)} of them too new to adopt yet"
+    lines = [title, "", "| Component | Pinned | Latest release | Status |", "|---|---|---|---|"]
     for r in rows:
-        status = "current" if not r.behind else f"**{r.status} behind**"
+        if not r.behind:
+            status = "current"
+        elif r.too_new:
+            status = f"{r.status} behind; published {r.published}, adoptable from {r.adoptable_on}"
+        else:
+            status = f"**{r.status} behind**"
         lines.append(f"| {r.component} ([{r.repo}](https://github.com/{r.repo}/releases)) | {r.pinned} | {r.latest} | {status} |")
+    if waiting:
+        lines += ["", f"Releases are adopted once they are {MIN_RELEASE_AGE_DAYS} days old, so a compromised or withdrawn "
+                      "release has time to come to light first."]
     return "\n".join(lines) + "\n"

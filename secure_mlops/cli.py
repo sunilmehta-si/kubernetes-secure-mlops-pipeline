@@ -128,8 +128,8 @@ def _parser() -> argparse.ArgumentParser:
     vi.add_argument("--model-version", help="Registry version the provenance must name (default: not checked).")
     vi.add_argument("--plain-http", action="store_true", help="The registry speaks plain HTTP (a local kind registry).")
     vs = sub.add_parser("versions", help="Compare deploy/versions.env with the latest releases upstream; --strict "
-                                          "exits 1 when a pin is behind.")
-    vs.add_argument("--strict", action="store_true", help="Exit 1 if any pinned component is behind its latest release.")
+                                          "exits 1 when a pin is behind a release old enough to adopt.")
+    vs.add_argument("--strict", action="store_true", help="Exit 1 if any pin is behind a release at least 14 days old.")
     vs.add_argument("--output", "-o", help="Write the Markdown report here as well (a CI job summary, say).")
     pv = sub.add_parser("provenance", help="Write the SLSA v1 provenance predicate for a published image, for "
                                             "cosign attest.")
@@ -583,11 +583,15 @@ def _cmd_versions(args: argparse.Namespace) -> int:
     if args.output:
         Path(args.output).write_text(text)
     print(text, end="")
-    behind = [r for r in rows if r.behind]
-    if behind:
-        print(f"smlops: {len(behind)} pin(s) behind upstream: " + ", ".join(f"{r.component} {r.pinned} -> {r.latest}" for r in behind),
+    ready = [r for r in rows if r.behind and not r.too_new]
+    waiting = [r for r in rows if r.too_new]
+    if ready:
+        print(f"smlops: {len(ready)} pin(s) behind upstream: " + ", ".join(f"{r.component} {r.pinned} -> {r.latest}" for r in ready),
               file=sys.stderr)
-    return 1 if args.strict and behind else 0
+    if waiting:
+        print(f"smlops: {len(waiting)} newer release(s) too new to adopt: "
+              + ", ".join(f"{r.component} {r.latest} from {r.adoptable_on}" for r in waiting), file=sys.stderr)
+    return 1 if args.strict and ready else 0
 
 
 def _cmd_provenance(args: argparse.Namespace) -> int:

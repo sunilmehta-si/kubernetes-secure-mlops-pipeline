@@ -370,6 +370,19 @@ class VersionsCliTests(unittest.TestCase):
         self.assertIn("| HELM_VERSION", out.getvalue())
         self.assertIn("pin(s) behind upstream", err.getvalue())
 
+    def test_strict_passes_while_every_newer_release_is_too_new(self):
+        from contextlib import redirect_stderr, redirect_stdout
+        from datetime import date
+        from unittest import mock
+
+        from secure_mlops import versions
+        fresh = versions.Release("v9.9.9", date.today())
+        with redirect_stdout(io.StringIO()), redirect_stderr(io.StringIO()) as err, \
+                mock.patch.object(versions, "github_latest", lambda repo: fresh):
+            self.assertEqual(main(["versions", "--strict"]), 0)
+        self.assertIn("too new to adopt", err.getvalue())
+        self.assertNotIn("pin(s) behind upstream", err.getvalue())
+
 
 class VerifyImageCliTests(unittest.TestCase):
     def test_needs_at_least_one_image(self):
