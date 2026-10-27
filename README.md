@@ -197,6 +197,9 @@ Problems this project's checks found in itself while it was being built:
 - **Pinning everything also pins the vulnerabilities.** The week the emSign root CA keys were found compromised, the
   pinned uv still bundled that root, and the lock would have kept it for as long as nobody looked. Now `osv-scanner`
   checks the lock on every run and `smlops versions` prints every platform pin against upstream's latest release.
+- **Newest is not safest.** A compromised or broken release is usually caught and withdrawn within days, so
+  `smlops versions` treats a newer release as adoptable only once it is 14 days old and says from which date. On
+  2026-10-27 it held back cert-manager v1.21.3, four days old, and uv 0.13.6, published that morning.
 - **The first lock fought the dependency bot.** A flat `pip freeze` lock let Dependabot bump transitive packages one
   at a time, and every one of its five pull requests broke the install, because another package forbade the new
   version. The lock is now resolver-managed, so updates arrive already resolved.
