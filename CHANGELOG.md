@@ -1,5 +1,14 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+- `smlops versions` holds back a newer release until it is 14 days old: the report marks it "too new", says from
+  which date it qualifies, and `--strict` fails only on releases already old enough. On 2026-10-27 that held back
+  cert-manager v1.21.3 (published 2026-10-23) and uv 0.13.6 (published that day).
+- `smlops versions --json PATH`: the report as one object per pin, with publication and adoptable dates and whether to
+  adopt it now.
+
 ## [0.7.1] - 2026-10-25
 
 ### Added
