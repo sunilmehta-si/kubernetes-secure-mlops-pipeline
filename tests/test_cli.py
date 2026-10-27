@@ -355,6 +355,7 @@ class AuditSummaryCliTests(unittest.TestCase):
 
 class VersionsCliTests(unittest.TestCase):
     def test_reports_and_strict_exit_from_a_fake_upstream(self):
+        import json
         import tempfile
         from contextlib import redirect_stderr, redirect_stdout
         from pathlib import Path
@@ -364,8 +365,9 @@ class VersionsCliTests(unittest.TestCase):
         latest = dict.fromkeys(versions.COMPONENTS.values(), "v9.9.9")
         with tempfile.TemporaryDirectory() as d, redirect_stdout(io.StringIO()) as out, redirect_stderr(io.StringIO()) as err, \
                 mock.patch.object(versions, "github_latest", lambda repo: latest[repo]):
-            self.assertEqual(main(["versions", "-o", str(Path(d, "v.md"))]), 0)
+            self.assertEqual(main(["versions", "-o", str(Path(d, "v.md")), "--json", str(Path(d, "v.json"))]), 0)
             self.assertIn("behind upstream", Path(d, "v.md").read_text())
+            self.assertTrue(all(row["adopt_now"] for row in json.loads(Path(d, "v.json").read_text())))
             self.assertEqual(main(["versions", "--strict"]), 1)
         self.assertIn("| HELM_VERSION", out.getvalue())
         self.assertIn("pin(s) behind upstream", err.getvalue())

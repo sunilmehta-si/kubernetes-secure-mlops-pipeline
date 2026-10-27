@@ -57,6 +57,19 @@ class VersionsTests(unittest.TestCase):
         later = {r.component: r for r in versions.report(pins, fetch=upstream.get, today=date(2026, 11, 6))}
         self.assertFalse(later["CERT_MANAGER_VERSION"].too_new)                        # the day it turns 14 days old
 
+    def test_json_spells_out_each_decision(self):
+        upstream = {"cert-manager/cert-manager": versions.Release("v1.21.3", date(2026, 10, 23)),
+                    "kyverno/kyverno": versions.Release("v1.19.2", date(2026, 9, 30)),
+                    "helm/helm": versions.Release("v4.3.1", date(2026, 9, 1))}
+        pins = {"CERT_MANAGER_VERSION": "v1.20.4", "KYVERNO_VERSION": "v1.19.1", "HELM_VERSION": "v4.3.1"}
+        data = {d["component"]: d for d in versions.as_json(versions.report(pins, fetch=upstream.get, today=date(2026, 10, 27)))}
+        self.assertEqual(data["CERT_MANAGER_VERSION"], {
+            "component": "CERT_MANAGER_VERSION", "repository": "cert-manager/cert-manager", "pinned": "v1.20.4",
+            "latest": "v1.21.3", "status": "minor", "published": "2026-10-23", "adoptable_on": "2026-11-06",
+            "too_new": True, "adopt_now": False})
+        self.assertTrue(data["KYVERNO_VERSION"]["adopt_now"])
+        self.assertFalse(data["HELM_VERSION"]["adopt_now"])                             # current: nothing to adopt
+
     def test_a_release_without_a_date_is_never_held_back(self):
         rows = versions.report({"HELM_VERSION": "v4.3.0"}, fetch=lambda repo: "v4.3.1", today=date(2026, 10, 27))
         self.assertTrue(rows[0].behind)

@@ -131,6 +131,7 @@ def _parser() -> argparse.ArgumentParser:
                                           "exits 1 when a pin is behind a release old enough to adopt.")
     vs.add_argument("--strict", action="store_true", help="Exit 1 if any pin is behind a release at least 14 days old.")
     vs.add_argument("--output", "-o", help="Write the Markdown report here as well (a CI job summary, say).")
+    vs.add_argument("--json", dest="json_out", metavar="PATH", help="Also write the report as JSON, one object per pin.")
     pv = sub.add_parser("provenance", help="Write the SLSA v1 provenance predicate for a published image, for "
                                             "cosign attest.")
     pv.add_argument("--kind", required=True, choices=["model", "server"], help="Which image.")
@@ -573,7 +574,7 @@ def _cmd_verify_image(args: argparse.Namespace) -> int:
 
 
 def _cmd_versions(args: argparse.Namespace) -> int:
-    from .versions import VersionsError, load_pins, markdown, report
+    from .versions import VersionsError, as_json, load_pins, markdown, report
     try:
         rows = report(load_pins())
     except VersionsError as exc:
@@ -582,6 +583,8 @@ def _cmd_versions(args: argparse.Namespace) -> int:
     text = markdown(rows)
     if args.output:
         Path(args.output).write_text(text)
+    if args.json_out:
+        Path(args.json_out).write_text(json.dumps(as_json(rows), indent=2) + "\n")
     print(text, end="")
     ready = [r for r in rows if r.behind and not r.too_new]
     waiting = [r for r in rows if r.too_new]
