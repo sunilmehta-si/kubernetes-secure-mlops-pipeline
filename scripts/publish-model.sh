@@ -34,7 +34,7 @@ push() {   # build context, repository:tag -> prints repository@sha256:digest
   # The digest comes from the registry, not from the local image store: what Docker reports after a push depends on
   # its image store and build attestations (Ubuntu 26.04's Docker reported one the registry did not hold), and the
   # registry's answer is by definition what the cluster will resolve when it pulls by digest.
-  local repo="${2%%:*}" tag="${2##*:}"
+  local repo="${2%:*}" tag="${2##*:}"     # strip only the tag: the registry's own ':5000' stays in the host
   curl -sSfI "http://${repo%%/*}/v2/${repo#*/}/manifests/${tag}" -H 'Accept: application/vnd.oci.image.index.v1+json, application/vnd.oci.image.manifest.v1+json, application/vnd.docker.distribution.manifest.list.v2+json, application/vnd.docker.distribution.manifest.v2+json' \
     | tr -d '\r' | awk -v repo="$repo" 'tolower($1) == "docker-content-digest:" {print repo "@" $2; found = 1} END {exit !found}'
 }
