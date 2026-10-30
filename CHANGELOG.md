@@ -12,6 +12,12 @@
 - The pull-request review workflow runs agentic-code-review-tool v0.7.0, which adds lock-file, HTTP-timeout,
   artifact-token and RBAC-escalation rules.
 
+### Fixed
+- Every cluster run failed from 2026-10-29: `ubuntu-latest` had moved to Ubuntu 26.04, whose Docker reports an image
+  digest after `docker push` that the registry does not hold, so the first pod to pull by digest got "not found".
+  The cluster runner is pinned to `ubuntu-24.04` like everything else, and `publish-model.sh` now takes each image's
+  digest from the registry's own answer after the push, which is what the cluster resolves.
+
 ### Changed
 - Dependabot's bumps wait the same 14 days as the platform pins before they are merged (README, governance G5).
 

@@ -85,3 +85,8 @@ if __name__ == "__main__":
         flow = yaml.safe_load((ROOT / ".github/workflows/ci.yml").read_text())
         self.assertIn("cron", flow[True]["schedule"][0])
         self.assertIn("versions", flow["jobs"])
+
+    def test_the_cluster_runner_is_pinned_not_latest(self):
+        flow = yaml.safe_load((ROOT / ".github/workflows/cluster.yml").read_text())
+        for name, job in flow["jobs"].items():
+            self.assertNotIn("latest", str(job["runs-on"]), name)     # ubuntu-latest moved to 26.04 under us once

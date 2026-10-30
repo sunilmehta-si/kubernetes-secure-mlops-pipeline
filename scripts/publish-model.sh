@@ -31,7 +31,12 @@ version="$(jq -r .version "$work/bundle/release.json")"
 push() {   # build context, repository:tag -> prints repository@sha256:digest
   docker build -q -t "$2" "$1" >/dev/null
   docker push -q "$2" >/dev/null
-  docker inspect --format '{{index .RepoDigests 0}}' "$2"
+  # The digest comes from the registry, not from the local image store: what Docker reports after a push depends on
+  # its image store and build attestations (Ubuntu 26.04's Docker reported one the registry did not hold), and the
+  # registry's answer is by definition what the cluster will resolve when it pulls by digest.
+  local repo="${2%%:*}" tag="${2##*:}"
+  curl -sSfI "http://${repo}/manifests/${tag}" -H 'Accept: application/vnd.oci.image.index.v1+json, application/vnd.oci.image.manifest.v1+json, application/vnd.docker.distribution.manifest.list.v2+json, application/vnd.docker.distribution.manifest.v2+json' \
+    | tr -d '\r' | awk -v repo="$repo" 'tolower($1) == "docker-content-digest:" {print repo "@" $2; found = 1} END {exit !found}'
 }
 model_image="$(push "$work/bundle" "${REGISTRY}/ticket-router:v${version}")"
 server_image="$(push . "${REGISTRY}/smlops-server:$(git rev-parse --short HEAD)")"

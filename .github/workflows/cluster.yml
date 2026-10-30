@@ -22,9 +22,11 @@ concurrency:
   group: cluster-${{ github.ref }}
   cancel-in-progress: true
 
+# The runner is pinned like everything else here: on 2026-10-29 ubuntu-latest moved to Ubuntu 26.04, whose Docker
+# reports an image digest after `docker push` that the registry does not hold, and every cluster run failed.
 jobs:
   serve:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 45
     env:
       WORK: ${{ github.workspace }}/.work
