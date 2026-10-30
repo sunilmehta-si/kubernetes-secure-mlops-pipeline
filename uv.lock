@@ -1441,11 +1441,13 @@ wheels = [
 
 [[package]]
 name = "kfp"
-version = "2.17.0"
+version = "2.17.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
+    { name = "certifi" },
     { name = "click" },
     { name = "click-option-group" },
+    { name = "cryptography" },
     { name = "docstring-parser" },
     { name = "google-api-core" },
     { name = "google-auth" },
@@ -1453,16 +1455,18 @@ dependencies = [
     { name = "kfp-pipeline-spec" },
     { name = "kfp-server-api" },
     { name = "kubernetes" },
+    { name = "oauthlib" },
     { name = "protobuf" },
+    { name = "pyasn1" },
     { name = "pyyaml" },
     { name = "requests" },
     { name = "requests-toolbelt" },
     { name = "tabulate" },
     { name = "urllib3" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/e9/e8/a14556188eb695055db4bfa7714ed84eb555637c97e4da77b67df573499b/kfp-2.17.0.tar.gz", hash = "sha256:92dd2fc0cca5b073f14860253e936cc9e6901f871dfae355be6a9f8ea9d580c5", size = 362373, upload-time = "2026-07-09T13:46:40.295Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/be/3a/e116ed607caf9546e5a2e04a72c932d41c41a4629364304ef8c565a5333b/kfp-2.17.3.tar.gz", hash = "sha256:43982a70c8b3f9c47a818f2946e4d0cb3a21ee59935163644939956b9e0793aa", size = 362751, upload-time = "2026-10-22T14:58:22.718Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/e9/c6/eab3e5ed59497c09e0aca3f1cf0fc7c9c7ceaa05be0db620787355ffb351/kfp-2.17.0-py3-none-any.whl", hash = "sha256:dff321b76b2be8a09748a1be805a88699b4919e13bb6a1bf67ebf3074ea8ce3f", size = 477920, upload-time = "2026-07-09T13:46:38.614Z" },
+    { url = "https://files.pythonhosted.org/packages/23/1b/5d268b3e05fff0b6717cca6505254c677456f652ebd6c0ee8ac0b059a416/kfp-2.17.3-py3-none-any.whl", hash = "sha256:13f365673ba419efd8c90382b4a2bbac80a6702254c27e64ce4745ec8d4f7b47", size = 477973, upload-time = "2026-10-22T14:58:20.781Z" },
 ]
 
 [[package]]
@@ -1650,7 +1654,7 @@ requires-dist = [
     { name = "cyclonedx-python-lib", extras = ["json-validation"], specifier = "==11.12.0" },
     { name = "fastapi", specifier = "==0.143.3" },
     { name = "httpx", marker = "extra == 'test'", specifier = "==0.28.1" },
-    { name = "kfp", specifier = "==2.17.0" },
+    { name = "kfp", specifier = "==2.17.3" },
     { name = "mlflow", specifier = "==3.17.2" },
     { name = "model-signing", specifier = "==1.1.1" },
     { name = "pandas", specifier = "==3.0.6" },

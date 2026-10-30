@@ -16,7 +16,7 @@ dependencies = [
     "pandera==0.34.1",
     "pyyaml==6.0.3",
     "mlflow==3.17.2",
-    "kfp==2.17.0",
+    "kfp==2.17.3",
     "skops==0.16.0",
     "model-signing==1.1.1",
     # model-signing 1.1.1 imports OpenSSL without declaring it; sigstore declared it until 4.5.1 (2026-10-20),
