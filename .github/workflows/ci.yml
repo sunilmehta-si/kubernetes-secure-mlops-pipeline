@@ -4,6 +4,10 @@ on:
   push:
     branches: [main]
   pull_request:
+  schedule:
+    # Weekly, so the versions report in the summary stays current when nothing is pushed: the tests do not change
+    # between pushes, the releases upstream do.
+    - cron: "23 4 * * 1"
 
 # `shell: bash` runs steps with -eo pipefail; the default (-e only) lets `script | tee` pass when the script fails.
 defaults:

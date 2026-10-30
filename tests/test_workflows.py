@@ -80,3 +80,8 @@ class WorkflowTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+    def test_ci_runs_weekly_so_the_versions_report_stays_current(self):
+        flow = yaml.safe_load((ROOT / ".github/workflows/ci.yml").read_text())
+        self.assertIn("cron", flow[True]["schedule"][0])
+        self.assertIn("versions", flow["jobs"])
