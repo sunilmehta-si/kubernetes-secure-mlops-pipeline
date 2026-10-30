@@ -35,7 +35,7 @@ push() {   # build context, repository:tag -> prints repository@sha256:digest
   # its image store and build attestations (Ubuntu 26.04's Docker reported one the registry did not hold), and the
   # registry's answer is by definition what the cluster will resolve when it pulls by digest.
   local repo="${2%%:*}" tag="${2##*:}"
-  curl -sSfI "http://${repo}/manifests/${tag}" -H 'Accept: application/vnd.oci.image.index.v1+json, application/vnd.oci.image.manifest.v1+json, application/vnd.docker.distribution.manifest.list.v2+json, application/vnd.docker.distribution.manifest.v2+json' \
+  curl -sSfI "http://${repo%%/*}/v2/${repo#*/}/manifests/${tag}" -H 'Accept: application/vnd.oci.image.index.v1+json, application/vnd.oci.image.manifest.v1+json, application/vnd.docker.distribution.manifest.list.v2+json, application/vnd.docker.distribution.manifest.v2+json' \
     | tr -d '\r' | awk -v repo="$repo" 'tolower($1) == "docker-content-digest:" {print repo "@" $2; found = 1} END {exit !found}'
 }
 model_image="$(push "$work/bundle" "${REGISTRY}/ticket-router:v${version}")"

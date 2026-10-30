@@ -77,10 +77,6 @@ class WorkflowTests(unittest.TestCase):
         for word in ("kubectl", "cosign sign", "git push", "gh "):
             self.assertNotIn(word, scripts)
 
-
-if __name__ == "__main__":
-    unittest.main()
-
     def test_ci_runs_weekly_so_the_versions_report_stays_current(self):
         flow = yaml.safe_load((ROOT / ".github/workflows/ci.yml").read_text())
         self.assertIn("cron", flow[True]["schedule"][0])
@@ -90,3 +86,7 @@ if __name__ == "__main__":
         flow = yaml.safe_load((ROOT / ".github/workflows/cluster.yml").read_text())
         for name, job in flow["jobs"].items():
             self.assertNotIn("latest", str(job["runs-on"]), name)     # ubuntu-latest moved to 26.04 under us once
+
+
+if __name__ == "__main__":
+    unittest.main()
