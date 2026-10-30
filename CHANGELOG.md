@@ -8,6 +8,12 @@
   cert-manager v1.21.3 (published 2026-10-23) and uv 0.13.6 (published that day).
 - `smlops versions --json PATH`: the report as one object per pin, with publication and adoptable dates and whether to
   adopt it now.
+- CI runs weekly as well as on every push, so the versions report in the summary stays current between pushes.
+- The pull-request review workflow runs agentic-code-review-tool v0.7.0, which adds lock-file, HTTP-timeout,
+  artifact-token and RBAC-escalation rules.
+
+### Changed
+- Dependabot's bumps wait the same 14 days as the platform pins before they are merged (README, governance G5).
 
 ## [0.7.1] - 2026-10-25
 
