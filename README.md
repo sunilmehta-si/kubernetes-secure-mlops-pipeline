@@ -226,7 +226,7 @@ Other open-source infrastructure work by [Sunil Mehta](https://github.com/sunilm
 
 - [agentic-code-review-tool](https://github.com/sunilmehta-si/agentic-code-review-tool): Scanner-grounded AI code review for the whole pull request: app, infrastructure and AI/agent code. It reviews every pull request here.
 - [k8s-gpu-scheduler-benchmark](https://github.com/sunilmehta-si/k8s-gpu-scheduler-benchmark): Benchmarks Kubernetes GPU schedulers (default, Kueue, Volcano, KAI) in simulation and on real clusters.
-- [k8s-inference-routing-benchmark](https://github.com/sunilmehta-si/k8s-inference-routing-benchmark): How much the router in front of LLM servers matters, measured: a Kubernetes Service against the llm-d Router's scorers on identical chat and RAG traces.
+- [k8s-inference-routing-benchmark](https://github.com/sunilmehta-si/k8s-inference-routing-benchmark): How much the router in front of LLM servers matters, measured: a Kubernetes Service against the llm-d Router's scorers on identical chat and RAG traces, with the picker's estimate of each pod's cache against the pods' real contents.
 
 ## License
 
