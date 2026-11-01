@@ -20,6 +20,11 @@ is adopted only once it is 14 days old: `smlops versions` says from which date, 
 that already qualify. Dependabot's bumps wait the same 14 days. A bump is a pull request of its own, because the
 `cluster` workflow has to show the platform still comes up and every drill still passes.
 
+A `kfp` bump also changes the compiled pipeline: `pipelines/ticket-router-training.yaml` records the SDK version that
+compiled it, and a test compares the file with a fresh `smlops pipeline compile`. Recompile in the same pull request as
+the bump (Dependabot's pull request for kfp 2.17.3 failed exactly there) and read the diff: anything beyond the
+`sdkVersion` line is the SDK changing what it emits, and the pull request should say so.
+
 ## Change a policy, a gate or a drill
 
 The drills in `scripts/drill-*.sh` prove the gates by breaking them: an unsigned image, a model with no provenance,
