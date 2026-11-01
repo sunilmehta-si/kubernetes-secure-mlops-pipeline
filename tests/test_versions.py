@@ -14,6 +14,12 @@ class VersionsTests(unittest.TestCase):
         self.assertEqual(release_pins - set(versions.COMPONENTS), set(), "add the component's repository to COMPONENTS")
         self.assertEqual(set(versions.COMPONENTS) - set(pins), set(), "COMPONENTS names a pin that versions.env lost")
 
+    def test_every_pin_is_compared_or_says_why_not(self):
+        # a new line in versions.env has to be mapped to the repository that releases it, or listed with its reason
+        pins = versions.load_pins(ROOT / "deploy/versions.env")
+        self.assertEqual(set(pins), set(versions.COMPONENTS) | set(versions.NOT_COMPARED))
+        self.assertEqual(set(versions.COMPONENTS) & set(versions.NOT_COMPARED), set())
+
     def test_compare_names_the_largest_part_that_moved(self):
         self.assertEqual(versions.compare("v1.2.3", "v1.2.3"), "current")
         self.assertEqual(versions.compare("v1.2.3", "v1.2.4"), "patch")
