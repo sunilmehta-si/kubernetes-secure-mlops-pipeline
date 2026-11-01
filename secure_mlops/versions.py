@@ -40,6 +40,20 @@ COMPONENTS = {
     "UV_VERSION": "astral-sh/uv",
     "OSV_SCANNER_VERSION": "google/osv-scanner",
 }
+# Pins that are not releases to compare, and why. Every line in deploy/versions.env is in COMPONENTS or here, so a
+# new pin has to say which it is.
+NOT_COMPARED = {
+    "KIND_NODE_IMAGE": "pinned by digest and chosen from the kind release's notes, which list the node images built for it",
+    "KIND_CONTEXT": "the kubectl context the scripts refuse to act outside of",
+    "REGISTRY": "the in-cluster registry address the scripts push to",
+    "KYVERNO_CLI_SHA256_LINUX_X86_64": "the checksum of the pinned download",
+    "PROMETHEUS_SHA256_LINUX_AMD64": "the checksum of the pinned download",
+    "ALERTMANAGER_SHA256_LINUX_AMD64": "the checksum of the pinned download",
+    "ORAS_SHA256_LINUX_AMD64": "the checksum of the pinned download",
+    "HELM_SHA256_LINUX_AMD64": "the checksum of the pinned download",
+    "UV_SHA256_LINUX_X86_64": "the checksum of the pinned download",
+    "OSV_SCANNER_SHA256_LINUX_AMD64": "the checksum of the pinned download",
+}
 SEMVER = re.compile(r"^v?(\d+)\.(\d+)\.(\d+)$")
 MIN_RELEASE_AGE_DAYS = 14
 
