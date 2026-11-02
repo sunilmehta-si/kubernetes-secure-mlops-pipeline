@@ -3,6 +3,20 @@
 ## [Unreleased]
 
 ### Added
+- `smlops versions` checks that the pinned kind node image, digest and all, is one the pinned kind release's notes
+  list, and exits 1 when it is not; the report lists the pins it does not compare, with the reason, and a test holds
+  every line of `deploy/versions.env` to one list or the other.
+- CONTRIBUTING says that a `kfp` bump means recompiling `pipelines/ticket-router-training.yaml` in the same pull
+  request, since the compiled file records the SDK version and a test compares it with a fresh compile.
+
+### Changed
+- Pull requests are reviewed with the code review tool at v0.9.0.
+
+### Known
+- CI on `main` fails the dependency and image scans: pyasn1 0.6.4 carries four high-severity advisories
+  (GHSA-2qm8-x737-gmw5 and three more), fixed in 0.6.5, which under the 14-day rule is adoptable from 2026-11-10.
+
+### Added
 - `smlops versions` holds back a newer release until it is 14 days old: the report marks it "too new", says from
   which date it qualifies, and `--strict` fails only on releases already old enough. On 2026-10-27 that held back
   cert-manager v1.21.3 (published 2026-10-23) and uv 0.13.6 (published that day).
