@@ -39,6 +39,7 @@ class VersionsTests(unittest.TestCase):
         self.assertIn("1 of 3 behind upstream", text)
         self.assertIn("| KYVERNO_VERSION ([kyverno/kyverno](https://github.com/kyverno/kyverno/releases)) | v1.19.1 | v1.19.2 | **patch behind** |", text)
         self.assertIn("all 2 current", versions.markdown([r for r in rows if not r.behind]))
+        self.assertIn("Not compared: KIND_NODE_IMAGE (pinned by digest", text)     # the reader sees what the table leaves out
 
     def test_a_failing_upstream_is_an_error_not_a_silent_current(self):
         def fetch(repo):

@@ -168,6 +168,7 @@ def markdown(rows: list[Row]) -> str:
     if waiting:
         lines += ["", f"Releases are adopted once they are {MIN_RELEASE_AGE_DAYS} days old, so a compromised or withdrawn "
                       "release has time to come to light first."]
+    lines += ["", "Not compared: " + "; ".join(f"{name} ({why})" for name, why in NOT_COMPARED.items()) + ".", ""]
     return "\n".join(lines) + "\n"
 
 
