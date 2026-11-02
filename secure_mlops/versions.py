@@ -124,6 +124,30 @@ def github_latest(repo: str) -> Release:
         raise VersionsError(f"{repo}: could not read the latest release: {exc}") from exc
 
 
+def github_release_body(repo: str, tag: str) -> str:
+    """The release notes of one tag through the API; GH_TOKEN or GITHUB_TOKEN raises the rate limit when set."""
+    request = urllib.request.Request(f"https://api.github.com/repos/{repo}/releases/tags/{tag}",
+                                     headers={"Accept": "application/vnd.github+json", "User-Agent": "smlops-versions"})
+    token = os.environ.get("GH_TOKEN") or os.environ.get("GITHUB_TOKEN")
+    if token:
+        request.add_header("Authorization", f"Bearer {token}")
+    try:
+        with urllib.request.urlopen(request, timeout=20) as response:
+            return str(json.load(response).get("body") or "")
+    except (OSError, ValueError) as exc:
+        raise VersionsError(f"{repo} {tag}: could not read the release notes: {exc}") from exc
+
+
+def node_image_listed(pins: dict[str, str], fetch_body: Callable[[str, str], str] | None = None) -> bool:
+    """True when the pinned node image, digest included, is one the pinned kind release's notes list.
+
+    kind builds node images per release and says to use them by digest; an image from another release can start
+    and fail in ways that look like the platform under test. The notes list every image as
+    `kindest/node:<k8s>@sha256:<digest>`, so the check is that exact string."""
+    fetch_body = fetch_body or github_release_body
+    return pins["KIND_NODE_IMAGE"] in fetch_body(COMPONENTS["KIND_VERSION"], pins["KIND_VERSION"])
+
+
 def compare(pinned: str, latest: str) -> str:
     a, b = SEMVER.match(pinned), SEMVER.match(latest)
     if not a or not b:
@@ -149,7 +173,7 @@ def report(pins: dict[str, str], fetch: Fetch | None = None, today: date | None 
     return rows
 
 
-def markdown(rows: list[Row]) -> str:
+def markdown(rows: list[Row], node_image_ok: bool | None = None) -> str:
     behind = [r for r in rows if r.behind]
     waiting = [r for r in behind if r.too_new]
     title = (f"## Pinned versions: {len(behind)} of {len(rows)} behind upstream" if behind else
@@ -168,7 +192,11 @@ def markdown(rows: list[Row]) -> str:
     if waiting:
         lines += ["", f"Releases are adopted once they are {MIN_RELEASE_AGE_DAYS} days old, so a compromised or withdrawn "
                       "release has time to come to light first."]
-    lines += ["", "Not compared: " + "; ".join(f"{name} ({why})" for name, why in NOT_COMPARED.items()) + ".", ""]
+    lines += ["", "Not compared: " + "; ".join(f"{name} ({why})" for name, why in NOT_COMPARED.items()) + "."]
+    if node_image_ok is not None:
+        lines += ["", "Node image: " + ("listed, digest and all, in the pinned kind release's notes." if node_image_ok else
+                  "**not among the images the pinned kind release's notes list**: it was built for another kind release.")]
+    lines.append("")
     return "\n".join(lines) + "\n"
 
 

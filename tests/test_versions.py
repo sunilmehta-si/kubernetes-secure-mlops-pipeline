@@ -82,3 +82,28 @@ class VersionsTests(unittest.TestCase):
         self.assertTrue(rows[0].behind)
         self.assertFalse(rows[0].too_new)
 
+
+class NodeImageTests(unittest.TestCase):
+    NOTES = ("Images pre-built for this release:\n* v1.37.0: `kindest/node:v1.37.0@sha256:" + "a" * 64 + "`\n"
+             "* v1.36.4: `kindest/node:v1.36.4@sha256:" + "b" * 64 + "`\n")
+
+    def test_the_pinned_node_image_must_be_one_the_kind_release_lists(self):
+        pins = {"KIND_VERSION": "v0.33.0", "KIND_NODE_IMAGE": "kindest/node:v1.37.0@sha256:" + "a" * 64}
+        seen = []
+        def body(repo, tag):
+            seen.append((repo, tag)); return self.NOTES
+        self.assertTrue(versions.node_image_listed(pins, body))
+        self.assertEqual(seen, [("kubernetes-sigs/kind", "v0.33.0")])
+        pins["KIND_NODE_IMAGE"] = "kindest/node:v1.37.0@sha256:" + "c" * 64      # same tag, another release's build
+        self.assertFalse(versions.node_image_listed(pins, body))
+
+    def test_the_committed_pins_pass_against_the_real_notes_shape(self):
+        pins = versions.load_pins(ROOT / "deploy/versions.env")
+        notes = f"* {pins['KIND_NODE_IMAGE'].split(':')[1].split('@')[0]}: `{pins['KIND_NODE_IMAGE']}`"
+        self.assertTrue(versions.node_image_listed(pins, lambda repo, tag: notes))
+
+    def test_markdown_says_whether_the_node_image_is_listed(self):
+        rows = versions.report({"HELM_VERSION": "v4.3.1"}, fetch=lambda repo: "v4.3.1")
+        self.assertIn("Node image: listed, digest and all", versions.markdown(rows, node_image_ok=True))
+        self.assertIn("**not among the images", versions.markdown(rows, node_image_ok=False))
+        self.assertNotIn("Node image:", versions.markdown(rows))

@@ -574,13 +574,15 @@ def _cmd_verify_image(args: argparse.Namespace) -> int:
 
 
 def _cmd_versions(args: argparse.Namespace) -> int:
-    from .versions import VersionsError, as_json, load_pins, markdown, report
+    from .versions import VersionsError, as_json, load_pins, markdown, node_image_listed, report
     try:
-        rows = report(load_pins())
+        pins = load_pins()
+        rows = report(pins)
+        node_ok = node_image_listed(pins)
     except VersionsError as exc:
         print(f"smlops: {exc}", file=sys.stderr)
         return 2
-    text = markdown(rows)
+    text = markdown(rows, node_ok)
     if args.output:
         Path(args.output).write_text(text)
     if args.json_out:
@@ -594,7 +596,9 @@ def _cmd_versions(args: argparse.Namespace) -> int:
     if waiting:
         print(f"smlops: {len(waiting)} newer release(s) too new to adopt: "
               + ", ".join(f"{r.component} {r.latest} from {r.adoptable_on}" for r in waiting), file=sys.stderr)
-    return 1 if args.strict and ready else 0
+    if not node_ok:
+        print("smlops: KIND_NODE_IMAGE is not an image the pinned kind release lists", file=sys.stderr)
+    return 1 if (args.strict and ready) or not node_ok else 0
 
 
 def _cmd_provenance(args: argparse.Namespace) -> int:

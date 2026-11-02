@@ -364,7 +364,8 @@ class VersionsCliTests(unittest.TestCase):
         from secure_mlops import versions
         latest = dict.fromkeys(versions.COMPONENTS.values(), "v9.9.9")
         with tempfile.TemporaryDirectory() as d, redirect_stdout(io.StringIO()) as out, redirect_stderr(io.StringIO()) as err, \
-                mock.patch.object(versions, "github_latest", lambda repo: latest[repo]):
+                mock.patch.object(versions, "github_latest", lambda repo: latest[repo]), \
+                mock.patch.object(versions, "github_release_body", lambda repo, tag: versions.load_pins()["KIND_NODE_IMAGE"]):
             self.assertEqual(main(["versions", "-o", str(Path(d, "v.md")), "--json", str(Path(d, "v.json"))]), 0)
             self.assertIn("behind upstream", Path(d, "v.md").read_text())
             self.assertTrue(all(row["adopt_now"] for row in json.loads(Path(d, "v.json").read_text())))
@@ -380,7 +381,8 @@ class VersionsCliTests(unittest.TestCase):
         from secure_mlops import versions
         fresh = versions.Release("v9.9.9", date.today())
         with redirect_stdout(io.StringIO()), redirect_stderr(io.StringIO()) as err, \
-                mock.patch.object(versions, "github_latest", lambda repo: fresh):
+                mock.patch.object(versions, "github_latest", lambda repo: fresh), \
+                mock.patch.object(versions, "github_release_body", lambda repo, tag: versions.load_pins()["KIND_NODE_IMAGE"]):
             self.assertEqual(main(["versions", "--strict"]), 0)
         self.assertIn("too new to adopt", err.getvalue())
         self.assertNotIn("pin(s) behind upstream", err.getvalue())
