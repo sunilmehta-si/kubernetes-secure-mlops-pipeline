@@ -368,7 +368,8 @@ class VersionsCliTests(unittest.TestCase):
                 mock.patch.object(versions, "github_release_body", lambda repo, tag: versions.load_pins()["KIND_NODE_IMAGE"]):
             self.assertEqual(main(["versions", "-o", str(Path(d, "v.md")), "--json", str(Path(d, "v.json"))]), 0)
             self.assertIn("behind upstream", Path(d, "v.md").read_text())
-            self.assertTrue(all(row["adopt_now"] for row in json.loads(Path(d, "v.json").read_text())))
+            self.assertTrue(all(row["adopt_now"] for row in json.loads(Path(d, "v.json").read_text())[:-1]))
+            self.assertTrue(json.loads(Path(d, "v.json").read_text())[-1]["ok"])      # the node image check rides along
             self.assertEqual(main(["versions", "--strict"]), 1)
         self.assertIn("| HELM_VERSION", out.getvalue())
         self.assertIn("pin(s) behind upstream", err.getvalue())

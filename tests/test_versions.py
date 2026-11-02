@@ -102,6 +102,12 @@ class NodeImageTests(unittest.TestCase):
         notes = f"* {pins['KIND_NODE_IMAGE'].split(':')[1].split('@')[0]}: `{pins['KIND_NODE_IMAGE']}`"
         self.assertTrue(versions.node_image_listed(pins, lambda repo, tag: notes))
 
+    def test_json_carries_the_node_image_check_as_a_final_object(self):
+        rows = versions.report({"HELM_VERSION": "v4.3.1"}, fetch=lambda repo: "v4.3.1")
+        self.assertEqual(versions.as_json(rows, node_image_ok=False)[-1],
+                         {"component": "KIND_NODE_IMAGE", "check": "listed in the pinned kind release's notes", "ok": False})
+        self.assertEqual(len(versions.as_json(rows)), 1)
+
     def test_markdown_says_whether_the_node_image_is_listed(self):
         rows = versions.report({"HELM_VERSION": "v4.3.1"}, fetch=lambda repo: "v4.3.1")
         self.assertIn("Node image: listed, digest and all", versions.markdown(rows, node_image_ok=True))

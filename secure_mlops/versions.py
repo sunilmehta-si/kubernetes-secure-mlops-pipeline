@@ -200,10 +200,14 @@ def markdown(rows: list[Row], node_image_ok: bool | None = None) -> str:
     return "\n".join(lines) + "\n"
 
 
-def as_json(rows: list[Row]) -> list[dict]:
-    """The report as data: one object per pin, with dates as ISO strings and nothing derived left implicit."""
-    return [{"component": r.component, "repository": r.repo, "pinned": r.pinned, "latest": r.latest, "status": r.status,
-             "published": r.published.isoformat() if r.published else None,
-             "adoptable_on": r.adoptable_on.isoformat() if r.adoptable_on else None,
-             "too_new": r.too_new, "adopt_now": r.behind and not r.too_new} for r in rows]
+def as_json(rows: list[Row], node_image_ok: bool | None = None) -> list[dict]:
+    """The report as data: one object per pin, with dates as ISO strings and nothing derived left implicit; the node
+    image check rides along as a final object when it ran, so a tool reads one file for everything the report knows."""
+    out = [{"component": r.component, "repository": r.repo, "pinned": r.pinned, "latest": r.latest, "status": r.status,
+            "published": r.published.isoformat() if r.published else None,
+            "adoptable_on": r.adoptable_on.isoformat() if r.adoptable_on else None,
+            "too_new": r.too_new, "adopt_now": r.behind and not r.too_new} for r in rows]
+    if node_image_ok is not None:
+        out.append({"component": "KIND_NODE_IMAGE", "check": "listed in the pinned kind release's notes", "ok": node_image_ok})
+    return out
 

@@ -586,7 +586,7 @@ def _cmd_versions(args: argparse.Namespace) -> int:
     if args.output:
         Path(args.output).write_text(text)
     if args.json_out:
-        Path(args.json_out).write_text(json.dumps(as_json(rows), indent=2) + "\n")
+        Path(args.json_out).write_text(json.dumps(as_json(rows, node_ok), indent=2) + "\n")
     print(text, end="")
     ready = [r for r in rows if r.behind and not r.too_new]
     waiting = [r for r in rows if r.too_new]
