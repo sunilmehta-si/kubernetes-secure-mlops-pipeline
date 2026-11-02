@@ -6,6 +6,7 @@
 - `smlops versions` checks that the pinned kind node image, digest and all, is one the pinned kind release's notes
   list, and exits 1 when it is not; the report lists the pins it does not compare, with the reason, and a test holds
   every line of `deploy/versions.env` to one list or the other.
+- `smlops versions --json` carries the node-image check as a final object beside the drift rows.
 - CONTRIBUTING says that a `kfp` bump means recompiling `pipelines/ticket-router-training.yaml` in the same pull
   request, since the compiled file records the SDK version and a test compares it with a fresh compile.
 
