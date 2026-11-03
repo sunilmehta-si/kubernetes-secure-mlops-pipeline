@@ -107,33 +107,34 @@ def load_pins(path: Path = VERSIONS) -> dict[str, str]:
     return pins
 
 
-def github_latest(repo: str) -> Release:
-    """The repository's latest (non-prerelease) release and its publication date, through the API; GH_TOKEN or
-    GITHUB_TOKEN raises the anonymous rate limit when set."""
-    request = urllib.request.Request(f"https://api.github.com/repos/{repo}/releases/latest",
+def _github_json(path: str) -> object:
+    """One GitHub API GET; GH_TOKEN or GITHUB_TOKEN raises the rate limit when set."""
+    request = urllib.request.Request(f"https://api.github.com/{path}",
                                      headers={"Accept": "application/vnd.github+json", "User-Agent": "smlops-versions"})
     token = os.environ.get("GH_TOKEN") or os.environ.get("GITHUB_TOKEN")
     if token:
         request.add_header("Authorization", f"Bearer {token}")
+    with urllib.request.urlopen(request, timeout=20) as response:   # noqa: S310 - fixed https API URL
+        return json.load(response)
+
+
+def _release(data: dict) -> Release:
+    published = data.get("published_at")
+    return Release(str(data["tag_name"]), datetime.fromisoformat(published.replace("Z", "+00:00")).date() if published else None)
+
+
+def github_latest(repo: str) -> Release:
+    """The repository's latest release through the API."""
     try:
-        with urllib.request.urlopen(request, timeout=20) as response:
-            data = json.load(response)
-        published = data.get("published_at")
-        return Release(str(data["tag_name"]), datetime.fromisoformat(published.replace("Z", "+00:00")).date() if published else None)
+        return _release(_github_json(f"repos/{repo}/releases/latest"))
     except (OSError, ValueError, KeyError) as exc:
         raise VersionsError(f"{repo}: could not read the latest release: {exc}") from exc
 
 
 def github_release_body(repo: str, tag: str) -> str:
-    """The release notes of one tag through the API; GH_TOKEN or GITHUB_TOKEN raises the rate limit when set."""
-    request = urllib.request.Request(f"https://api.github.com/repos/{repo}/releases/tags/{tag}",
-                                     headers={"Accept": "application/vnd.github+json", "User-Agent": "smlops-versions"})
-    token = os.environ.get("GH_TOKEN") or os.environ.get("GITHUB_TOKEN")
-    if token:
-        request.add_header("Authorization", f"Bearer {token}")
+    """The release notes of one tag through the API."""
     try:
-        with urllib.request.urlopen(request, timeout=20) as response:
-            return str(json.load(response).get("body") or "")
+        return str(_github_json(f"repos/{repo}/releases/tags/{tag}").get("body") or "")
     except (OSError, ValueError) as exc:
         raise VersionsError(f"{repo} {tag}: could not read the release notes: {exc}") from exc
 
