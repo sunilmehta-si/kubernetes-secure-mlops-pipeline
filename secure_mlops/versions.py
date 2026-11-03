@@ -124,8 +124,19 @@ def _release(data: dict) -> Release:
 
 
 def github_latest(repo: str) -> Release:
-    """The repository's latest release through the API."""
+    """The newest stable release: the highest plain x.y.z among published, non-draft, non-prerelease releases.
+
+    GitHub's `releases/latest` returns whatever the maintainers mark latest, and some projects mark their release
+    candidates (vLLM's v0.33.0rc3), which neither compares with a pin nor is anything to adopt. The same call that
+    lists the releases shows the stable ones. A repository with no plain x.y.z release falls back to
+    `releases/latest`."""
     try:
+        listing = _github_json(f"repos/{repo}/releases?per_page=50")
+        if not isinstance(listing, list):
+            raise ValueError("expected a list of releases")
+        stable = [r for r in listing if not r.get("draft") and not r.get("prerelease") and SEMVER.match(str(r.get("tag_name")))]
+        if stable:
+            return _release(max(stable, key=lambda r: tuple(map(int, SEMVER.match(r["tag_name"]).groups()))))
         return _release(_github_json(f"repos/{repo}/releases/latest"))
     except (OSError, ValueError, KeyError) as exc:
         raise VersionsError(f"{repo}: could not read the latest release: {exc}") from exc

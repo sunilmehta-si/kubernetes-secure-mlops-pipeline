@@ -39,6 +39,7 @@ def serving(routes):
 
 class GithubApiTests(unittest.TestCase):
     LATEST = {"tag_name": "v1.2.3", "published_at": "2026-10-20T08:00:00Z"}
+    LISTING = [LATEST]
 
     def read(self, routes, env=None):
         urlopen, seen = serving(routes)
@@ -46,13 +47,45 @@ class GithubApiTests(unittest.TestCase):
             return versions.github_latest("o/r"), seen
 
     def test_the_latest_release_carries_its_tag_and_publish_date(self):
-        release, _ = self.read({"/repos/o/r/releases/latest": self.LATEST})
+        release, _ = self.read({"/repos/o/r/releases?per_page=50": self.LISTING})
         self.assertEqual(release, versions.Release("v1.2.3", date(2026, 10, 20)))
 
+    def test_a_release_candidate_marked_latest_is_not_the_latest_release(self):
+        rc = {"tag_name": "v0.33.0rc3", "published_at": "2026-11-02T08:00:00Z", "prerelease": False}
+        stable = {"tag_name": "v0.32.0", "published_at": "2026-10-18T08:00:00Z", "prerelease": False}
+        older = {"tag_name": "v0.31.0", "published_at": "2026-10-05T08:00:00Z", "prerelease": False}
+        release, _ = self.read({"/releases?per_page=50": [rc, stable, older]})
+        self.assertEqual(release, versions.Release("v0.32.0", date(2026, 10, 18)))
+
+    def test_drafts_and_prereleases_are_skipped(self):
+        listing = [{"tag_name": "v2.0.0", "published_at": "2026-10-30T08:00:00Z", "draft": True},
+                   {"tag_name": "v1.9.0", "published_at": "2026-10-29T08:00:00Z", "prerelease": True},
+                   {"tag_name": "v1.8.0", "published_at": "2026-10-01T08:00:00Z"}]
+        release, _ = self.read({"/releases?per_page=50": listing})
+        self.assertEqual(release.tag, "v1.8.0")
+
+    def test_the_highest_version_wins_over_a_later_backport(self):
+        listing = [{"tag_name": "v1.20.5", "published_at": "2026-11-01T08:00:00Z"},
+                   {"tag_name": "v1.21.0", "published_at": "2026-10-20T08:00:00Z"}]
+        release, _ = self.read({"/releases?per_page=50": listing})
+        self.assertEqual(release.tag, "v1.21.0")
+
+    def test_a_repository_without_a_plain_release_falls_back_to_the_latest_endpoint(self):
+        listing = [{"tag_name": "release-2026.10", "published_at": "2026-10-01T08:00:00Z"}]
+        release, seen = self.read({"/releases?per_page=50": listing, "/releases/latest": self.LATEST})
+        self.assertEqual(release.tag, "v1.2.3")
+        self.assertEqual(len(seen), 2)
+
+    def test_an_unexpected_answer_is_a_versions_error(self):
+        urlopen, _ = serving({"/releases?per_page=50": {"message": "Not Found"}})
+        with mock.patch.object(versions.urllib.request, "urlopen", urlopen):
+            with self.assertRaisesRegex(versions.VersionsError, "latest release"):
+                versions.github_latest("o/r")
+
     def test_a_token_raises_the_rate_limit_and_none_sends_no_header(self):
-        _, seen = self.read({"/releases/latest": self.LATEST}, env={"GH_TOKEN": "t0k"})
+        _, seen = self.read({"/releases?per_page=50": self.LISTING}, env={"GH_TOKEN": "t0k"})
         self.assertEqual(seen[0].get_header("Authorization"), "Bearer t0k")
-        _, seen = self.read({"/releases/latest": self.LATEST})
+        _, seen = self.read({"/releases?per_page=50": self.LISTING})
         self.assertIsNone(seen[0].get_header("Authorization"))
 
     def test_the_release_notes_come_back_as_text(self):
