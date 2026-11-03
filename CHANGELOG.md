@@ -12,6 +12,8 @@
 
 ### Changed
 - Pull requests are reviewed with the code review tool at v0.9.0.
+- `smlops versions` reports the newest stable release (the highest plain x.y.z that is not a draft or prerelease), not
+  the one GitHub marks latest, so a project that marks its release candidates is not compared against one.
 
 ### Known
 - CI on `main` fails the dependency and image scans: pyasn1 0.6.4 carries four high-severity advisories
