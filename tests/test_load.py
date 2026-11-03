@@ -46,11 +46,17 @@ class FakeEndpoint(BaseHTTPRequestHandler):
         pass
 
 
+class RoomyServer(ThreadingHTTPServer):
+    """The default listen backlog is 5. Workers that connect together on a busy machine overflow it, the connection is
+    dropped and the client records status 0: the healthy-endpoint test failed that way once in a full run."""
+    request_queue_size = 128
+    daemon_threads = True
+
+
 class LoadTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.server = ThreadingHTTPServer(("127.0.0.1", 0), FakeEndpoint)
-        cls.server.daemon_threads = True
+        cls.server = RoomyServer(("127.0.0.1", 0), FakeEndpoint)
         threading.Thread(target=cls.server.serve_forever, daemon=True).start()
         cls.url = f"http://127.0.0.1:{cls.server.server_port}/v1/models/ticket-router:predict"
 
@@ -60,6 +66,10 @@ class LoadTests(unittest.TestCase):
 
     def setUp(self):
         FakeEndpoint.slow_every = FakeEndpoint.fail_every = FakeEndpoint.throttle_every = FakeEndpoint.seen = 0
+
+    def test_a_burst_wider_than_the_default_backlog_is_all_answered(self):
+        report = run(self.url, "smk_test", requests_total=400, concurrency=48)
+        self.assertEqual((report["requests"], report["errors"], report["status_counts"]), (400, 0, {"200": 400}))
 
     def test_measures_every_request_and_passes_a_healthy_endpoint(self):
         report = run(self.url, "smk_test", requests_total=60, concurrency=6)
