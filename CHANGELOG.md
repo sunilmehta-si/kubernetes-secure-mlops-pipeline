@@ -3,6 +3,8 @@
 ## [Unreleased]
 
 ### Added
+- Dependabot updates (uv, actions, docker) wait 14 days after a release, as CONTRIBUTING already said they should, and
+  `tests/test_dependabot.py` holds the cooldown.
 - `smlops versions` checks that the pinned kind node image, digest and all, is one the pinned kind release's notes
   list, and exits 1 when it is not; the report lists the pins it does not compare, with the reason, and a test holds
   every line of `deploy/versions.env` to one list or the other.
