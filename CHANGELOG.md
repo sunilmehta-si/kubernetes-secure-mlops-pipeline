@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Security
+- `pyasn1` 0.6.4 to 0.6.5 in `uv.lock`, fixing four high-severity advisories (GHSA-2qm8-x737-gmw5, GHSA-9m75-vc3g-4x39,
+  GHSA-fm9c-5rcf-2q5p, GHSA-mm57-4v3p-rchx) that failed the `dependencies` and `image` gates since 1 November. 0.6.5 was
+  released on 27 October, so this takes it at 8 days, before the 14-day wait; a known high-severity fix outweighs the
+  wait. Nothing else in the lock changed.
+
 ### Added
 - Dependabot updates (uv, actions, docker) wait 14 days after a release, as CONTRIBUTING already said they should, and
   `tests/test_dependabot.py` holds the cooldown.
