@@ -7,6 +7,9 @@
   GHSA-fm9c-5rcf-2q5p, GHSA-mm57-4v3p-rchx) that failed the `dependencies` and `image` gates since 1 November. 0.6.5 was
   released on 27 October, so this takes it at 8 days, before the 14-day wait; a known high-severity fix outweighs the
   wait. Nothing else in the lock changed.
+- The pipeline image no longer contains apt: CVE-2026-109518 (HIGH, in `apt` and `libapt-pkg7.0` 3.0.3) failed the
+  Trivy gate on 5 November. Nothing installs packages after the build, so removing apt fixes it without adopting a base
+  image published the same day.
 
 ### Changed
 - `pandas` 3.0.6 to 3.1.0 and `kfp` 2.17.0 to 2.17.3, both 14 days old. kfp 2.17.3 pins `urllib3` 2.8.0 itself, so the

@@ -15,6 +15,10 @@ class DockerfileTests(unittest.TestCase):
         users = re.findall(r"^USER (\S+)", TEXT, re.M)
         self.assertTrue(users and not users[-1].startswith(("0", "root")), users)
 
+    def test_the_image_has_no_package_manager(self):
+        self.assertRegex(TEXT, r"dpkg --purge [^\n]*\bapt\b[^\n]*\blibapt-pkg")
+        self.assertNotRegex(TEXT, r"apt-get install")
+
     def test_secrets_and_local_state_stay_out_of_the_build_context(self):
         ignored = (ROOT / ".dockerignore").read_text().split()
         for path in (".git", "mlflow.db", "data/", "runs/"):
