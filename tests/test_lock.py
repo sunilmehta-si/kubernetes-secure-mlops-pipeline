@@ -29,11 +29,11 @@ class LockTests(unittest.TestCase):
             with self.subTest(dependency=name):
                 self.assertEqual(versions.get(canonical(name)), version)
 
-    def test_the_cve_override_and_the_undeclared_import_are_in_the_lock(self):
+    def test_the_patched_urllib3_and_the_undeclared_import_are_in_the_lock(self):
         project = tomllib.loads((ROOT / "pyproject.toml").read_text())
-        self.assertIn("urllib3==2.8.0", project["tool"]["uv"]["override-dependencies"])   # kfp pins 2.7.0
+        self.assertNotIn("override-dependencies", project["tool"]["uv"])   # kfp 2.17.3 pins urllib3 2.8.0 itself
         versions = locked()
-        self.assertEqual(versions["urllib3"], "2.8.0")
+        self.assertEqual(versions["urllib3"], "2.8.0")                     # 2.7.0 has two HIGH CVEs
         self.assertIn("pyopenssl", versions)                       # model-signing imports it undeclared
 
     def test_every_install_uses_the_frozen_lock(self):

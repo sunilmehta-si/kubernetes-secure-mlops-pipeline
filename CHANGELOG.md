@@ -8,6 +8,10 @@
   released on 27 October, so this takes it at 8 days, before the 14-day wait; a known high-severity fix outweighs the
   wait. Nothing else in the lock changed.
 
+### Changed
+- `pandas` 3.0.6 to 3.1.0 and `kfp` 2.17.0 to 2.17.3, both 14 days old. kfp 2.17.3 pins `urllib3` 2.8.0 itself, so the
+  resolver override that forced the CVE fix is gone from `pyproject.toml`; the lock still has 2.8.0.
+
 ### Added
 - Dependabot updates (uv, actions, docker) wait 14 days after a release, as CONTRIBUTING already said they should, and
   `tests/test_dependabot.py` holds the cooldown.
