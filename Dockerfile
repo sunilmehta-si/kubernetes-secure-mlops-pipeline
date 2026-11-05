@@ -15,9 +15,12 @@ COPY --from=ghcr.io/astral-sh/uv:0.13.5@sha256:32a7bb39b496babbd997b0a39a4d66c12
 COPY pyproject.toml uv.lock README.md LICENSE ./
 COPY secure_mlops ./secure_mlops
 COPY configs ./configs
-# The urllib3 CVE override (kfp pins 2.7.0) lives in pyproject.toml under [tool.uv], so it is part of the lock.
+# Nothing in the image installs packages once it is built, so apt and its library are removed: a CVE in apt
+# (CVE-2026-109518, 5 November) cannot reach an image that has no apt, and the fix does not wait for a new base.
 RUN uv sync --frozen --no-dev --no-editable --compile-bytecode \
-    && useradd --uid 10001 --create-home --shell /usr/sbin/nologin pipeline
+    && useradd --uid 10001 --create-home --shell /usr/sbin/nologin pipeline \
+    && dpkg --purge --force-remove-protected apt libapt-pkg7.0 \
+    && rm -rf /var/lib/apt /var/cache/apt /etc/apt
 ENV PATH="/app/.venv/bin:$PATH"
 
 USER 10001:10001
