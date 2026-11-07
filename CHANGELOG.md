@@ -7,6 +7,10 @@
   GHSA-fm9c-5rcf-2q5p, GHSA-mm57-4v3p-rchx) that failed the `dependencies` and `image` gates since 1 November. 0.6.5 was
   released on 27 October, so this takes it at 8 days, before the 14-day wait; a known high-severity fix outweighs the
   wait. Nothing else in the lock changed.
+- `oauthlib` 4.0.0 to 4.0.1 in `uv.lock` (a dependency of kfp's Kubernetes client), fixing CVE-2026-49272 /
+  GHSA-3jp2-3mrg-2vxc (HIGH) that failed the `dependencies` and `image` gates on 7 November. 4.0.1 was released on
+  31 October, so this takes it at 7 days, before the 14-day wait, for the same reason as `pyasn1`. Nothing else in the
+  lock changed.
 - The pipeline image no longer contains apt: CVE-2026-109518 (HIGH, in `apt` and `libapt-pkg7.0` 3.0.3) failed the
   Trivy gate on 5 November. Nothing installs packages after the build, so removing apt fixes it without adopting a base
   image published the same day.
