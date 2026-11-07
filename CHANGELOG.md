@@ -12,6 +12,8 @@
   image published the same day.
 
 ### Changed
+- cert-manager v1.20.4 to v1.21.3 (published 2026-10-23, 14 days old). The 1.21 breaking changes are to the Helm
+  chart's RBAC and metrics values; the platform applies the static manifest and uses none of them.
 - `pandas` 3.0.6 to 3.1.0 and `kfp` 2.17.0 to 2.17.3, both 14 days old. kfp 2.17.3 pins `urllib3` 2.8.0 itself, so the
   resolver override that forced the CVE fix is gone from `pyproject.toml`; the lock still has 2.8.0.
 
