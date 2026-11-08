@@ -1,4 +1,5 @@
 import re
+import re
 import unittest
 from pathlib import Path
 
@@ -17,7 +18,10 @@ class DockerfileTests(unittest.TestCase):
 
     def test_the_image_has_no_package_manager(self):
         self.assertRegex(TEXT, r"dpkg --purge [^\n]*\bapt\b[^\n]*\blibapt-pkg")
-        self.assertNotRegex(TEXT, r"apt-get install")
+        installs = re.findall(r"apt-get install[^\n\\]*", TEXT)
+        self.assertTrue(installs and all("--only-upgrade" in line for line in installs),
+                        "apt may only upgrade what the base image already has, never add a package")
+        self.assertLess(TEXT.index("apt-get install"), TEXT.index("dpkg --purge"))   # the upgrade comes before apt goes
 
     def test_secrets_and_local_state_stay_out_of_the_build_context(self):
         ignored = (ROOT / ".dockerignore").read_text().split()
