@@ -23,6 +23,8 @@
   chart's RBAC and metrics values; the platform applies the static manifest and uses none of them.
 - `pandas` 3.0.6 to 3.1.0 and `kfp` 2.17.0 to 2.17.3, both 14 days old. kfp 2.17.3 pins `urllib3` 2.8.0 itself, so the
   resolver override that forced the CVE fix is gone from `pyproject.toml`; the lock still has 2.8.0.
+- `pandera` 0.34.1 to 0.35.0 (published 2026-10-25, 14 days old). The release adds DataFusion schemas; nothing the
+  platform uses changed, and the dataframe-schema tests pass unchanged. Nothing else in the lock changed.
 
 ### Added
 - Dependabot updates (uv, actions, docker) wait 14 days after a release, as CONTRIBUTING already said they should, and
