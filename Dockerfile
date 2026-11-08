@@ -17,7 +17,11 @@ COPY secure_mlops ./secure_mlops
 COPY configs ./configs
 # Nothing in the image installs packages once it is built, so apt and its library are removed: a CVE in apt
 # (CVE-2026-109518, 5 November) cannot reach an image that has no apt, and the fix does not wait for a new base.
-RUN uv sync --frozen --no-dev --no-editable --compile-bytecode \
+# The base image's zlib1g carries CVE-2026-76844 and CVE-2026-85091 (HIGH, 8 November); Debian's fix is in its security
+# archive before it is in a new python:3.12-slim, so the build takes the security upgrade before apt is removed.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends --only-upgrade zlib1g \
+    && uv sync --frozen --no-dev --no-editable --compile-bytecode \
     && useradd --uid 10001 --create-home --shell /usr/sbin/nologin pipeline \
     && dpkg --purge --force-remove-protected apt libapt-pkg7.0 \
     && rm -rf /var/lib/apt /var/cache/apt /etc/apt
