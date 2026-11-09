@@ -1,3 +1,3 @@
 """kubernetes-secure-mlops-pipeline: train, evaluate, sign and deliver models on Kubernetes."""
 
-__version__ = "0.7.1"
+__version__ = "0.8.0"

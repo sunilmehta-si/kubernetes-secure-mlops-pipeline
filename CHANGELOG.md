@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-11-09
+
+The pins and their rules: `smlops versions` holds a newer release back until it is 14 days old, checks the kind node
+image against the kind release, and reports the newest stable release rather than the one GitHub marks latest;
+Dependabot waits the same 14 days; and three high-severity advisories that failed the gates are fixed, two of them
+before the wait because a known fix outweighs it.
+
 ### Security
 - The pipeline image upgrades `zlib1g` from Debian's security archive before removing apt: CVE-2026-76844 and
   CVE-2026-85091 (HIGH) in the base image's 1:1.3.dfsg+really1.3.1-1+b1 failed the Trivy gate on 8 November, and the
@@ -18,14 +25,6 @@
   Trivy gate on 5 November. Nothing installs packages after the build, so removing apt fixes it without adopting a base
   image published the same day.
 
-### Changed
-- cert-manager v1.20.4 to v1.21.3 (published 2026-10-23, 14 days old). The 1.21 breaking changes are to the Helm
-  chart's RBAC and metrics values; the platform applies the static manifest and uses none of them.
-- `pandas` 3.0.6 to 3.1.0 and `kfp` 2.17.0 to 2.17.3, both 14 days old. kfp 2.17.3 pins `urllib3` 2.8.0 itself, so the
-  resolver override that forced the CVE fix is gone from `pyproject.toml`; the lock still has 2.8.0.
-- `pandera` 0.34.1 to 0.35.0 (published 2026-10-25, 14 days old). The release adds DataFusion schemas; nothing the
-  platform uses changed, and the dataframe-schema tests pass unchanged. Nothing else in the lock changed.
-
 ### Added
 - Dependabot updates (uv, actions, docker) wait 14 days after a release, as CONTRIBUTING already said they should, and
   `tests/test_dependabot.py` holds the cooldown.
@@ -35,17 +34,6 @@
 - `smlops versions --json` carries the node-image check as a final object beside the drift rows.
 - CONTRIBUTING says that a `kfp` bump means recompiling `pipelines/ticket-router-training.yaml` in the same pull
   request, since the compiled file records the SDK version and a test compares it with a fresh compile.
-
-### Changed
-- Pull requests are reviewed with the code review tool at v0.9.0.
-- `smlops versions` reports the newest stable release (the highest plain x.y.z that is not a draft or prerelease), not
-  the one GitHub marks latest, so a project that marks its release candidates is not compared against one.
-
-### Known
-- CI on `main` fails the dependency and image scans: pyasn1 0.6.4 carries four high-severity advisories
-  (GHSA-2qm8-x737-gmw5 and three more), fixed in 0.6.5, which under the 14-day rule is adoptable from 2026-11-10.
-
-### Added
 - `smlops versions` holds back a newer release until it is 14 days old: the report marks it "too new", says from
   which date it qualifies, and `--strict` fails only on releases already old enough. On 2026-10-27 that held back
   cert-manager v1.21.3 (published 2026-10-23) and uv 0.13.6 (published that day).
@@ -55,14 +43,23 @@
 - The pull-request review workflow runs agentic-code-review-tool v0.7.0, which adds lock-file, HTTP-timeout,
   artifact-token and RBAC-escalation rules.
 
+### Changed
+- cert-manager v1.20.4 to v1.21.3 (published 2026-10-23, 14 days old). The 1.21 breaking changes are to the Helm
+  chart's RBAC and metrics values; the platform applies the static manifest and uses none of them.
+- `pandas` 3.0.6 to 3.1.0 and `kfp` 2.17.0 to 2.17.3, both 14 days old. kfp 2.17.3 pins `urllib3` 2.8.0 itself, so the
+  resolver override that forced the CVE fix is gone from `pyproject.toml`; the lock still has 2.8.0.
+- `pandera` 0.34.1 to 0.35.0 (published 2026-10-25, 14 days old). The release adds DataFusion schemas; nothing the
+  platform uses changed, and the dataframe-schema tests pass unchanged. Nothing else in the lock changed.
+- Pull requests are reviewed with the code review tool at v0.9.0.
+- `smlops versions` reports the newest stable release (the highest plain x.y.z that is not a draft or prerelease), not
+  the one GitHub marks latest, so a project that marks its release candidates is not compared against one.
+- Dependabot's bumps wait the same 14 days as the platform pins before they are merged (README, governance G5).
+
 ### Fixed
 - Every cluster run failed from 2026-10-29: `ubuntu-latest` had moved to Ubuntu 26.04, whose Docker reports an image
   digest after `docker push` that the registry does not hold, so the first pod to pull by digest got "not found".
   The cluster runner is pinned to `ubuntu-24.04` like everything else, and `publish-model.sh` now takes each image's
   digest from the registry's own answer after the push, which is what the cluster resolves.
-
-### Changed
-- Dependabot's bumps wait the same 14 days as the platform pins before they are merged (README, governance G5).
 
 ## [0.7.1] - 2026-10-25
 
