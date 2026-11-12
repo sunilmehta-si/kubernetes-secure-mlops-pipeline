@@ -198,7 +198,8 @@ Problems this project's checks found in itself while it was being built:
   pinned uv still bundled that root, and the lock would have kept it for as long as nobody looked. Now `osv-scanner`
   checks the lock on every run and `smlops versions` prints every platform pin against upstream's latest release.
 - **Newest is not safest.** A compromised or broken release is usually caught and withdrawn within days, so
-  `smlops versions` treats a newer release as adoptable only once it is 14 days old and says from which date, lists the
+  `smlops versions` treats a newer release as adoptable only once it is 14 days old and says from which date (naming an
+  earlier release that already qualifies when the newest does not: uv 0.13.6 on 2026-11-12, while 0.13.7 waited), lists the
   pins it does not compare and why, and checks that the kind node image is one the pinned kind release built. On
   2026-10-27 it held back cert-manager v1.21.3, four days old, and uv 0.13.6, published that morning. Dependabot's
   pull requests get the same wait: fastapi 0.156.8 and actions/setup-python v7.1.0, both about a week old when

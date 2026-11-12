@@ -383,10 +383,29 @@ class VersionsCliTests(unittest.TestCase):
         fresh = versions.Release("v9.9.9", date.today())
         with redirect_stdout(io.StringIO()), redirect_stderr(io.StringIO()) as err, \
                 mock.patch.object(versions, "github_latest", lambda repo: fresh), \
+                mock.patch.object(versions, "github_stable", lambda repo: [fresh]), \
                 mock.patch.object(versions, "github_release_body", lambda repo, tag: versions.load_pins()["KIND_NODE_IMAGE"]):
             self.assertEqual(main(["versions", "--strict"]), 0)
         self.assertIn("too new to adopt", err.getvalue())
         self.assertNotIn("pin(s) behind upstream", err.getvalue())
+
+
+    def test_strict_fails_when_an_earlier_release_is_old_enough_though_the_latest_is_not(self):
+        from contextlib import redirect_stderr, redirect_stdout
+        from datetime import date, timedelta
+        from unittest import mock
+
+        from secure_mlops import versions
+        fresh = versions.Release("v9.9.9", date.today())
+        aged = versions.Release("v9.9.8", date.today() - timedelta(days=20))
+        with redirect_stdout(io.StringIO()) as out, redirect_stderr(io.StringIO()) as err, \
+                mock.patch.object(versions, "github_latest", lambda repo: fresh), \
+                mock.patch.object(versions, "github_stable", lambda repo: [fresh, aged]), \
+                mock.patch.object(versions, "github_release_body", lambda repo, tag: versions.load_pins()["KIND_NODE_IMAGE"]):
+            self.assertEqual(main(["versions", "--strict"]), 1)
+        self.assertIn("**v9.9.8**", out.getvalue())
+        self.assertIn(f"HELM_VERSION {versions.load_pins()['HELM_VERSION']} -> v9.9.8", err.getvalue())
+        self.assertIn("(v9.9.8 is adoptable now)", err.getvalue())
 
 
 class VerifyImageCliTests(unittest.TestCase):
