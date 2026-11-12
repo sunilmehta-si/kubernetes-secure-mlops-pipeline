@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Changed
+- `smlops versions` names an earlier release that is already 14 days old when the newest is not, and `--strict`
+  fails on it. Before, such a pin read as "too new" until the newest release aged: uv 0.13.6 (27 Oct) was adoptable
+  from 10 Nov, but the report kept showing 0.13.7 (3 Nov) as too new until 17 Nov. `--json` adds `ready` and
+  `ready_published`, and `adopt_now` counts the earlier release.
+
 ## [0.8.0] - 2026-11-09
 
 The pins and their rules: `smlops versions` holds a newer release back until it is 14 days old, checks the kind node

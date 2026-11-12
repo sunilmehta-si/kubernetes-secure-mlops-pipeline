@@ -588,14 +588,15 @@ def _cmd_versions(args: argparse.Namespace) -> int:
     if args.json_out:
         Path(args.json_out).write_text(json.dumps(as_json(rows, node_ok), indent=2) + "\n")
     print(text, end="")
-    ready = [r for r in rows if r.behind and not r.too_new]
+    ready = [r for r in rows if r.adopt_now]
     waiting = [r for r in rows if r.too_new]
     if ready:
-        print(f"smlops: {len(ready)} pin(s) behind upstream: " + ", ".join(f"{r.component} {r.pinned} -> {r.latest}" for r in ready),
+        print(f"smlops: {len(ready)} pin(s) behind upstream: " + ", ".join(f"{r.component} {r.pinned} -> {r.ready.tag if r.too_new else r.latest}" for r in ready),
               file=sys.stderr)
     if waiting:
         print(f"smlops: {len(waiting)} newer release(s) too new to adopt: "
-              + ", ".join(f"{r.component} {r.latest} from {r.adoptable_on}" for r in waiting), file=sys.stderr)
+              + ", ".join(f"{r.component} {r.latest} from {r.adoptable_on}" + (f" ({r.ready.tag} is adoptable now)" if r.ready else "")
+                          for r in waiting), file=sys.stderr)
     if not node_ok:
         print("smlops: KIND_NODE_IMAGE is not an image the pinned kind release lists", file=sys.stderr)
     return 1 if (args.strict and ready) or not node_ok else 0

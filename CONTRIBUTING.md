@@ -17,7 +17,8 @@ uv run python -m unittest discover -s tests -t . # about 4 minutes
 Every platform component is pinned in `deploy/versions.env`, with its download checksum beside the version. Bump the
 version and the checksum together; `tests/test_workflows.py` refuses a literal checksum anywhere else. A newer release
 is adopted only once it is 14 days old: `smlops versions` says from which date, and `--strict` fails only on releases
-that already qualify. The release it compares with is the newest stable one: a release candidate is skipped even when
+that already qualify. When the newest release is too new, the report names the highest earlier one that already
+qualifies, and `--strict` counts it. The release it compares with is the newest stable one: a release candidate is skipped even when
 upstream marks it latest. Dependabot's bumps wait the same 14 days (`cooldown` in `.github/dependabot.yml`, held by
 `tests/test_dependabot.py`); security updates are not delayed. A bump is a pull request of its own, because the
 `cluster` workflow has to show the platform still comes up and every drill still passes.

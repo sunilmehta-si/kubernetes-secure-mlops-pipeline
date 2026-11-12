@@ -1,3 +1,4 @@
+import io
 import json
 import os
 import unittest
@@ -168,7 +169,7 @@ class VersionsTests(unittest.TestCase):
         self.assertEqual(data["CERT_MANAGER_VERSION"], {
             "component": "CERT_MANAGER_VERSION", "repository": "cert-manager/cert-manager", "pinned": "v1.20.4",
             "latest": "v1.21.3", "status": "minor", "published": "2026-10-23", "adoptable_on": "2026-11-06",
-            "too_new": True, "adopt_now": False})
+            "too_new": True, "adopt_now": False, "ready": None, "ready_published": None})
         self.assertTrue(data["KYVERNO_VERSION"]["adopt_now"])
         self.assertFalse(data["HELM_VERSION"]["adopt_now"])                             # current: nothing to adopt
 
@@ -176,6 +177,53 @@ class VersionsTests(unittest.TestCase):
         rows = versions.report({"HELM_VERSION": "v4.3.0"}, fetch=lambda repo: "v4.3.1", today=date(2026, 10, 27))
         self.assertTrue(rows[0].behind)
         self.assertFalse(rows[0].too_new)
+
+
+class EarlierReleaseTests(unittest.TestCase):
+    # uv on 12 Nov 2026: 0.13.7 (3 Nov) is too new, 0.13.6 (27 Oct) has been adoptable since 10 Nov
+    UV = [versions.Release("0.13.7", date(2026, 11, 3)), versions.Release("0.13.6", date(2026, 10, 27)),
+          versions.Release("0.13.5", date(2026, 10, 14))]
+    DAY = date(2026, 11, 12)
+
+    def test_the_newest_release_past_the_pin_that_is_old_enough(self):
+        self.assertEqual(versions.newest_ready("0.13.5", self.UV, self.DAY), self.UV[1])
+        self.assertEqual(versions.newest_ready("0.13.5", self.UV, date(2026, 11, 10)), self.UV[1])     # the day it turns 14 days old
+        self.assertIsNone(versions.newest_ready("0.13.5", self.UV, date(2026, 11, 9)))
+        self.assertIsNone(versions.newest_ready("0.13.6", self.UV, self.DAY))
+        self.assertIsNone(versions.newest_ready("main", self.UV, self.DAY))
+        self.assertIsNone(versions.newest_ready("0.13.5", [versions.Release("0.13.6")], self.DAY))
+
+    def test_report_names_it_counts_it_and_looks_only_when_the_latest_is_too_new(self):
+        seen = []
+        def every(repo):
+            seen.append(repo)
+            return self.UV
+        upstream = {"astral-sh/uv": self.UV[0], "helm/helm": versions.Release("v4.3.1", date(2026, 9, 1))}
+        pins = {"UV_VERSION": "0.13.5", "HELM_VERSION": "v4.3.1"}
+        rows = {r.component: r for r in versions.report(pins, fetch=upstream.get, today=self.DAY, fetch_all=every)}
+        self.assertEqual(seen, ["astral-sh/uv"])                                         # helm is current: no second call
+        self.assertEqual(rows["UV_VERSION"].ready, self.UV[1])
+        self.assertTrue(rows["UV_VERSION"].too_new and rows["UV_VERSION"].adopt_now)
+        text = versions.markdown(list(rows.values()))
+        self.assertIn("| 0.13.5 | 0.13.7 | patch behind; published 2026-11-03, adoptable from 2026-11-17; "
+                      "**0.13.6** (published 2026-10-27) is adoptable now |", text)
+        self.assertIn("1 of 2 behind upstream\n", text)                                  # not counted as waiting
+        data = {d["component"]: d for d in versions.as_json(list(rows.values()))}
+        self.assertEqual((data["UV_VERSION"]["ready"], data["UV_VERSION"]["ready_published"], data["UV_VERSION"]["adopt_now"]),
+                         ("0.13.6", "2026-10-27", True))
+        # a caller with its own fetch and no fetch_all gets no lookup, so tests never reach the network
+        rows = versions.report(pins, fetch=upstream.get, today=self.DAY)
+        self.assertIsNone(rows[0].ready if rows[0].component == "UV_VERSION" else rows[1].ready)
+
+    def test_the_stable_releases_come_highest_version_first(self):
+        listing = [{"tag_name": "0.13.6", "published_at": "2026-10-27T08:00:00Z"},
+                   {"tag_name": "0.13.7", "published_at": "2026-11-03T08:00:00Z"},
+                   {"tag_name": "0.14.0", "published_at": "2026-11-04T08:00:00Z", "draft": True},
+                   {"tag_name": "0.13.5", "published_at": "2026-10-14T08:00:00Z"}]
+        def urlopen(request, timeout=None):
+            return io.BytesIO(json.dumps(listing).encode())
+        with mock.patch.object(versions.urllib.request, "urlopen", urlopen):
+            self.assertEqual([r.tag for r in versions.github_stable("o/r")], ["0.13.7", "0.13.6", "0.13.5"])
 
 
 class NodeImageTests(unittest.TestCase):
