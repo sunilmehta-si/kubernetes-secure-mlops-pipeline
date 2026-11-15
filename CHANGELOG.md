@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Security
+- dnspython 2.9.2 (was 2.9.0) fixes CVE-2026-128089 (GHSA-vvf4-9x63-8xvv, high), and opentelemetry-api and -sdk
+  1.45.2 (were 1.45.1) fix GHSA-mf5v-w3w3-f6cg (medium). Both reach the image through MLflow. dnspython 2.9.2 was
+  published on 3 November and is taken before its 14 days because it is a security fix.
+
 ### Changed
 - `smlops versions` names an earlier release that is already 14 days old when the newest is not, and `--strict`
   fails on it. Before, such a pin read as "too new" until the newest release aged: uv 0.13.6 (27 Oct) was adoptable
