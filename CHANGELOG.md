@@ -8,6 +8,9 @@
   published on 3 November and is taken before its 14 days because it is a security fix.
 
 ### Changed
+- The cluster's registry runs zot v2.1.23 (was v2.1.22; published 2 Nov, adoptable from 16 Nov). Its notes fix
+  storage and garbage-collection bugs and leftover uploads after a full disk; the registry here runs with zot's
+  defaults, and nothing in the notes changes pushes, pulls or signatures by digest.
 - `smlops versions` names an earlier release that is already 14 days old when the newest is not, and `--strict`
   fails on it. Before, such a pin read as "too new" until the newest release aged: uv 0.13.6 (27 Oct) was adoptable
   from 10 Nov, but the report kept showing 0.13.7 (3 Nov) as too new until 17 Nov. `--json` adds `ready` and
