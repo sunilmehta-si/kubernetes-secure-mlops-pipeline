@@ -15,8 +15,8 @@
   fails on it. Before, such a pin read as "too new" until the newest release aged: uv 0.13.6 (27 Oct) was adoptable
   from 10 Nov, but the report kept showing 0.13.7 (3 Nov) as too new until 17 Nov. `--json` adds `ready` and
   `ready_published`, and `adopt_now` counts the earlier release.
-- uv 0.13.6 (was 0.13.5), in CI and in the pipeline image: published 27 Oct, adoptable from 10 Nov; 0.13.7 waits
-  until 17 Nov. Bug fixes and speed-ups, no lockfile change.
+- uv 0.13.7 (was 0.13.5), in CI and in the pipeline image: 0.13.6 (published 27 Oct) from 12 Nov, then 0.13.7
+  (published 3 Nov) from 17 Nov, the day it turned 14 days old. Bug fixes, no lockfile change.
 
 ## [0.8.0] - 2026-11-09
 
