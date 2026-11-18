@@ -15,6 +15,8 @@
   fails on it. Before, such a pin read as "too new" until the newest release aged: uv 0.13.6 (27 Oct) was adoptable
   from 10 Nov, but the report kept showing 0.13.7 (3 Nov) as too new until 17 Nov. `--json` adds `ready` and
   `ready_published`, and `adopt_now` counts the earlier release.
+- Argo CD v3.5.7 (was v3.5.6; published 2 Nov, adoptable from 16 Nov), a patch release of bug fixes with the same Redis
+  image; the installer checks its core-install manifest against a recorded checksum. v3.6.1 is adoptable from 18 Nov.
 - uv 0.13.7 (was 0.13.5), in CI and in the pipeline image: 0.13.6 (published 27 Oct) from 12 Nov, then 0.13.7
   (published 3 Nov) from 17 Nov, the day it turned 14 days old. Bug fixes, no lockfile change.
 
