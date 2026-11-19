@@ -6,6 +6,11 @@
 - dnspython 2.9.2 (was 2.9.0) fixes CVE-2026-128089 (GHSA-vvf4-9x63-8xvv, high), and opentelemetry-api and -sdk
   1.45.2 (were 1.45.1) fix GHSA-mf5v-w3w3-f6cg (medium). Both reach the image through MLflow. dnspython 2.9.2 was
   published on 3 November and is taken before its 14 days because it is a security fix.
+- Argo CD v3.6.2 (was v3.5.7) fixes CVE-2026-77299 (GHSA-wq9v-j77v-qr26, high) in its regexp2 dependency, a pattern
+  that makes memory grow without bound. It was published on 18 November and is taken before its 14 days because it is
+  a security fix; v3.6.0 and v3.6.1, the minor release it patches, are past theirs. Its core-install manifest moves
+  Redis to 8.10.1-alpine, and the installer's mirror holds that image's digest, the same on public.ecr.aws and Docker
+  Hub. The installer checks the manifest against a recorded checksum.
 
 ### Changed
 - The cluster's registry runs zot v2.1.23 (was v2.1.22; published 2 Nov, adoptable from 16 Nov). Its notes fix
@@ -16,7 +21,7 @@
   from 10 Nov, but the report kept showing 0.13.7 (3 Nov) as too new until 17 Nov. `--json` adds `ready` and
   `ready_published`, and `adopt_now` counts the earlier release.
 - Argo CD v3.5.7 (was v3.5.6; published 2 Nov, adoptable from 16 Nov), a patch release of bug fixes with the same Redis
-  image; the installer checks its core-install manifest against a recorded checksum. v3.6.1 is adoptable from 18 Nov.
+  image; the installer checks its core-install manifest against a recorded checksum.
 - uv 0.13.7 (was 0.13.5), in CI and in the pipeline image: 0.13.6 (published 27 Oct) from 12 Nov, then 0.13.7
   (published 3 Nov) from 17 Nov, the day it turned 14 days old. Bug fixes, no lockfile change.
 

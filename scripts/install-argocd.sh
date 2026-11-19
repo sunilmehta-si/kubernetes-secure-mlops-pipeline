@@ -15,6 +15,7 @@ case "$ARGOCD_VERSION" in    # SHA-256 of core-install.yaml per pinned version; 
   v3.5.4) expected=7f6e38f3d1826c2ab92b22c04160dec3778563b84bdafd3f262c2353edf34602 ;;
   v3.5.6) expected=d3d9d3555ad77eb4b6d27b1ec0d2af7978a91537e84d54631f983c227f0a3d31 ;;
   v3.5.7) expected=a7ab521e55a511af9274294afafc87cddf9621a34ac255b4b20cd31989e1ecbc ;;
+  v3.6.2) expected=7d39e823fa236666a512bdd294f307360a59f7865e6936fed49fd7b57d348a3f ;;
   *) expected="" ;;
 esac
 # The same image from a second registry, by digest, for when the first refuses us: public.ecr.aws limits anonymous
@@ -24,6 +25,8 @@ mirror() {
   case "$1" in
     public.ecr.aws/docker/library/redis:8.2.3-alpine)
       echo docker.io/library/redis@sha256:08ad0b1d280850169a790dba1393ff7a90aef951fc19632cf4d3ce4f78e679ba ;;
+    public.ecr.aws/docker/library/redis:8.10.1-alpine)
+      echo docker.io/library/redis@sha256:ef216d85ec44f4fdf7c0e6df2d1757a4734ed32fbb278cabd3181b5a27353b79 ;;
   esac
 }
 [ -n "$expected" ] || { echo "no checksum recorded for Argo CD ${ARGOCD_VERSION}" >&2; exit 1; }
