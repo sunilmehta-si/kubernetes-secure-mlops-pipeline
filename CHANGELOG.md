@@ -13,6 +13,9 @@
   Hub. The installer checks the manifest against a recorded checksum.
 
 ### Changed
+- Prometheus v3.16.0 (was v3.15.1; published 5 Nov, adoptable from 19 Nov), in the cluster's monitoring and for
+  promtool in CI, checked by SHA-256 and the image by digest. Its changes are to TLS external URLs, remote write,
+  exemplars and query statistics, none of which the alerts and scrapes here use.
 - The cluster's registry runs zot v2.1.23 (was v2.1.22; published 2 Nov, adoptable from 16 Nov). Its notes fix
   storage and garbage-collection bugs and leftover uploads after a full disk; the registry here runs with zot's
   defaults, and nothing in the notes changes pushes, pulls or signatures by digest.
