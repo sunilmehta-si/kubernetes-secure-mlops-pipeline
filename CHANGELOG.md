@@ -25,6 +25,8 @@
   Hub. The installer checks the manifest against a recorded checksum.
 
 ### Changed
+- osv-scanner v2.7.1 (was v2.7.0; published 9 Nov, adoptable from 23 Nov) checks uv.lock in CI: report and
+  configuration features, no change to what it finds; the binary's checksum is the release's.
 - Alertmanager v0.35.0 (was v0.34.1; published 9 Nov, adoptable from 23 Nov), in the cluster and as amtool in CI. Its
   breaking changes (the auto-gomemlimit flag, named eventrecorder outputs) touch nothing here: the routing tests pass
   with its amtool, and the in-cluster image is pinned by the digest Docker Hub serves. v0.35.1 waits until 8 Dec.
