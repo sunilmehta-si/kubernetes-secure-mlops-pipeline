@@ -3,6 +3,9 @@
 ## [Unreleased]
 
 ### Security
+- The pipeline image takes Debian's libzstd1 1.5.7+dfsg-1+deb13u1 for CVE-2026-124851 (high: information disclosure
+  through an uninitialized buffer), upgraded from the security archive before apt is removed, as zlib1g already is;
+  the image scan failed on it.
 - Argo CD v3.6.3 (was v3.6.2) fixes seven advisories, four high: a repository create with upsert that overwrites
   another without the update permission (GHSA-mfgm-4p7x-3ccr), an API server one unauthenticated request crashes
   (GHSA-w7rw-fg89-2cjf), stored XSS through a Helm chart's home link (GHSA-rxm8-qc6h-3c8h) and an ApplicationSet delete
