@@ -13,6 +13,13 @@
   Hub. The installer checks the manifest against a recorded checksum.
 
 ### Changed
+- The digest policy is a ValidatingPolicy (policies.kyverno.io/v1) with a CEL check, where it was a kyverno.io
+  ClusterPolicy pattern: Kyverno v1.20 runs no legacy ClusterPolicy, and the new types run on v1.19.2 already, so the
+  policies move first and Kyverno after. It now also requires the digest to be a full sha256 (64 hex digits).
+- The serving pods' hardening is a MutatingPolicy: the pod's runAsNonRoot and default seccomp profile as apply
+  configurations, the containers' allowPrivilegeEscalation and dropped capabilities as JSON patches (an apply
+  configuration may not set an atomic list such as capabilities.drop); a container's added capabilities are kept. The
+  Kyverno CLI test checks the same hardened predictor pod on v1.19.2 and v1.20.0.
 - Prometheus v3.16.0 (was v3.15.1; published 5 Nov, adoptable from 19 Nov), in the cluster's monitoring and for
   promtool in CI, checked by SHA-256 and the image by digest. Its changes are to TLS external URLs, remote write,
   exemplars and query statistics, none of which the alerts and scrapes here use.
