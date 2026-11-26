@@ -3,6 +3,14 @@
 ## [Unreleased]
 
 ### Security
+- Argo CD v3.6.3 (was v3.6.2) fixes seven advisories, four high: a repository create with upsert that overwrites
+  another without the update permission (GHSA-mfgm-4p7x-3ccr), an API server one unauthenticated request crashes
+  (GHSA-w7rw-fg89-2cjf), stored XSS through a Helm chart's home link (GHSA-rxm8-qc6h-3c8h) and an ApplicationSet delete
+  that ignores the allowed namespaces (GHSA-rvmf-gjc9-wjgq); and three moderate, among them a Helm release name
+  evaluated as a template that discloses the repo-server's environment (GHSA-v2hj-322q-6cg4). The core install this
+  project runs has no API server or UI, but its repo-server and controller take the rest. Published on 24 November and
+  taken before its 14 days because it is a security release; the core-install manifest keeps Redis 8.10.1-alpine, and
+  the installer checks it against the new recorded checksum.
 - dnspython 2.9.2 (was 2.9.0) fixes CVE-2026-128089 (GHSA-vvf4-9x63-8xvv, high), and opentelemetry-api and -sdk
   1.45.2 (were 1.45.1) fix GHSA-mf5v-w3w3-f6cg (medium). Both reach the image through MLflow. dnspython 2.9.2 was
   published on 3 November and is taken before its 14 days because it is a security fix.
