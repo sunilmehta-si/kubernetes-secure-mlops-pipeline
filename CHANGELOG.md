@@ -11,6 +11,10 @@
   project runs has no API server or UI, but its repo-server and controller take the rest. Published on 24 November and
   taken before its 14 days because it is a security release; the core-install manifest keeps Redis 8.10.1-alpine, and
   the installer checks it against the new recorded checksum.
+- uv 0.13.10 (was 0.13.7), in CI and in the pipeline image, addresses GHSA-vjvj-3m3f-fgmm (low): a ZIP payload
+  hidden by conflicting compressed sizes. It also checks that the dependency requirements in uv.lock match the locked
+  versions. Published on 24 November and taken before its 14 days because it is a security fix; 0.13.8 and 0.13.9 come
+  with it.
 - dnspython 2.9.2 (was 2.9.0) fixes CVE-2026-128089 (GHSA-vvf4-9x63-8xvv, high), and opentelemetry-api and -sdk
   1.45.2 (were 1.45.1) fix GHSA-mf5v-w3w3-f6cg (medium). Both reach the image through MLflow. dnspython 2.9.2 was
   published on 3 November and is taken before its 14 days because it is a security fix.
