@@ -35,7 +35,7 @@ class VersionTests(unittest.TestCase):
             self.assertRegex(v.pop(key), r"^[0-9a-f]{64}$", key)
         self.assertRegex(v.pop("UV_VERSION"), r"^\d+\.\d+\.\d+$")                   # uv has no v prefix
         policy = (ROOT / "deploy/policy/require-digests.yaml").read_text()
-        self.assertIn('"kind-registry:5000/*@sha256:*"', policy)                     # policy and scripts agree
+        self.assertIn("'^kind-registry:5000/[^@]+@sha256:", policy)                 # policy and scripts agree
         for key, value in v.items():
             with self.subTest(key=key):
                 self.assertRegex(value.split(":")[-1], r"^v\d+\.\d+\.\d+$")
@@ -167,17 +167,21 @@ class SignaturePolicyTests(unittest.TestCase):
 
 class DigestPolicyTests(unittest.TestCase):
     def test_containers_and_init_containers_need_the_registry_and_a_digest(self):
-        import fnmatch
+        import re
         (policy,) = docs("deploy/policy/require-digests.yaml")
-        (rule,) = policy["spec"]["rules"]
-        self.assertEqual(rule["validate"]["failureAction"], "Enforce")
-        spec = rule["validate"]["pattern"]["spec"]
-        for key in ("containers", "=(initContainers)"):
-            pattern = spec[key][0]["image"]
-            self.assertTrue(fnmatch.fnmatch("kind-registry:5000/ticket-router@sha256:" + "a" * 64, pattern))
-            for bad in ("kind-registry:5000/ticket-router:latest", "docker.io/library/busybox@sha256:" + "a" * 64):
-                self.assertFalse(fnmatch.fnmatch(bad, pattern), bad)
-
+        self.assertEqual((policy["apiVersion"], policy["kind"]), ("policies.kyverno.io/v1", "ValidatingPolicy"))
+        spec = policy["spec"]
+        self.assertEqual((spec["validationActions"], spec["failurePolicy"]), (["Deny"], "Fail"))
+        self.assertEqual(spec["matchConditions"][0]["expression"], "request.namespace == 'serving'")
+        (images,) = spec["variables"]
+        self.assertIn("object.spec.containers", images["expression"])
+        self.assertIn("object.spec.initContainers", images["expression"])
+        (check,) = spec["validations"]
+        pattern = re.search(r"matches\('([^']+)'\)", check["expression"]).group(1)
+        self.assertTrue(re.search(pattern, "kind-registry:5000/ticket-router@sha256:" + "a" * 64))
+        for bad in ("kind-registry:5000/ticket-router:latest", "docker.io/library/busybox@sha256:" + "a" * 64,
+                    "kind-registry:5000/ticket-router@sha256:short"):
+            self.assertFalse(re.search(pattern, bad), bad)
 
 
 class KindTests(unittest.TestCase):
