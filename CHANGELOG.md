@@ -25,6 +25,9 @@
   Hub. The installer checks the manifest against a recorded checksum.
 
 ### Changed
+- Alertmanager v0.35.0 (was v0.34.1; published 9 Nov, adoptable from 23 Nov), in the cluster and as amtool in CI. Its
+  breaking changes (the auto-gomemlimit flag, named eventrecorder outputs) touch nothing here: the routing tests pass
+  with its amtool, and the in-cluster image is pinned by the digest Docker Hub serves. v0.35.1 waits until 8 Dec.
 - Prometheus v3.16.0 (was v3.15.1; published 5 Nov, adoptable from 19 Nov), in the cluster's monitoring and for
   promtool in CI, checked by SHA-256 and the image by digest. Its changes are to TLS external URLs, remote write,
   exemplars and query statistics, none of which the alerts and scrapes here use.
