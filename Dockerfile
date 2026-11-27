@@ -11,16 +11,17 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 # uv installs exactly what uv.lock says; the uv binary comes from its image, pinned by digest.
-COPY --from=ghcr.io/astral-sh/uv:0.13.7@sha256:96f40d3904aad8d0bd010539001d36c8e2188b981e1334471a90c4a1d93bb490 /uv /usr/local/bin/uv
+COPY --from=ghcr.io/astral-sh/uv:0.13.10@sha256:a3ea1357342c1a4bf9a0c53a3deb1b55379aefa037338d8113d5771efa01774f /uv /usr/local/bin/uv
 COPY pyproject.toml uv.lock README.md LICENSE ./
 COPY secure_mlops ./secure_mlops
 COPY configs ./configs
 # Nothing in the image installs packages once it is built, so apt and its library are removed: a CVE in apt
 # (CVE-2026-109518, 5 November) cannot reach an image that has no apt, and the fix does not wait for a new base.
-# The base image's zlib1g carries CVE-2026-76844 and CVE-2026-85091 (HIGH, 8 November); Debian's fix is in its security
-# archive before it is in a new python:3.12-slim, so the build takes the security upgrade before apt is removed.
+# The base image's zlib1g carries CVE-2026-76844 and CVE-2026-85091 (HIGH, 8 November), and its libzstd1
+# CVE-2026-124851 (HIGH, fixed in 1.5.7+dfsg-1+deb13u1); Debian's fixes are in its security archive before they are in a
+# new python:3.12-slim, so the build takes the security upgrades before apt is removed.
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends --only-upgrade zlib1g \
+    && apt-get install -y --no-install-recommends --only-upgrade zlib1g libzstd1 \
     && uv sync --frozen --no-dev --no-editable --compile-bytecode \
     && useradd --uid 10001 --create-home --shell /usr/sbin/nologin pipeline \
     && dpkg --purge --force-remove-protected apt libapt-pkg7.0 \

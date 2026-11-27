@@ -3,6 +3,21 @@
 ## [Unreleased]
 
 ### Security
+- The pipeline image takes Debian's libzstd1 1.5.7+dfsg-1+deb13u1 for CVE-2026-124851 (high: information disclosure
+  through an uninitialized buffer), upgraded from the security archive before apt is removed, as zlib1g already is;
+  the image scan failed on it.
+- Argo CD v3.6.3 (was v3.6.2) fixes seven advisories, four high: a repository create with upsert that overwrites
+  another without the update permission (GHSA-mfgm-4p7x-3ccr), an API server one unauthenticated request crashes
+  (GHSA-w7rw-fg89-2cjf), stored XSS through a Helm chart's home link (GHSA-rxm8-qc6h-3c8h) and an ApplicationSet delete
+  that ignores the allowed namespaces (GHSA-rvmf-gjc9-wjgq); and three moderate, among them a Helm release name
+  evaluated as a template that discloses the repo-server's environment (GHSA-v2hj-322q-6cg4). The core install this
+  project runs has no API server or UI, but its repo-server and controller take the rest. Published on 24 November and
+  taken before its 14 days because it is a security release; the core-install manifest keeps Redis 8.10.1-alpine, and
+  the installer checks it against the new recorded checksum.
+- uv 0.13.10 (was 0.13.7), in CI and in the pipeline image, addresses GHSA-vjvj-3m3f-fgmm (low): a ZIP payload
+  hidden by conflicting compressed sizes. It also checks that the dependency requirements in uv.lock match the locked
+  versions. Published on 24 November and taken before its 14 days because it is a security fix; 0.13.8 and 0.13.9 come
+  with it.
 - dnspython 2.9.2 (was 2.9.0) fixes CVE-2026-128089 (GHSA-vvf4-9x63-8xvv, high), and opentelemetry-api and -sdk
   1.45.2 (were 1.45.1) fix GHSA-mf5v-w3w3-f6cg (medium). Both reach the image through MLflow. dnspython 2.9.2 was
   published on 3 November and is taken before its 14 days because it is a security fix.
@@ -13,6 +28,11 @@
   Hub. The installer checks the manifest against a recorded checksum.
 
 ### Changed
+- osv-scanner v2.7.1 (was v2.7.0; published 9 Nov, adoptable from 23 Nov) checks uv.lock in CI: report and
+  configuration features, no change to what it finds; the binary's checksum is the release's.
+- Alertmanager v0.35.0 (was v0.34.1; published 9 Nov, adoptable from 23 Nov), in the cluster and as amtool in CI. Its
+  breaking changes (the auto-gomemlimit flag, named eventrecorder outputs) touch nothing here: the routing tests pass
+  with its amtool, and the in-cluster image is pinned by the digest Docker Hub serves. v0.35.1 waits until 8 Dec.
 - Prometheus v3.16.0 (was v3.15.1; published 5 Nov, adoptable from 19 Nov), in the cluster's monitoring and for
   promtool in CI, checked by SHA-256 and the image by digest. Its changes are to TLS external URLs, remote write,
   exemplars and query statistics, none of which the alerts and scrapes here use.
