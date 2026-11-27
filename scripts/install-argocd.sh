@@ -16,6 +16,7 @@ case "$ARGOCD_VERSION" in    # SHA-256 of core-install.yaml per pinned version; 
   v3.5.6) expected=d3d9d3555ad77eb4b6d27b1ec0d2af7978a91537e84d54631f983c227f0a3d31 ;;
   v3.5.7) expected=a7ab521e55a511af9274294afafc87cddf9621a34ac255b4b20cd31989e1ecbc ;;
   v3.6.2) expected=7d39e823fa236666a512bdd294f307360a59f7865e6936fed49fd7b57d348a3f ;;
+  v3.6.3) expected=62c72e700b741f537da8ffaca03b2b3c179686eead28b8495b34ba21ceae26e7 ;;
   *) expected="" ;;
 esac
 # The same image from a second registry, by digest, for when the first refuses us: public.ecr.aws limits anonymous
