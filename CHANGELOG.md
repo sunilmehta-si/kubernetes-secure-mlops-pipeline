@@ -34,7 +34,9 @@
 - The serving pods' hardening is a MutatingPolicy: the pod's runAsNonRoot and default seccomp profile as apply
   configurations, the containers' allowPrivilegeEscalation and dropped capabilities as JSON patches (an apply
   configuration may not set an atomic list such as capabilities.drop); a container's added capabilities are kept. The
-  Kyverno CLI test checks the same hardened predictor pod on v1.19.2 and v1.20.0.
+  Kyverno CLI test checks the same hardened predictor pod on v1.19.2 and v1.20.0. It applies to pods only, with
+  Kyverno's autogen turned off: the copy autogen made for Deployments rewrote the typed Object.spec{...} constructors
+  into a type CEL does not have, and denied the predictor Deployment, so the cluster run served no model.
 - osv-scanner v2.7.1 (was v2.7.0; published 9 Nov, adoptable from 23 Nov) checks uv.lock in CI: report and
   configuration features, no change to what it finds; the binary's checksum is the release's.
 - Alertmanager v0.35.0 (was v0.34.1; published 9 Nov, adoptable from 23 Nov), in the cluster and as amtool in CI. Its

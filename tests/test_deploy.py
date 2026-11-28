@@ -184,6 +184,18 @@ class DigestPolicyTests(unittest.TestCase):
             self.assertFalse(re.search(pattern, bad), bad)
 
 
+class HardeningPolicyTests(unittest.TestCase):
+    def test_pods_only_with_autogen_off(self):
+        # Kyverno's autogen rewrites object.spec to object.spec.template.spec for Deployments, and the typed
+        # Object.spec{...} constructors become a type CEL does not know: every predictor Deployment was denied.
+        (policy,) = docs("deploy/policy/harden-serving-pods.yaml")
+        self.assertEqual((policy["apiVersion"], policy["kind"]), ("policies.kyverno.io/v1", "MutatingPolicy"))
+        spec = policy["spec"]
+        self.assertEqual(spec["autogen"]["podControllers"]["controllers"], [])
+        (rule,) = spec["matchConstraints"]["resourceRules"]
+        self.assertEqual(rule["resources"], ["pods"])
+
+
 class KindTests(unittest.TestCase):
     def test_containerd_reads_per_registry_hosts(self):
         (cluster,) = docs("deploy/kind.yaml")
