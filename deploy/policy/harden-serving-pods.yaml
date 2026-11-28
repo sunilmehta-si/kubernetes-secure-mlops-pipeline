@@ -8,6 +8,10 @@
 # A MutatingPolicy: Kyverno's CEL policy type, which replaced ClusterPolicy's mutate rules in Kyverno 1.20. The pod's
 # settings are apply configurations; the containers' are JSON patches, as an apply configuration may not set an atomic
 # list such as capabilities.drop. A container's other capabilities settings (add) are kept.
+# Autogen is off: Kyverno would otherwise also apply the policy to Deployments and other pod controllers by rewriting
+# object.spec to object.spec.template.spec, which turns the typed Object.spec{...} constructors into a type CEL does
+# not have; the policy then failed on every predictor Deployment KServe created, so no model was served. Pods are
+# hardened when they are created, which covers the pods a controller makes.
 apiVersion: policies.kyverno.io/v1
 kind: MutatingPolicy
 metadata:
@@ -15,6 +19,9 @@ metadata:
   annotations:
     policies.kyverno.io/title: Restricted security settings for every container in serving
 spec:
+  autogen:
+    podControllers:
+      controllers: []
   evaluation:
     background:
       enabled: false
