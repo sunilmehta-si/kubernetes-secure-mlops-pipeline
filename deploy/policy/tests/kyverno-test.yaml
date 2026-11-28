@@ -12,23 +12,17 @@ resources:
   - kserve-pod.yaml
 results:
   - policy: require-registry-and-digest
-    rule: registry-and-digest
+    isValidatingPolicy: true
     resources: ["serving/pinned-from-local-registry"]
     kind: Pod
     result: pass
   - policy: require-registry-and-digest
-    rule: registry-and-digest
+    isValidatingPolicy: true
     resources: ["serving/uses-a-tag", "serving/other-registry", "serving/init-container-by-tag"]
     kind: Pod
     result: fail
   - policy: harden-serving-pods
-    rule: restricted-pod-defaults
-    resources: ["serving/ticket-router-predictor"]
-    kind: Pod
-    patchedResources: kserve-pod-hardened.yaml
-    result: pass
-  - policy: harden-serving-pods
-    rule: restricted-container-defaults
+    isMutatingPolicy: true
     resources: ["serving/ticket-router-predictor"]
     kind: Pod
     patchedResources: kserve-pod-hardened.yaml

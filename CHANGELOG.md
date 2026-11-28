@@ -28,6 +28,13 @@
   Hub. The installer checks the manifest against a recorded checksum.
 
 ### Changed
+- The digest policy is a ValidatingPolicy (policies.kyverno.io/v1) with a CEL check, where it was a kyverno.io
+  ClusterPolicy pattern: Kyverno v1.20 runs no legacy ClusterPolicy, and the new types run on v1.19.2 already, so the
+  policies move first and Kyverno after. It now also requires the digest to be a full sha256 (64 hex digits).
+- The serving pods' hardening is a MutatingPolicy: the pod's runAsNonRoot and default seccomp profile as apply
+  configurations, the containers' allowPrivilegeEscalation and dropped capabilities as JSON patches (an apply
+  configuration may not set an atomic list such as capabilities.drop); a container's added capabilities are kept. The
+  Kyverno CLI test checks the same hardened predictor pod on v1.19.2 and v1.20.0.
 - osv-scanner v2.7.1 (was v2.7.0; published 9 Nov, adoptable from 23 Nov) checks uv.lock in CI: report and
   configuration features, no change to what it finds; the binary's checksum is the release's.
 - Alertmanager v0.35.0 (was v0.34.1; published 9 Nov, adoptable from 23 Nov), in the cluster and as amtool in CI. Its

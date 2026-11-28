@@ -1,31 +1,36 @@
 # In the serving namespace, every image (containers and init containers) must come from the cluster's registry,
 # kind-registry:5000, and be pinned by digest. The registry is a container on the kind network, so the same name works
 # for containerd on the nodes, for Kyverno inside a pod checking signatures, and (through /etc/hosts) for the host
-# that pushes images; "localhost" would mean a different machine to each of them. A tag can be moved to different content later; a digest cannot, so the
-# image that was signed and approved is the image that runs.
-apiVersion: kyverno.io/v1
-kind: ClusterPolicy
+# that pushes images; "localhost" would mean a different machine to each of them. A tag can be moved to different
+# content later; a digest cannot, so the image that was signed and approved is the image that runs.
+# A ValidatingPolicy: Kyverno's CEL policy type, which replaced ClusterPolicy's validate rules in Kyverno 1.20.
+apiVersion: policies.kyverno.io/v1
+kind: ValidatingPolicy
 metadata:
   name: require-registry-and-digest
   annotations:
     policies.kyverno.io/title: Approved registry and digests only in serving
     policies.kyverno.io/severity: high
 spec:
-  background: false
+  validationActions: [Deny]
   failurePolicy: Fail
-  rules:
-    - name: registry-and-digest
-      match:
-        any:
-          - resources:
-              kinds: ["Pod"]
-              namespaces: ["serving"]
-      validate:
-        failureAction: Enforce
-        message: "serving images must come from kind-registry:5000 and be pinned by digest (image@sha256:...)"
-        pattern:
-          spec:
-            =(initContainers):
-              - image: "kind-registry:5000/*@sha256:*"
-            containers:
-              - image: "kind-registry:5000/*@sha256:*"
+  evaluation:
+    background:
+      enabled: false
+  matchConstraints:
+    resourceRules:
+      - apiGroups: [""]
+        apiVersions: [v1]
+        operations: [CREATE, UPDATE]
+        resources: [pods]
+  matchConditions:
+    - name: in-serving
+      expression: request.namespace == 'serving'
+  variables:
+    - name: images
+      expression: >-
+        object.spec.containers.map(c, c.image) +
+        (has(object.spec.initContainers) ? object.spec.initContainers.map(c, c.image) : [])
+  validations:
+    - expression: "variables.images.all(i, i.matches('^kind-registry:5000/[^@]+@sha256:[0-9a-f]{64}$'))"
+      message: "serving images must come from kind-registry:5000 and be pinned by digest (image@sha256:...)"
